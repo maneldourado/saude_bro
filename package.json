@@ -1,0 +1,45 @@
+{
+  "name": "continental-saude",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão de Saúde Ocupacional",
+  "author": "Continental Saúde",
+  "license": "MIT",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "electron:dev": "NODE_ENV=development electron electron/main.js",
+    "electron:dev:no-build": "electron electron/main.js",
+    "electron:build": "npm run build && electron-builder --project electron",
+    "electron:win": "npm run build && electron-builder --project electron --win",
+    "electron:mac": "npm run build && electron-builder --project electron --mac",
+    "electron:linux": "npm run build && electron-builder --project electron --linux"
+  },
+  "dependencies": {
+    "@supabase/auth-ui-react": "^0.4.7",
+    "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/supabase-js": "^2.107.0",
+    "@types/node": "20.6.2",
+    "@types/react": "18.2.22",
+    "@types/react-dom": "18.2.7",
+    "autoprefixer": "10.4.15",
+    "eslint": "8.49.0",
+    "eslint-config-next": "13.5.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "next": "13.5.1",
+    "postcss": "8.4.30",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "tailwindcss": "3.3.3",
+    "typescript": "5.2.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^24.6.4"
+  }
+}

@@ -1,0 +1,69 @@
+# electron-builder.yml
+appId: com.continental.saude
+productName: Continental Saúde
+copyright: Copyright © 2024 Continental Saúde
+directories:
+  output: dist-electron
+  buildResources: build
+
+files:
+  - "!**/*.map"
+  - "!**/*.md"
+  - "!**/*.ts"
+  - "!**/*.tsx"
+  - "!**/*.js.map"
+  - "!node_modules/**/*"
+  - "!**/test/**"
+  - "!**/tests/**"
+  - "!**/__tests__/**"
+  - "!**/.*"
+  - "!**/.*/**"
+  - "!**/.next/**"
+  - "!**/app/**"
+  - "!**/pages/**"
+  - "!**/public/**"
+  - "!**/styles/**"
+  - "!**/components/**"
+  - "!**/lib/**"
+  - "!**/utils/**"
+  - "!**/hooks/**"
+  - "!**/types/**"
+  - "!**/constants/**"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+  icon: build/icon.ico
+  publisherName: Continental Saúde
+  certificateFile: ''
+  certificatePassword: ''
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+mac:
+  target:
+    - dmg
+    - zip
+  icon: build/icon.icns
+  category: public.app-category.healthcare-fitness
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: build/icon.png
+  category: Health
+
+extraResources:
+  - from: build/
+    to: .
+    filter:
+      - "**/*"
