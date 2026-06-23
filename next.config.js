@@ -11,12 +11,11 @@ const nextConfig = {
     domains: ['localhost'],
   },
 
-  // ========== IGNORAR ERROS DE LINT ==========
+  // ========== IGNORAR ERROS DE LINT E TYPESCRIPT DURANTE BUILD ==========
   eslint: {
+    // 🔥 IGNORA TODOS OS ERROS DO ESLINT DURANTE O BUILD
     ignoreDuringBuilds: true,
   },
-
-  // ========== IGNORAR ERROS DE TYPESCRIPT ==========
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -24,7 +23,7 @@ const nextConfig = {
   // ========== DESABILITAR TELEMETRIA ==========
   telemetry: false,
 
-  // ========== HEADERS DE SEGURANÇA ==========
+  // ========== HEADERS DE SEGURANÇA E CACHE ==========
   async headers() {
     return [
       {
@@ -48,7 +47,7 @@ const nextConfig = {
           },
         ],
       },
-      // 🔥 ADICIONAR HEADER PARA FAVICON (FORÇA ATUALIZAÇÃO DO CACHE)
+      // 🔥 HEADERS PARA FORÇAR ATUALIZAÇÃO DO FAVICON
       {
         source: '/favicon.ico',
         headers: [
