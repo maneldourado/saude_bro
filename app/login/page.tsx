@@ -212,6 +212,15 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const MicrosoftIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 23 23">
+    <rect x="1" y="1" width="10" height="10" fill="#F25022" />
+    <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
+    <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
+    <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
+  </svg>
+);
+
 const MailIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -296,6 +305,56 @@ function RippleButton({
   );
 }
 
+// ─── Social Login Button Component ───
+function SocialButton({
+  icon,
+  label,
+  onClick,
+  loading,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  loading?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      style={{
+        width: '100%',
+        padding: '14px',
+        fontSize: '14px',
+        fontWeight: 600,
+        color: '#e2e8f0',
+        background: hovered ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+        border: `1px solid ${hovered ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)'}`,
+        borderRadius: '14px',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: loading ? 0.6 : 1,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {loading ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+          <path d="M12 2C6.477 2 2 6.477 2 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      ) : icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
 // ─── Main Page ───
 export default function LoginPage() {
   const router = useRouter();
@@ -308,6 +367,8 @@ export default function LoginPage() {
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [senhaValid, setSenhaValid] = useState<boolean | null>(null);
   const [cardVisible, setCardVisible] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -387,16 +448,45 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
         },
       });
+      if (error) {
+        setErro('Erro ao conectar com Google');
+        setGoogleLoading(false);
+      }
+      // Se data.url existir, o Supabase já redireciona automaticamente
     } catch (err) {
       console.error('Erro Google:', err);
       setErro('Erro ao conectar com Google');
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setMicrosoftLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'email',
+          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+        },
+      });
+      if (error) {
+        setErro('Erro ao conectar com Microsoft');
+        setMicrosoftLoading(false);
+      }
+      // Se data.url existir, o Supabase já redireciona automaticamente
+    } catch (err) {
+      console.error('Erro Microsoft:', err);
+      setErro('Erro ao conectar com Microsoft');
+      setMicrosoftLoading(false);
     }
   };
 
@@ -598,21 +688,10 @@ export default function LoginPage() {
     textTransform: 'uppercase',
   };
 
-  const googleButtonStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '14px',
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#e2e8f0',
-    background: 'rgba(255, 255, 255, 0.04)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '14px',
-    cursor: 'pointer',
+  const socialButtonsStyle: React.CSSProperties = {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    transition: 'all 0.3s ease',
+    flexDirection: 'column',
+    gap: '12px',
   };
 
   const footerTextStyle: React.CSSProperties = {
@@ -800,22 +879,23 @@ export default function LoginPage() {
           <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, rgba(255,255,255,0.1))' }} />
         </div>
 
-        <button
-          type="button"
-          style={googleButtonStyle}
-          onClick={handleGoogleLogin}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-          }}
-        >
-          <GoogleIcon />
-          <span>Continuar com Google</span>
-        </button>
+        <div style={socialButtonsStyle}>
+          {/* Google */}
+          <SocialButton
+            icon={<GoogleIcon />}
+            label="Continuar com Google"
+            onClick={handleGoogleLogin}
+            loading={googleLoading}
+          />
+
+          {/* Microsoft */}
+          <SocialButton
+            icon={<MicrosoftIcon />}
+            label="Continuar com Microsoft"
+            onClick={handleMicrosoftLogin}
+            loading={microsoftLoading}
+          />
+        </div>
 
         {/* Footer */}
         <p style={footerTextStyle}>
