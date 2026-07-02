@@ -9,6 +9,7 @@ interface DashboardModuleProps {
   bloodPressureRecords: any[];
   styles: any;
   onNavigate?: (module: string) => void;
+  userNome?: string;
 }
 
 export default function DashboardModule({
@@ -16,9 +17,11 @@ export default function DashboardModule({
   bloodPressureRecords,
   styles: oldStyles,
   onNavigate,
+  userNome = 'Usuário',
 }: DashboardModuleProps) {
   const [examesToxicologicos, setExamesToxicologicos] = useState<any[]>([]);
   const [imcRecords, setImcRecords] = useState<any[]>([]);
+  const [allImcRecords, setAllImcRecords] = useState<any[]>([]); // ← ADICIONADO
   const [atestadosPendentes, setAtestadosPendentes] = useState<any[]>([]);
   const [atestadosCount, setAtestadosCount] = useState<number>(0);
   const [certificadosCount, setCertificadosCount] = useState<number>(0);
@@ -63,7 +66,7 @@ export default function DashboardModule({
     }
   };
 
-  // ==================== CARREGAR IMC ====================
+  // ==================== CARREGAR IMC (SOMENTE MÊS MAIS RECENTE) ====================
   const carregarImcRecords = async () => {
     try {
       let allData: any[] = [];
@@ -91,9 +94,38 @@ export default function DashboardModule({
         }
       }
 
-      setImcRecords(allData);
+      // Guardar TODOS os dados para comparação
+      setAllImcRecords(allData);
+
+      if (allData.length === 0) {
+        setImcRecords([]);
+        return;
+      }
+
+      const firstRecord = allData[0];
+      if (firstRecord.mes === undefined || firstRecord.ano === undefined) {
+        console.error('❌ Colunas "mes" e "ano" não encontradas!');
+        setImcRecords(allData);
+        return;
+      }
+
+      const latestRecord = allData.reduce((latest, current) => {
+        if (current.ano > latest.ano) return current;
+        if (current.ano === latest.ano && current.mes > latest.mes)
+          return current;
+        return latest;
+      });
+
+      const mes = latestRecord.mes;
+      const ano = latestRecord.ano;
+
+      const filteredData = allData.filter((record) => {
+        return record.mes === mes && record.ano === ano;
+      });
+
+      setImcRecords(filteredData);
     } catch (error) {
-      console.error('Erro ao carregar IMC records:', error);
+      console.error('❌ Erro ao carregar IMC:', error);
       setImcRecords([]);
     }
   };
@@ -167,7 +199,7 @@ export default function DashboardModule({
   // ==================== CARREGAR MEDICAMENTOS ====================
   const carregarMedicamentos = async () => {
     const { count, error } = await supabase
-      .from('equipamentos_sobressale...')
+      .from('emergency_kits')
       .select('*', { count: 'exact', head: true });
 
     if (!error && count !== null) {
@@ -291,18 +323,90 @@ export default function DashboardModule({
     status: e.status,
   }));
 
-  const nomeUsuario = 'Jorge';
   const horaAtual = new Date().getHours();
   const saudacao =
     horaAtual < 12 ? 'Bom dia' : horaAtual < 18 ? 'Boa tarde' : 'Boa noite';
 
+  // ==================== CÁLCULO DE PERCENTUAIS ====================
+  const totalEmployees = employees.length;
+
+  const imcPercentual = totalEmployees > 0
+    ? Math.round((totalColaboradoresIMC / totalEmployees) * 100)
+    : 0;
+
+  const pressaoPercentual = totalEmployees > 0
+    ? Math.round((bloodPressureRecords.length / totalEmployees) * 100)
+    : 0;
+
+  const medicamentosPercentual = totalEmployees > 0
+    ? Math.round((medicamentosCount / totalEmployees) * 100)
+    : 0;
+
+  const atestadosPercentual = totalEmployees > 0
+    ? Math.round((atestadosCount / totalEmployees) * 100)
+    : 0;
+
+  const toxPercentual = totalEmployees > 0
+    ? Math.round((stats.totalExames / totalEmployees) * 100)
+    : 0;
+
+  const certificadosPercentual = totalEmployees > 0
+    ? Math.round((certificadosCount / totalEmployees) * 100)
+    : 0;
+
+  const vacinasPercentual = totalEmployees > 0
+    ? Math.round((vacinasCount / totalEmployees) * 100)
+    : 0;
+
+  const preMerPercentual = totalEmployees > 0
+    ? Math.round((preMerCount / totalEmployees) * 100)
+    : 0;
+
+  // ==================== COMPARATIVO MÊS ANTERIOR ====================
+  const meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  // 1. Pegar o mês atual
+  let mesAtual = 0;
+  let anoAtual = 0;
+  let registrosMesAtual = totalColaboradoresIMC;
+
+  if (imcRecords.length > 0) {
+    const firstRecord = imcRecords[0];
+    mesAtual = firstRecord.mes;
+    anoAtual = firstRecord.ano;
+  }
+
+  // 2. Calcular o mês anterior
+  let mesAnterior = mesAtual - 1;
+  let anoAnterior = anoAtual;
+  if (mesAnterior < 0) {
+    mesAnterior = 11;
+    anoAnterior = anoAtual - 1;
+  }
+
+  // 3. Contar registros do mês anterior USANDO allImcRecords
+  const registrosMesAnterior = allImcRecords.filter((record) => {
+    return record.mes === mesAnterior && record.ano === anoAnterior;
+  }).length;
+
+  // 4. Calcular diferença
+  const diferencaIMC = registrosMesAtual - registrosMesAnterior;
+  const percentualDiferenca = registrosMesAnterior > 0
+    ? Math.round((diferencaIMC / registrosMesAnterior) * 100)
+    : 0;
+
+  const nomeMesAnterior = meses[mesAnterior];
+  const nomeMesAtual = meses[mesAtual];
+
+  console.log(`📊 Mês atual: ${nomeMesAtual}/${anoAtual} - ${registrosMesAtual} registros`);
+  console.log(`📊 Mês anterior: ${nomeMesAnterior}/${anoAnterior} - ${registrosMesAnterior} registros`);
+  console.log(`📈 Diferença: ${diferencaIMC > 0 ? '+' : ''}${diferencaIMC} (${percentualDiferenca > 0 ? '+' : ''}${percentualDiferenca}%)`);
+
   // ==================== AÇÕES RÁPIDAS ====================
   const handleQuickAction = (action: string) => {
-    if (!onNavigate) {
-      alert(`Redirecionando para: ${action}`);
-      return;
-    }
-
     const moduleMap: Record<string, string> = {
       'Novo IMC': 'imc',
       'Nova Pressão': 'pressao',
@@ -310,13 +414,26 @@ export default function DashboardModule({
       Relatórios: 'dashboard',
       Certificados: 'certificados',
       Atestados: 'atestados',
+      'Pré-Embarque': 'preembarque',
+      'Pré-mergulho': 'premer',
+      Colaboradores: 'funcionarios',
+      Vacinação: 'vacinacao',
     };
 
-    const moduleId = moduleMap[action] || 'dashboard';
-    onNavigate(moduleId);
+    const moduleId = moduleMap[action];
+
+    if (moduleId && onNavigate) {
+      onNavigate(moduleId);
+    } else if (moduleId && !onNavigate) {
+      console.log(`Navegando para: ${moduleId} (ação: ${action})`);
+      alert(`Redirecionando para: ${action} (${moduleId})`);
+    } else {
+      console.warn(`Ação sem mapeamento: ${action}`);
+      alert(`Redirecionando para: ${action}`);
+    }
   };
 
-  // ==================== ESTILOS PREMIUM ====================
+  // ==================== ESTILOS ====================
   const styles = {
     container: {
       padding: '24px',
@@ -325,7 +442,6 @@ export default function DashboardModule({
       fontFamily: '"Inter", -apple-system, sans-serif',
     },
 
-    // ===== HERO =====
     heroContainer: {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       borderRadius: '24px',
@@ -373,7 +489,6 @@ export default function DashboardModule({
       color: '#10B981',
     },
 
-    // ===== STATS GRID =====
     statsGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(4, 1fr)',
@@ -437,7 +552,6 @@ export default function DashboardModule({
       borderRadius: '0 0 24px 24px',
     },
 
-    // ===== SECONDARY STATS =====
     secondaryStatsGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -466,8 +580,12 @@ export default function DashboardModule({
       letterSpacing: '0.3px',
       marginTop: '4px',
     },
+    secondaryStatPercent: {
+      fontSize: '11px',
+      fontWeight: 700,
+      marginTop: '2px',
+    },
 
-    // ===== MAIN GRID =====
     mainGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(12, 1fr)',
@@ -475,7 +593,6 @@ export default function DashboardModule({
       marginBottom: '32px',
     },
 
-    // ===== CARDS =====
     card: {
       background: '#ffffff',
       borderRadius: '24px',
@@ -508,7 +625,6 @@ export default function DashboardModule({
       color: '#6B7280',
     },
 
-    // ===== PIRÂMIDE =====
     pyramidLevel: {
       marginBottom: '16px',
     },
@@ -546,7 +662,6 @@ export default function DashboardModule({
       transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
     }),
 
-    // ===== TOXICOLÓGICO =====
     toxGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(2, 1fr)',
@@ -573,7 +688,6 @@ export default function DashboardModule({
       marginTop: '4px',
     },
 
-    // ===== TIMELINE =====
     timeline: {
       display: 'flex',
       flexDirection: 'column' as const,
@@ -626,7 +740,6 @@ export default function DashboardModule({
       textTransform: 'uppercase' as const,
     }),
 
-    // ===== AÇÕES RÁPIDAS =====
     actionsGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -654,7 +767,6 @@ export default function DashboardModule({
       fontSize: '24px',
     },
 
-    // ===== BADGE =====
     badge: (bg: string, color: string) => ({
       padding: '4px 12px',
       borderRadius: '12px',
@@ -665,7 +777,6 @@ export default function DashboardModule({
       textTransform: 'uppercase' as const,
     }),
 
-    // ===== EMPTY STATE =====
     emptyState: {
       textAlign: 'center' as const,
       padding: '24px',
@@ -673,7 +784,6 @@ export default function DashboardModule({
       fontSize: '13px',
     },
 
-    // ===== LOADING =====
     loadingContainer: {
       display: 'flex',
       flexDirection: 'column' as const,
@@ -708,7 +818,7 @@ export default function DashboardModule({
       <div style={styles.heroContainer}>
         <div style={styles.heroLeft}>
           <h1 style={styles.heroTitle}>
-            {saudacao}, {nomeUsuario}! 👋
+            {saudacao}, {userNome}! 👋
           </h1>
           <p style={styles.heroSubtitle}>
             Aqui está o resumo da saúde ocupacional de hoje.
@@ -728,9 +838,9 @@ export default function DashboardModule({
             icon: 'fa-weight-scale',
             color: '#10B981',
             bg: 'rgba(16,185,129,0.08)',
-            number: totalColaboradoresIMC,
+            number: registrosMesAtual || totalColaboradoresIMC,
             label: 'Registros IMC',
-            comparison: '+12% vs mês anterior',
+            comparison: `${diferencaIMC > 0 ? '↑' : '↓'} ${Math.abs(diferencaIMC)} (${percentualDiferenca > 0 ? '+' : ''}${percentualDiferenca}%) vs ${nomeMesAnterior}`,
             waveColor: '#10B981',
           },
           {
@@ -739,7 +849,7 @@ export default function DashboardModule({
             bg: 'rgba(59,130,246,0.08)',
             number: bloodPressureRecords.length,
             label: 'Pressão Arterial',
-            comparison: '0% vs ontem',
+            comparison: `${pressaoPercentual}% dos colaboradores`,
             waveColor: '#3B82F6',
           },
           {
@@ -748,7 +858,7 @@ export default function DashboardModule({
             bg: 'rgba(139,92,246,0.08)',
             number: stats.totalExames,
             label: 'Exames Tox.',
-            comparison: '0% vs ontem',
+            comparison: `${toxPercentual}% dos colaboradores`,
             waveColor: '#8B5CF6',
           },
           {
@@ -790,8 +900,8 @@ export default function DashboardModule({
                 <div style={styles.statLabel}>{item.label}</div>
               </div>
             </div>
-            <div style={{ ...styles.statComparison, color: '#10B981' }}>
-              <span>↑</span> {item.comparison}
+            <div style={{ ...styles.statComparison, color: item.comparison.includes('↓') ? '#EF4444' : '#10B981' }}>
+              {item.comparison.includes('↑') ? '↑' : item.comparison.includes('↓') ? '↓' : '↑'} {item.comparison}
             </div>
             <div
               style={{
@@ -804,45 +914,81 @@ export default function DashboardModule({
         ))}
       </div>
 
-      {/* ===== CARDS SECUNDÁRIOS ===== */}
+      {/* ===== CARDS SECUNDÁRIOS (COM PORCENTAGENS) ===== */}
       <div style={styles.secondaryStatsGrid}>
         {[
           {
             number: employees.length,
             label: 'Colaboradores',
             color: '#3B82F6',
+            percent: '100%',
           },
-          { number: preMerCount, label: 'Pré-mergulho', color: '#8B5CF6' },
           {
-            number: totalColaboradoresIMC,
+            number: preMerCount,
+            label: 'Pré-mergulho',
+            color: '#8B5CF6',
+            percent: `${preMerPercentual}%`,
+          },
+          {
+            number: registrosMesAtual || totalColaboradoresIMC,
             label: 'Registros IMC',
             color: '#10B981',
+            percent: `${imcPercentual}%`,
           },
           {
             number: bloodPressureRecords.length,
             label: 'Pressão Arterial',
             color: '#EF4444',
+            percent: `${pressaoPercentual}%`,
           },
           {
             number: medicamentosCount,
             label: 'Medicamentos',
             color: '#F59E0B',
+            percent: `${medicamentosPercentual}%`,
           },
-          { number: preEmbarqueCount, label: 'Pré-Embarque', color: '#3B82F6' },
-          { number: refeicoesCount, label: 'Refeições', color: '#10B981' },
+          {
+            number: preEmbarqueCount,
+            label: 'Pré-Embarque',
+            color: '#3B82F6',
+            percent: '0%',
+          },
+          {
+            number: refeicoesCount,
+            label: 'Refeições',
+            color: '#10B981',
+            percent: '0%',
+          },
           {
             number: certificadosCount,
             label: 'Certificados',
             color: '#8B5CF6',
+            percent: `${certificadosPercentual}%`,
           },
-          { number: vacinasCount, label: 'Vacinação', color: '#3B82F6' },
-          { number: atestadosCount, label: 'Atestados', color: '#EF4444' },
+          {
+            number: vacinasCount,
+            label: 'Vacinação',
+            color: '#3B82F6',
+            percent: `${vacinasPercentual}%`,
+          },
+          {
+            number: atestadosCount,
+            label: 'Atestados',
+            color: '#EF4444',
+            percent: `${atestadosPercentual}%`,
+          },
           {
             number: stats.totalExames,
             label: 'Toxicológico',
             color: '#8B5CF6',
+            percent: `${toxPercentual}%`,
           },
-          { number: employees.length, label: 'Prontuários', color: '#F59E0B' },
+          {
+            number: employees.length,
+            label: 'Prontuários',
+            color: '#F59E0B',
+            percent: '100%',
+          },
         ].map((item, idx) => (
           <div
             key={idx}
@@ -862,6 +1008,9 @@ export default function DashboardModule({
               {item.number}
             </div>
             <div style={styles.secondaryStatLabel}>{item.label}</div>
+            <div style={{ ...styles.secondaryStatPercent, color: item.color }}>
+              {item.percent}
+            </div>
           </div>
         ))}
       </div>
@@ -1209,9 +1358,13 @@ export default function DashboardModule({
                 label: 'Colaboradores',
                 color: '#3B82F6',
               },
-              { number: preMerCount, label: 'Pré-mergulho', color: '#8B5CF6' },
               {
-                number: totalColaboradoresIMC,
+                number: preMerCount,
+                label: 'Pré-mergulho',
+                color: '#8B5CF6',
+              },
+              {
+                number: registrosMesAtual || totalColaboradoresIMC,
                 label: 'Registros IMC',
                 color: '#10B981',
               },
@@ -1230,14 +1383,26 @@ export default function DashboardModule({
                 label: 'Pré-Embarque',
                 color: '#3B82F6',
               },
-              { number: refeicoesCount, label: 'Refeições', color: '#10B981' },
+              {
+                number: refeicoesCount,
+                label: 'Refeições',
+                color: '#10B981',
+              },
               {
                 number: certificadosCount,
                 label: 'Certificados',
                 color: '#8B5CF6',
               },
-              { number: vacinasCount, label: 'Vacinação', color: '#3B82F6' },
-              { number: atestadosCount, label: 'Atestados', color: '#EF4444' },
+              {
+                number: vacinasCount,
+                label: 'Vacinação',
+                color: '#3B82F6',
+              },
+              {
+                number: atestadosCount,
+                label: 'Atestados',
+                color: '#EF4444',
+              },
               {
                 number: stats.totalExames,
                 label: 'Toxicológico',
