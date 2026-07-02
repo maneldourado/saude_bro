@@ -517,13 +517,15 @@ function DashboardContent() {
           </div>
         </div>
 
-        {activeModule === 'dashboard' && (
-          <DashboardModule
-            employees={employees}
-            bloodPressureRecords={bloodPressureRecords}
-            styles={styles}
-          />
-        )}
+     {activeModule === 'dashboard' && (
+  <DashboardModule
+    employees={employees}
+    bloodPressureRecords={bloodPressureRecords}
+    styles={styles}
+    onNavigate={setActiveModule}  // Isso deve funcionar
+    userNome={nomeUsuario}
+  />
+)}
 
         {activeModule === 'imc' && (
           <IMCModule
