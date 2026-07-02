@@ -1446,7 +1446,7 @@ export default function IMCModule({
             <StatCard
               icon="fas fa-users"
               value={total}
-              label="TOTAL DE COLABORADORES"
+              label="TOTAL DE REGISTROS DE IMC 2023 - ATUAL"
               color="#2c7da0"
               bgColor="#e6f3f9"
             />
