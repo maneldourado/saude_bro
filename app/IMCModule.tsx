@@ -95,7 +95,6 @@ export default function IMCModule({
       }
 
       if (allData.length > 0) {
-        // Agrupar por colaborador para calcular peso anterior
         const colaboradorMap = new Map();
 
         allData.forEach((record: any) => {
@@ -106,7 +105,6 @@ export default function IMCModule({
           colaboradorMap.get(key).push(record);
         });
 
-        // Para cada colaborador, ordenar por data e calcular variação
         const formattedData = allData.map((record: any) => {
           const records = colaboradorMap.get(record.codigo) || [];
           const sorted = records.sort(
@@ -183,7 +181,6 @@ export default function IMCModule({
     loadColaboradores();
   }, []);
 
-  // Filtrar colaboradores pela busca
   useEffect(() => {
     if (searchColaborador.trim() === '') {
       setColaboradoresFiltrados(colaboradores);
@@ -282,20 +279,8 @@ export default function IMCModule({
     const circunferencia = toNumber(row[map.circunferencia]);
     const empresa = toSafeString(row[map.empresa]);
 
-    console.log(
-      `📊 Linha ${
-        idx + 2
-      }: Código=${codigo}, Data=${dataRaw}, Peso=${peso}, Altura=${altura}, Circ=${circunferencia}, Empresa=${empresa}`
-    );
-
-    if (peso === 0 || altura === 0) {
-      console.warn(`⚠️ Linha ${idx + 2} ignorada: Peso ou Altura = 0`);
-      return null;
-    }
-    if (!dataInfo) {
-      console.warn(`⚠️ Linha ${idx + 2} ignorada: Data inválida`);
-      return null;
-    }
+    if (peso === 0 || altura === 0) return null;
+    if (!dataInfo) return null;
 
     return {
       id: `${Date.now()}_${idx}_${Math.random()}`,
@@ -356,15 +341,10 @@ export default function IMCModule({
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      console.log('📊 Primeira linha (cabeçalho):', json[0]);
-      console.log('📊 Segunda linha (primeiros dados):', json[1]);
-      console.log('📊 Total de linhas:', json.length);
-
       if (!json || json.length < 2) throw new Error('Planilha vazia');
       setFileData({ headers: json[0], rows: json.slice(1) });
       setShowMapping(true);
     } catch (err) {
-      console.error('❌ Erro:', err);
       setError('Erro ao ler planilha');
     } finally {
       setImporting(false);
@@ -377,16 +357,12 @@ export default function IMCModule({
     const { rows } = fileData;
     const novos: any[] = [];
 
-    console.log(`📊 Processando ${rows.length} linhas...`);
-
     for (let i = 0; i < rows.length; i++) {
       const emp = extractEmployee(rows[i], i, columnMapping);
       if (emp) {
         novos.push(emp);
       }
     }
-
-    console.log(`✅ ${novos.length} registros válidos encontrados`);
 
     if (novos.length === 0) {
       setError(
@@ -565,16 +541,26 @@ export default function IMCModule({
   };
   const temDados = (e: any) => getIMC(e) > 0;
 
+  // ==================== STATUS COUNTS ====================
+  const allowedStatuses = [
+    'Peso normal',
+    'Sobrepeso',
+    'Obesidade grau I',
+    'Obesidade grau II',
+  ];
+
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     dadosExibir.forEach((e) => {
       if (!temDados(e)) return;
       const status = e.statusImc || getBMIClassification(getIMC(e));
+      if (!allowedStatuses.includes(status)) return;
       counts[status] = (counts[status] || 0) + 1;
     });
     return counts;
   }, [dadosExibir]);
 
+  // ==================== VARIACAO PESO ====================
   const variacaoPeso = useMemo(() => {
     let diminuiu = 0,
       manteve = 0,
@@ -588,6 +574,7 @@ export default function IMCModule({
     return { diminuiu, manteve, aumentou };
   }, [dadosExibir]);
 
+  // ==================== TOTAL POR MES ====================
   const totalPorMes = useMemo(() => {
     return meses.map((_, i) => {
       return employees.filter(
@@ -605,6 +592,71 @@ export default function IMCModule({
       setSelectedMonth(monthIndex);
     }
   };
+
+  // ==================== EVOLUÇÃO ANUAL POR STATUS ====================
+  const evolucaoPorStatus = useMemo(() => {
+    const statusList = [
+      'Peso normal',
+      'Sobrepeso',
+      'Obesidade grau I',
+      'Obesidade grau II',
+    ];
+    const result: Record<string, number[]> = {};
+
+    statusList.forEach((status) => {
+      result[status] = meses.map((_, i) => {
+        return employees.filter(
+          (e) =>
+            e.ano === selectedYear &&
+            e.mes === i &&
+            temDados(e) &&
+            (e.statusImc || getBMIClassification(getIMC(e))) === status
+        ).length;
+      });
+    });
+
+    const statusColors: Record<string, string> = {
+      'Peso normal': '#5B9BD5',
+      Sobrepeso: '#F4B942',
+      'Obesidade grau I': '#ED7D31',
+      'Obesidade grau II': '#C0504D',
+    };
+
+    const maxCount = Math.max(...Object.values(result).flat(), 1);
+
+    return { data: result, colors: statusColors, maxCount };
+  }, [employees, selectedYear]);
+
+  // ==================== STATUS POR MES/ANO ====================
+  const statusPorMesAno = useMemo(() => {
+    const statusMap = new Map();
+    dadosExibir.forEach((e) => {
+      if (!temDados(e)) return;
+      const status = e.statusImc || getBMIClassification(getIMC(e));
+      const key = `${e.ano}-${e.mes}-${status}`;
+      if (!statusMap.has(key)) {
+        statusMap.set(key, { ano: e.ano, mes: e.mes, status, count: 0 });
+      }
+      statusMap.get(key).count++;
+    });
+
+    const mesTotal = new Map();
+    statusMap.forEach((value) => {
+      const key = `${value.ano}-${value.mes}`;
+      if (!mesTotal.has(key)) {
+        mesTotal.set(key, 0);
+      }
+      mesTotal.set(key, mesTotal.get(key) + value.count);
+    });
+
+    const sorted = Array.from(statusMap.values()).sort((a, b) => {
+      if (a.ano !== b.ano) return b.ano - a.ano;
+      if (a.mes !== b.mes) return b.mes - a.mes;
+      return a.status.localeCompare(b.status);
+    });
+
+    return { data: sorted, mesTotal };
+  }, [dadosExibir]);
 
   // ==================== MODAIS ====================
   const MappingModal = () => {
@@ -1324,7 +1376,7 @@ export default function IMCModule({
         </div>
       </div>
 
-      {/* CARDS SUPERIORES */}
+      {/* ===== CARDS SUPERIORES ===== */}
       <div
         style={{
           display: 'grid',
@@ -1425,7 +1477,7 @@ export default function IMCModule({
         ))}
       </div>
 
-      {/* DIMINUIÇÃO/MANTEVE/AUMENTOU */}
+      {/* ===== DIMINUIÇÃO/MANTEVE/AUMENTOU ===== */}
       <div
         style={{
           display: 'grid',
@@ -1482,7 +1534,7 @@ export default function IMCModule({
         ))}
       </div>
 
-      {/* STATUS ATUAL DE IMC */}
+      {/* ===== GRÁFICO DE PIZZA - STATUS DE IMC ===== */}
       {Object.keys(statusCounts).length > 0 && (
         <div
           style={{
@@ -1505,15 +1557,17 @@ export default function IMCModule({
               className="fas fa-chart-pie"
               style={{ color: accentColor, marginRight: '8px' }}
             ></i>
-            Status atual de IMC
+            Status de IMC
           </h3>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px',
+              alignItems: 'center',
             }}
           >
+            {/* GRÁFICO DE PIZZA (ROSQUINHA) */}
             <div
               style={{
                 display: 'flex',
@@ -1524,8 +1578,8 @@ export default function IMCModule({
               <div
                 style={{
                   position: 'relative',
-                  width: '180px',
-                  height: '180px',
+                  width: '200px',
+                  height: '200px',
                 }}
               >
                 <svg
@@ -1543,11 +1597,10 @@ export default function IMCModule({
                       ).length;
                       const percentage = total > 0 ? (count / total) * 100 : 0;
                       const colors: Record<string, string> = {
-                        NORMAL: '#10B981',
-                        SOBREPESO: '#F59E0B',
-                        'OBESIDADE I': '#F97316',
-                        'OBESIDADE II': '#EF4444',
-                        'OBESIDADE III': '#7F1D1D',
+                        'Peso normal': '#10B981',
+                        Sobrepeso: '#F59E0B',
+                        'Obesidade grau I': '#F97316',
+                        'Obesidade grau II': '#EF4444',
                       };
                       const color = colors[status] || '#6B7280';
 
@@ -1573,7 +1626,7 @@ export default function IMCModule({
                           r="15.9"
                           fill="none"
                           stroke={color}
-                          strokeWidth="2"
+                          strokeWidth="3"
                           strokeDasharray={dasharray}
                           strokeDashoffset={dashoffset}
                           strokeLinecap="round"
@@ -1612,26 +1665,23 @@ export default function IMCModule({
                 </div>
               </div>
             </div>
+
+            {/* LEGENDA COM PERCENTUAIS */}
             <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
               {Object.entries(statusCounts).map(([status, count]) => {
                 const total = dadosExibir.filter((e) => temDados(e)).length;
                 const colors: Record<string, string> = {
-                  NORMAL: '#10B981',
-                  SOBREPESO: '#F59E0B',
-                  'OBESIDADE I': '#F97316',
-                  'OBESIDADE II': '#EF4444',
-                  'OBESIDADE III': '#7F1D1D',
+                  'Peso normal': '#10B981',
+                  Sobrepeso: '#F59E0B',
+                  'Obesidade grau I': '#F97316',
+                  'Obesidade grau II': '#EF4444',
                 };
                 const color = colors[status] || '#6B7280';
                 const percentage =
                   total > 0 ? Math.round((count / total) * 100) : 0;
+
                 return (
                   <div
                     key={status}
@@ -1643,15 +1693,16 @@ export default function IMCModule({
                   >
                     <div
                       style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '3px',
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '4px',
                         background: color,
+                        flexShrink: 0,
                       }}
                     ></div>
                     <span
                       style={{
-                        fontSize: '13px',
+                        fontSize: '14px',
                         color: textSecondary,
                         flex: 1,
                       }}
@@ -1660,7 +1711,7 @@ export default function IMCModule({
                     </span>
                     <span
                       style={{
-                        fontSize: '14px',
+                        fontSize: '16px',
                         fontWeight: 700,
                         color: textPrimary,
                       }}
@@ -1675,7 +1726,7 @@ export default function IMCModule({
         </div>
       )}
 
-      {/* GRÁFICO DE BARRAS */}
+      {/* ===== GRÁFICO DE BARRAS ===== */}
       <div
         style={{
           background: bgCard,
@@ -1781,7 +1832,384 @@ export default function IMCModule({
         </div>
       </div>
 
-      {/* ===== TABELA COM FILTROS E COLUNA "DATA" ===== */}
+      {/* ===== GRÁFICO DE LINHAS - EVOLUÇÃO ANUAL DE IMC ===== */}
+      <div
+        style={{
+          background: bgCard,
+          borderRadius: '16px',
+          padding: '24px',
+          border: `1px solid ${cardBorder}`,
+          marginBottom: '24px',
+        }}
+      >
+        <h3
+          style={{
+            fontSize: '16px',
+            fontWeight: 700,
+            color: textPrimary,
+            marginBottom: '8px',
+          }}
+        >
+          <i
+            className="fas fa-chart-line"
+            style={{ color: accentColor, marginRight: '8px' }}
+          ></i>
+          Evolução Anual de IMC
+        </h3>
+        <p
+          style={{
+            fontSize: '12px',
+            color: textSecondary,
+            marginBottom: '20px',
+          }}
+        >
+          Quantidade de registros por status ao longo dos meses
+        </p>
+
+        {/* GRÁFICO SVG */}
+        <div style={{ position: 'relative' }}>
+          <svg viewBox="0 0 700 250" style={{ width: '100%', height: 'auto' }}>
+            {/* Eixo Y */}
+            {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
+              const y = 20 + (1 - pct) * 200;
+              const label = Math.round(evolucaoPorStatus.maxCount * pct);
+              return (
+                <g key={i}>
+                  <line
+                    x1="50"
+                    y1={y}
+                    x2="680"
+                    y2={y}
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                    strokeDasharray={pct === 0 ? '0' : '4 4'}
+                  />
+                  <text
+                    x="45"
+                    y={y + 4}
+                    textAnchor="end"
+                    fontSize="10"
+                    fill="#6b7280"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Eixo X */}
+            {meses.map((mes, i) => {
+              const x = 50 + (i / 11) * 630;
+              return (
+                <g key={i}>
+                  <line
+                    x1={x}
+                    y1={20}
+                    x2={x}
+                    y2={220}
+                    stroke="#f3f4f6"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={x}
+                    y={240}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#6b7280"
+                  >
+                    {mes}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Linhas */}
+            {Object.entries(evolucaoPorStatus.data).map(([status, values]) => {
+              const color = evolucaoPorStatus.colors[status] || '#6B7280';
+              const points = values
+                .map((v, i) => {
+                  const x = 50 + (i / 11) * 630;
+                  const y =
+                    evolucaoPorStatus.maxCount > 0
+                      ? 220 - (v / evolucaoPorStatus.maxCount) * 200
+                      : 220;
+                  return `${x},${y}`;
+                })
+                .join(' ');
+
+              return (
+                <g key={status}>
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                  {values.map((v, i) => {
+                    const x = 50 + (i / 11) * 630;
+                    const y =
+                      evolucaoPorStatus.maxCount > 0
+                        ? 220 - (v / evolucaoPorStatus.maxCount) * 200
+                        : 220;
+                    return (
+                      <g key={i}>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="5"
+                          fill="white"
+                          stroke={color}
+                          strokeWidth="2.5"
+                        />
+                        {v > 0 && (
+                          <text
+                            x={x}
+                            y={y - 10}
+                            textAnchor="middle"
+                            fontSize="10"
+                            fontWeight="700"
+                            fill={color}
+                          >
+                            {v}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* LEGENDA */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '24px',
+            marginTop: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {Object.entries(evolucaoPorStatus.colors).map(([status, color]) => (
+            <div
+              key={status}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '3px',
+                  background: color,
+                  borderRadius: '2px',
+                }}
+              />
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: color,
+                  border: '2px solid white',
+                  boxShadow: `0 0 0 1px ${color}`,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '13px',
+                  color: textSecondary,
+                  fontWeight: 600,
+                }}
+              >
+                {status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== TABELA: STATUS DE IMC POR MÊS/ANO ===== */}
+      <div
+        style={{
+          background: bgCard,
+          borderRadius: '16px',
+          padding: '24px',
+          border: `1px solid ${cardBorder}`,
+          marginBottom: '24px',
+        }}
+      >
+        <h3
+          style={{
+            fontSize: '16px',
+            fontWeight: 700,
+            color: textPrimary,
+            marginBottom: '16px',
+          }}
+        >
+          <i
+            className="fas fa-table"
+            style={{ color: accentColor, marginRight: '8px' }}
+          ></i>
+          Status de IMC por Mês/Ano
+        </h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '13px',
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: '#f8f9fa',
+                  borderBottom: `2px solid ${cardBorder}`,
+                }}
+              >
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Ano
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Mês
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Status
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Quantidade
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  %
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {statusPorMesAno.data.map((item, idx) => {
+                const total =
+                  statusPorMesAno.mesTotal.get(`${item.ano}-${item.mes}`) || 0;
+                const percentage =
+                  total > 0 ? Math.round((item.count / total) * 100) : 0;
+                const statusColors: Record<string, string> = {
+                  NORMAL: '#10B981',
+                  SOBREPESO: '#F59E0B',
+                  'OBESIDADE I': '#F97316',
+                  'OBESIDADE II': '#EF4444',
+                  'OBESIDADE III': '#7F1D1D',
+                };
+                const color = statusColors[item.status] || '#6B7280';
+
+                return (
+                  <tr
+                    key={idx}
+                    style={{ borderBottom: `1px solid ${cardBorder}` }}
+                  >
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 600,
+                        color: textPrimary,
+                      }}
+                    >
+                      {item.ano}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: textSecondary }}>
+                      {meses[item.mes]}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          background: `${color}20`,
+                          color: color,
+                        }}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 600,
+                        color: textPrimary,
+                      }}
+                    >
+                      {item.count}
+                    </td>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 700,
+                        color: color,
+                      }}
+                    >
+                      {percentage}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {statusPorMesAno.data.length === 0 && (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '20px',
+                color: textSecondary,
+              }}
+            >
+              Nenhum registro encontrado.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===== TABELA DE DETALHAMENTO ===== */}
       <div
         style={{
           background: bgCard,
@@ -1923,7 +2351,7 @@ export default function IMCModule({
               </tr>
             </thead>
             <tbody id="table-body">
-            {dadosExibir.map((emp, idx) => {
+              {dadosExibir.map((emp, idx) => {
                 const bmi = getIMC(emp);
                 const status = emp.statusImc || getBMIClassification(bmi);
                 let statusColor = '#6B7280';
@@ -2065,24 +2493,6 @@ export default function IMCModule({
                 }}
               ></i>
               Nenhum registro encontrado.
-            </div>
-          )}
-          {dadosExibir.length > 100 && (
-            <div
-              style={{
-                padding: '16px',
-                textAlign: 'center',
-                color: textSecondary,
-                fontSize: '13px',
-                background: '#f8f9fa',
-                borderTop: `1px solid ${cardBorder}`,
-              }}
-            >
-              <i
-                className="fas fa-info-circle"
-                style={{ marginRight: '6px' }}
-              ></i>
-              Exibindo 100 de {dadosExibir.length} registros
             </div>
           )}
         </div>
