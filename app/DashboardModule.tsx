@@ -1,4 +1,4 @@
-// app/DashboardModule.tsx
+// app/DashboardModule.tsx - VERSÃO REFORMULADA COM DESIGN 2000% MELHORADO
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,7 +21,7 @@ export default function DashboardModule({
 }: DashboardModuleProps) {
   const [examesToxicologicos, setExamesToxicologicos] = useState<any[]>([]);
   const [imcRecords, setImcRecords] = useState<any[]>([]);
-  const [allImcRecords, setAllImcRecords] = useState<any[]>([]); // ← ADICIONADO
+  const [allImcRecords, setAllImcRecords] = useState<any[]>([]);
   const [atestadosPendentes, setAtestadosPendentes] = useState<any[]>([]);
   const [atestadosCount, setAtestadosCount] = useState<number>(0);
   const [certificadosCount, setCertificadosCount] = useState<number>(0);
@@ -66,7 +66,7 @@ export default function DashboardModule({
     }
   };
 
-  // ==================== CARREGAR IMC (SOMENTE MÊS MAIS RECENTE) ====================
+  // ==================== CARREGAR IMC ====================
   const carregarImcRecords = async () => {
     try {
       let allData: any[] = [];
@@ -94,7 +94,6 @@ export default function DashboardModule({
         }
       }
 
-      // Guardar TODOS os dados para comparação
       setAllImcRecords(allData);
 
       if (allData.length === 0) {
@@ -330,45 +329,58 @@ export default function DashboardModule({
   // ==================== CÁLCULO DE PERCENTUAIS ====================
   const totalEmployees = employees.length;
 
-  const imcPercentual = totalEmployees > 0
-    ? Math.round((totalColaboradoresIMC / totalEmployees) * 100)
-    : 0;
+  const imcPercentual =
+    totalEmployees > 0
+      ? Math.round((totalColaboradoresIMC / totalEmployees) * 100)
+      : 0;
 
-  const pressaoPercentual = totalEmployees > 0
-    ? Math.round((bloodPressureRecords.length / totalEmployees) * 100)
-    : 0;
+  const pressaoPercentual =
+    totalEmployees > 0
+      ? Math.round((bloodPressureRecords.length / totalEmployees) * 100)
+      : 0;
 
-  const medicamentosPercentual = totalEmployees > 0
-    ? Math.round((medicamentosCount / totalEmployees) * 100)
-    : 0;
+  const medicamentosPercentual =
+    totalEmployees > 0
+      ? Math.round((medicamentosCount / totalEmployees) * 100)
+      : 0;
 
-  const atestadosPercentual = totalEmployees > 0
-    ? Math.round((atestadosCount / totalEmployees) * 100)
-    : 0;
+  const atestadosPercentual =
+    totalEmployees > 0
+      ? Math.round((atestadosCount / totalEmployees) * 100)
+      : 0;
 
-  const toxPercentual = totalEmployees > 0
-    ? Math.round((stats.totalExames / totalEmployees) * 100)
-    : 0;
+  const toxPercentual =
+    totalEmployees > 0
+      ? Math.round((stats.totalExames / totalEmployees) * 100)
+      : 0;
 
-  const certificadosPercentual = totalEmployees > 0
-    ? Math.round((certificadosCount / totalEmployees) * 100)
-    : 0;
+  const certificadosPercentual =
+    totalEmployees > 0
+      ? Math.round((certificadosCount / totalEmployees) * 100)
+      : 0;
 
-  const vacinasPercentual = totalEmployees > 0
-    ? Math.round((vacinasCount / totalEmployees) * 100)
-    : 0;
+  const vacinasPercentual =
+    totalEmployees > 0 ? Math.round((vacinasCount / totalEmployees) * 100) : 0;
 
-  const preMerPercentual = totalEmployees > 0
-    ? Math.round((preMerCount / totalEmployees) * 100)
-    : 0;
+  const preMerPercentual =
+    totalEmployees > 0 ? Math.round((preMerCount / totalEmployees) * 100) : 0;
 
   // ==================== COMPARATIVO MÊS ANTERIOR ====================
   const meses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
   ];
 
-  // 1. Pegar o mês atual
   let mesAtual = 0;
   let anoAtual = 0;
   let registrosMesAtual = totalColaboradoresIMC;
@@ -379,7 +391,6 @@ export default function DashboardModule({
     anoAtual = firstRecord.ano;
   }
 
-  // 2. Calcular o mês anterior
   let mesAnterior = mesAtual - 1;
   let anoAnterior = anoAtual;
   if (mesAnterior < 0) {
@@ -387,23 +398,18 @@ export default function DashboardModule({
     anoAnterior = anoAtual - 1;
   }
 
-  // 3. Contar registros do mês anterior USANDO allImcRecords
   const registrosMesAnterior = allImcRecords.filter((record) => {
     return record.mes === mesAnterior && record.ano === anoAnterior;
   }).length;
 
-  // 4. Calcular diferença
   const diferencaIMC = registrosMesAtual - registrosMesAnterior;
-  const percentualDiferenca = registrosMesAnterior > 0
-    ? Math.round((diferencaIMC / registrosMesAnterior) * 100)
-    : 0;
+  const percentualDiferenca =
+    registrosMesAnterior > 0
+      ? Math.round((diferencaIMC / registrosMesAnterior) * 100)
+      : 0;
 
   const nomeMesAnterior = meses[mesAnterior];
   const nomeMesAtual = meses[mesAtual];
-
-  console.log(`📊 Mês atual: ${nomeMesAtual}/${anoAtual} - ${registrosMesAtual} registros`);
-  console.log(`📊 Mês anterior: ${nomeMesAnterior}/${anoAnterior} - ${registrosMesAnterior} registros`);
-  console.log(`📈 Diferença: ${diferencaIMC > 0 ? '+' : ''}${diferencaIMC} (${percentualDiferenca > 0 ? '+' : ''}${percentualDiferenca}%)`);
 
   // ==================== AÇÕES RÁPIDAS ====================
   const handleQuickAction = (action: string) => {
@@ -433,322 +439,420 @@ export default function DashboardModule({
     }
   };
 
-  // ==================== ESTILOS ====================
+  // ==================== PALETA DE CORES PREMIUM ====================
+  const colors = {
+    // Cores Primárias - Verde Profissional
+    primary: '#00A86B', // Verde Esmeralda
+    primaryLight: '#E8F7F0', // Verde muito claro
+    primaryDark: '#007A52', // Verde escuro
+
+    // Cores Secundárias - Azul Moderno
+    secondary: '#0066CC', // Azul Profissional
+    secondaryLight: '#E6F0FF', // Azul muito claro
+    secondaryDark: '#004A99', // Azul escuro
+
+    // Cores de Ênfase
+    accent: '#FF6B35', // Laranja Vibrante
+    accentLight: '#FFF0E6', // Laranja muito claro
+    accentDark: '#CC5528', // Laranja escuro
+
+    // Cores de Status
+    success: '#00A86B', // Verde
+    warning: '#FFA500', // Laranja
+    danger: '#E63946', // Vermelho
+    info: '#0066CC', // Azul
+
+    // Cores Neutras
+    dark: '#1A1A2E', // Quase preto
+    darkGray: '#2D3E50', // Cinza escuro
+    gray: '#6B7280', // Cinza médio
+    lightGray: '#E5E7EB', // Cinza claro
+    white: '#FFFFFF', // Branco
+    background: '#F8FAFC', // Fundo muito claro
+  };
+
+  // ==================== ESTILOS REFORMULADOS ====================
   const styles = {
     container: {
-      padding: '24px',
-      maxWidth: '1440px',
+      padding: '32px',
+      maxWidth: '1600px',
       margin: '0 auto',
-      fontFamily: '"Inter", -apple-system, sans-serif',
+      fontFamily: '"Segoe UI", "Roboto", -apple-system, sans-serif',
+      background: '#f5f0eb',  
+      minHeight: '100vh',
     },
 
+    // ===== HERO SECTION =====
     heroContainer: {
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-      borderRadius: '24px',
-      padding: '32px 40px',
-      marginBottom: '32px',
+      background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
+      borderRadius: '32px',
+      padding: '40px 48px',
+      marginBottom: '40px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      border: '1px solid #eef2f7',
-    },
-    heroLeft: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '4px',
-    },
-    heroTitle: {
-      fontSize: '30px',
-      fontWeight: 700,
-      color: '#111827',
-      margin: 0,
-      letterSpacing: '-0.5px',
-    },
-    heroSubtitle: {
-      fontSize: '15px',
-      fontWeight: 500,
-      color: '#6B7280',
-      margin: 0,
-    },
-    heroRight: {
-      textAlign: 'right' as const,
-    },
-    heroDate: {
-      fontSize: '16px',
-      fontWeight: 600,
-      color: '#111827',
-    },
-    heroDay: {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: '#6B7280',
-    },
-    heroTime: {
-      fontSize: '24px',
-      fontWeight: 700,
-      color: '#10B981',
-    },
-
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '16px',
-      marginBottom: '24px',
-    },
-    statCard: {
-      background: '#ffffff',
-      borderRadius: '24px',
-      padding: '24px',
-      border: '1px solid #eef2f7',
-      boxShadow: '0 15px 40px rgba(15,23,42,0.06)',
-      transition: 'all 0.25s ease',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '12px',
+      boxShadow: `0 20px 60px rgba(0, 168, 107, 0.15)`,
+      color: colors.white,
       position: 'relative' as const,
       overflow: 'hidden',
     },
+
+    heroLeft: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '8px',
+      zIndex: 1,
+    },
+
+    heroTitle: {
+      fontSize: '36px',
+      fontWeight: 700,
+      color: colors.white,
+      margin: 0,
+      letterSpacing: '-0.5px',
+    },
+
+    heroSubtitle: {
+      fontSize: '16px',
+      fontWeight: 400,
+      color: 'rgba(255, 255, 255, 0.85)',
+      margin: 0,
+    },
+
+    heroRight: {
+      textAlign: 'right' as const,
+      zIndex: 1,
+    },
+
+    heroDate: {
+      fontSize: '18px',
+      fontWeight: 600,
+      color: colors.white,
+      marginBottom: '4px',
+    },
+
+    heroDay: {
+      fontSize: '14px',
+      fontWeight: 400,
+      color: 'rgba(255, 255, 255, 0.85)',
+      marginBottom: '8px',
+    },
+
+    heroTime: {
+      fontSize: '28px',
+      fontWeight: 700,
+      color: 'rgba(255, 255, 255, 0.95)',
+    },
+
+    // ===== STATS GRID =====
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+      gap: '20px',
+      marginBottom: '40px',
+    },
+
+    statCard: {
+      background: colors.white,
+      borderRadius: '28px',
+      padding: '28px',
+      border: `2px solid ${colors.lightGray}`,
+      boxShadow: `0 10px 30px rgba(0, 0, 0, 0.05)`,
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '16px',
+      position: 'relative' as const,
+      overflow: 'hidden',
+      cursor: 'pointer',
+    },
+
+    statCardHover: {
+      transform: 'translateY(-8px)',
+      boxShadow: `0 20px 50px rgba(0, 0, 0, 0.1)`,
+      borderColor: colors.primary,
+    },
+
     statCardTop: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: '16px',
     },
+
     statIconWrapper: {
-      width: '56px',
-      height: '56px',
-      borderRadius: '16px',
+      width: '64px',
+      height: '64px',
+      borderRadius: '20px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '24px',
+      fontSize: '28px',
+      flexShrink: 0,
     },
+
     statNumber: {
-      fontSize: '42px',
+      fontSize: '48px',
       fontWeight: 800,
-      color: '#111827',
+      color: colors.dark,
       letterSpacing: '-1px',
       lineHeight: 1,
     },
+
     statLabel: {
       fontSize: '13px',
-      fontWeight: 500,
-      color: '#6B7280',
+      fontWeight: 600,
+      color: colors.gray,
       textTransform: 'uppercase' as const,
-      letterSpacing: '0.5px',
+      letterSpacing: '0.8px',
     },
+
     statComparison: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 600,
       display: 'flex',
       alignItems: 'center',
-      gap: '4px',
-    },
-    statWave: {
-      position: 'absolute' as const,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: '4px',
-      borderRadius: '0 0 24px 24px',
+      gap: '6px',
+      padding: '8px 12px',
+      borderRadius: '12px',
+      width: 'fit-content',
     },
 
+    // ===== SECONDARY STATS =====
     secondaryStatsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-      gap: '12px',
-      marginBottom: '32px',
-    },
-    secondaryStatCard: {
-      background: '#ffffff',
-      borderRadius: '16px',
-      padding: '16px',
-      border: '1px solid #eef2f7',
-      boxShadow: '0 15px 40px rgba(15,23,42,0.04)',
-      textAlign: 'center' as const,
-      transition: 'all 0.25s ease',
-    },
-    secondaryStatNumber: {
-      fontSize: '22px',
-      fontWeight: 800,
-      color: '#111827',
-    },
-    secondaryStatLabel: {
-      fontSize: '10px',
-      fontWeight: 600,
-      color: '#6B7280',
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.3px',
-      marginTop: '4px',
-    },
-    secondaryStatPercent: {
-      fontSize: '11px',
-      fontWeight: 700,
-      marginTop: '2px',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+      gap: '16px',
+      marginBottom: '40px',
     },
 
+    secondaryStatCard: {
+      background: colors.white,
+      borderRadius: '24px',
+      padding: '20px',
+      border: `1px solid ${colors.lightGray}`,
+      boxShadow: `0 8px 20px rgba(0, 0, 0, 0.04)`,
+      textAlign: 'center' as const,
+      transition: 'all 0.3s ease',
+    },
+
+    secondaryStatNumber: {
+      fontSize: '28px',
+      fontWeight: 800,
+      color: colors.dark,
+    },
+
+    secondaryStatLabel: {
+      fontSize: '11px',
+      fontWeight: 600,
+      color: colors.gray,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.5px',
+      marginTop: '6px',
+    },
+
+    secondaryStatPercent: {
+      fontSize: '12px',
+      fontWeight: 700,
+      marginTop: '4px',
+    },
+
+    // ===== MAIN GRID =====
     mainGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(12, 1fr)',
       gap: '24px',
-      marginBottom: '32px',
+      marginBottom: '40px',
     },
 
+    // ===== CARDS =====
     card: {
-      background: '#ffffff',
-      borderRadius: '24px',
-      padding: '24px',
-      border: '1px solid #eef2f7',
-      boxShadow: '0 15px 40px rgba(15,23,42,0.04)',
-      transition: 'all 0.25s ease',
+      background: colors.white,
+      borderRadius: '28px',
+      padding: '28px',
+      border: `1px solid ${colors.lightGray}`,
+      boxShadow: `0 10px 30px rgba(0, 0, 0, 0.05)`,
+      transition: 'all 0.3s ease',
     },
+
     cardHeader: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: '20px',
+      marginBottom: '24px',
+      paddingBottom: '16px',
+      borderBottom: `2px solid ${colors.lightGray}`,
     },
+
     cardTitle: {
-      fontSize: '16px',
+      fontSize: '18px',
       fontWeight: 700,
-      color: '#111827',
+      color: colors.dark,
       margin: 0,
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
-    },
-    cardBadge: {
-      fontSize: '11px',
-      fontWeight: 600,
-      padding: '2px 10px',
-      borderRadius: '20px',
-      background: '#f1f5f9',
-      color: '#6B7280',
+      gap: '10px',
     },
 
-    pyramidLevel: {
-      marginBottom: '16px',
+    cardBadge: {
+      fontSize: '12px',
+      fontWeight: 700,
+      padding: '6px 14px',
+      borderRadius: '20px',
+      background: colors.primaryLight,
+      color: colors.primary,
+      textTransform: 'uppercase' as const,
     },
+
+    // ===== PYRAMID =====
+    pyramidLevel: {
+      marginBottom: '20px',
+    },
+
     pyramidHeader: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '6px',
+      marginBottom: '8px',
     },
+
     pyramidName: {
-      fontSize: '14px',
+      fontSize: '15px',
       fontWeight: 600,
-      color: '#111827',
+      color: colors.dark,
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
+      gap: '10px',
     },
+
     pyramidStats: {
-      fontSize: '14px',
+      fontSize: '15px',
       fontWeight: 700,
-      color: '#111827',
+      color: colors.dark,
     },
+
     pyramidBar: {
-      height: '16px',
-      background: '#f1f5f9',
-      borderRadius: '8px',
+      height: '20px',
+      background: colors.lightGray,
+      borderRadius: '12px',
       overflow: 'hidden',
       position: 'relative' as const,
+      boxShadow: `inset 0 2px 4px rgba(0, 0, 0, 0.05)`,
     },
+
     pyramidFill: (width: number, color: string) => ({
       width: `${Math.min(width, 100)}%`,
       height: '100%',
       background: color,
-      borderRadius: '8px',
+      borderRadius: '12px',
       transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: `0 2px 8px rgba(0, 0, 0, 0.15)`,
     }),
 
+    // ===== TOX GRID =====
     toxGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '12px',
-      marginBottom: '16px',
-    },
-    toxItem: {
-      background: '#f8fafc',
-      borderRadius: '16px',
-      padding: '16px',
-      border: '1px solid #eef2f7',
-    },
-    toxLabel: {
-      fontSize: '11px',
-      fontWeight: 600,
-      color: '#6B7280',
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.3px',
-    },
-    toxValue: {
-      fontSize: '24px',
-      fontWeight: 800,
-      color: '#111827',
-      marginTop: '4px',
+      gap: '16px',
+      marginBottom: '20px',
     },
 
+    toxItem: {
+      background: colors.background,
+      borderRadius: '20px',
+      padding: '20px',
+      border: `2px solid ${colors.lightGray}`,
+      transition: 'all 0.3s ease',
+    },
+
+    toxLabel: {
+      fontSize: '12px',
+      fontWeight: 600,
+      color: colors.gray,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.5px',
+    },
+
+    toxValue: {
+      fontSize: '28px',
+      fontWeight: 800,
+      color: colors.dark,
+      marginTop: '6px',
+    },
+
+    // ===== TIMELINE =====
     timeline: {
       display: 'flex',
       flexDirection: 'column' as const,
       gap: '12px',
     },
+
     timelineItem: {
       display: 'flex',
       alignItems: 'center',
-      gap: '12px',
-      padding: '12px 16px',
-      background: '#f8fafc',
-      borderRadius: '16px',
-      border: '1px solid #eef2f7',
+      gap: '14px',
+      padding: '14px 18px',
+      background: colors.background,
+      borderRadius: '18px',
+      border: `1px solid ${colors.lightGray}`,
+      transition: 'all 0.3s ease',
     },
+
     timelineIcon: {
-      width: '36px',
-      height: '36px',
-      borderRadius: '10px',
+      width: '40px',
+      height: '40px',
+      borderRadius: '12px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '16px',
+      fontSize: '18px',
       flexShrink: 0,
     },
+
     timelineContent: {
       flex: 1,
     },
+
     timelineName: {
-      fontSize: '14px',
+      fontSize: '15px',
       fontWeight: 600,
-      color: '#111827',
+      color: colors.dark,
     },
+
     timelineDesc: {
-      fontSize: '12px',
-      color: '#6B7280',
+      fontSize: '13px',
+      color: colors.gray,
+      marginTop: '2px',
     },
+
     timelineTime: {
-      fontSize: '11px',
+      fontSize: '12px',
       fontWeight: 500,
-      color: '#6B7280',
+      color: colors.gray,
       flexShrink: 0,
     },
+
     timelineBadge: (bg: string, color: string) => ({
-      padding: '2px 10px',
-      borderRadius: '12px',
-      fontSize: '10px',
+      padding: '4px 12px',
+      borderRadius: '14px',
+      fontSize: '11px',
       fontWeight: 700,
       background: bg,
       color: color,
       textTransform: 'uppercase' as const,
     }),
 
+    // ===== ACTIONS =====
     actionsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-      gap: '12px',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+      gap: '14px',
     },
+
     actionButton: (color: string, bg: string) => ({
-      padding: '16px',
-      borderRadius: '16px',
-      border: '1px solid #eef2f7',
+      padding: '18px 16px',
+      borderRadius: '20px',
+      border: `2px solid ${color}`,
       background: bg,
       color: color,
       cursor: 'pointer',
@@ -756,49 +860,60 @@ export default function DashboardModule({
       flexDirection: 'column' as const,
       alignItems: 'center',
       gap: '8px',
-      transition: 'all 0.25s ease',
-      boxShadow: '0 15px 40px rgba(15,23,42,0.04)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: `0 8px 20px rgba(0, 0, 0, 0.04)`,
       fontSize: '13px',
-      fontWeight: 600,
+      fontWeight: 700,
       textAlign: 'center' as const,
       width: '100%',
     }),
+
     actionIcon: {
-      fontSize: '24px',
+      fontSize: '28px',
     },
 
+    // ===== BADGES =====
     badge: (bg: string, color: string) => ({
-      padding: '4px 12px',
-      borderRadius: '12px',
-      fontSize: '11px',
+      padding: '6px 14px',
+      borderRadius: '16px',
+      fontSize: '12px',
       fontWeight: 700,
       background: bg,
       color: color,
       textTransform: 'uppercase' as const,
     }),
 
+    // ===== EMPTY STATE =====
     emptyState: {
       textAlign: 'center' as const,
-      padding: '24px',
-      color: '#6B7280',
-      fontSize: '13px',
+      padding: '32px',
+      color: colors.gray,
+      fontSize: '14px',
     },
 
+    // ===== LOADING =====
     loadingContainer: {
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '100px',
-      gap: '16px',
+      padding: '120px 32px',
+      gap: '20px',
     },
+
     spinner: {
-      width: '48px',
-      height: '48px',
-      border: '4px solid rgba(16,185,129,0.15)',
-      borderTop: '4px solid #10B981',
+      width: '56px',
+      height: '56px',
+      border: `4px solid ${colors.lightGray}`,
+      borderTop: `4px solid ${colors.primary}`,
       borderRadius: '50%',
       animation: 'spin 1s linear infinite',
+    },
+
+    loadingText: {
+      color: colors.gray,
+      fontWeight: 500,
+      fontSize: '15px',
     },
   };
 
@@ -807,21 +922,21 @@ export default function DashboardModule({
       <div style={styles.loadingContainer}>
         <div style={styles.spinner}></div>
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        <p style={{ color: '#6B7280', fontWeight: 500 }}>Carregando dados...</p>
+        <p style={styles.loadingText}>Carregando dados...</p>
       </div>
     );
   }
 
   return (
     <div style={styles.container}>
-      {/* ===== HERO ===== */}
+      {/* ===== HERO SECTION ===== */}
       <div style={styles.heroContainer}>
         <div style={styles.heroLeft}>
           <h1 style={styles.heroTitle}>
             {saudacao}, {userNome}! 👋
           </h1>
           <p style={styles.heroSubtitle}>
-            Aqui está o resumo da saúde ocupacional de hoje.
+            Resumo executivo da saúde ocupacional
           </p>
         </div>
         <div style={styles.heroRight}>
@@ -831,58 +946,60 @@ export default function DashboardModule({
         </div>
       </div>
 
-      {/* ===== CARDS SUPERIORES (4) ===== */}
+      {/* ===== MAIN STATS (4 CARDS) ===== */}
       <div style={styles.statsGrid}>
         {[
           {
-            icon: 'fa-weight-scale',
-            color: '#10B981',
-            bg: 'rgba(16,185,129,0.08)',
+            icon: '⚖️',
+            color: colors.primary,
+            bg: colors.primaryLight,
             number: registrosMesAtual || totalColaboradoresIMC,
             label: 'Registros IMC',
-            comparison: `${diferencaIMC > 0 ? '↑' : '↓'} ${Math.abs(diferencaIMC)} (${percentualDiferenca > 0 ? '+' : ''}${percentualDiferenca}%) vs ${nomeMesAnterior}`,
-            waveColor: '#10B981',
+            comparison: `${diferencaIMC > 0 ? '↑' : '↓'} ${Math.abs(
+              diferencaIMC
+            )} (${
+              percentualDiferenca > 0 ? '+' : ''
+            }${percentualDiferenca}%) vs ${nomeMesAnterior}`,
+            comparisonColor: diferencaIMC > 0 ? colors.success : colors.danger,
           },
           {
-            icon: 'fa-heartbeat',
-            color: '#3B82F6',
-            bg: 'rgba(59,130,246,0.08)',
+            icon: '❤️',
+            color: colors.secondary,
+            bg: colors.secondaryLight,
             number: bloodPressureRecords.length,
             label: 'Pressão Arterial',
             comparison: `${pressaoPercentual}% dos colaboradores`,
-            waveColor: '#3B82F6',
+            comparisonColor: colors.secondary,
           },
           {
-            icon: 'fa-flask',
-            color: '#8B5CF6',
-            bg: 'rgba(139,92,246,0.08)',
+            icon: '🧪',
+            color: colors.accent,
+            bg: colors.accentLight,
             number: stats.totalExames,
             label: 'Exames Tox.',
             comparison: `${toxPercentual}% dos colaboradores`,
-            waveColor: '#8B5CF6',
+            comparisonColor: colors.accent,
           },
           {
-            icon: 'fa-check-circle',
-            color: '#10B981',
-            bg: 'rgba(16,185,129,0.08)',
+            icon: '✅',
+            color: colors.success,
+            bg: colors.primaryLight,
             number: `${stats.percentualConformidade}%`,
             label: 'Conformidade',
-            comparison: '5% vs mês anterior',
-            waveColor: '#10B981',
+            comparison: 'Taxa de exames ativos',
+            comparisonColor: colors.success,
           },
         ].map((item, idx) => (
           <div
             key={idx}
             style={styles.statCard}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow =
-                '0 25px 50px rgba(15,23,42,0.08)';
+              Object.assign(e.currentTarget.style, styles.statCardHover);
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow =
-                '0 15px 40px rgba(15,23,42,0.06)';
+              e.currentTarget.style.boxShadow = `0 10px 30px rgba(0, 0, 0, 0.05)`;
+              e.currentTarget.style.borderColor = colors.lightGray;
             }}
           >
             <div style={styles.statCardTop}>
@@ -893,115 +1010,105 @@ export default function DashboardModule({
                   color: item.color,
                 }}
               >
-                <i className={`fas ${item.icon}`}></i>
+                {item.icon}
               </div>
               <div>
                 <div style={styles.statNumber}>{item.number}</div>
                 <div style={styles.statLabel}>{item.label}</div>
               </div>
             </div>
-            <div style={{ ...styles.statComparison, color: item.comparison.includes('↓') ? '#EF4444' : '#10B981' }}>
-              {item.comparison.includes('↑') ? '↑' : item.comparison.includes('↓') ? '↓' : '↑'} {item.comparison}
-            </div>
             <div
               style={{
-                ...styles.statWave,
-                background: item.waveColor,
-                opacity: 0.15,
+                ...styles.statComparison,
+                background: `${item.comparisonColor}15`,
+                color: item.comparisonColor,
               }}
-            ></div>
+            >
+              {item.comparison.includes('↑')
+                ? '📈'
+                : item.comparison.includes('↓')
+                ? '📉'
+                : '→'}{' '}
+              {item.comparison}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ===== CARDS SECUNDÁRIOS (COM PORCENTAGENS) ===== */}
+      {/* ===== SECONDARY STATS ===== */}
       <div style={styles.secondaryStatsGrid}>
         {[
           {
             number: employees.length,
             label: 'Colaboradores',
-            color: '#3B82F6',
+            color: colors.secondary,
             percent: '100%',
           },
           {
             number: preMerCount,
             label: 'Pré-mergulho',
-            color: '#8B5CF6',
+            color: colors.accent,
             percent: `${preMerPercentual}%`,
           },
           {
             number: registrosMesAtual || totalColaboradoresIMC,
             label: 'Registros IMC',
-            color: '#10B981',
+            color: colors.primary,
             percent: `${imcPercentual}%`,
           },
           {
             number: bloodPressureRecords.length,
             label: 'Pressão Arterial',
-            color: '#EF4444',
+            color: colors.danger,
             percent: `${pressaoPercentual}%`,
           },
           {
             number: medicamentosCount,
             label: 'Medicamentos',
-            color: '#F59E0B',
+            color: colors.warning,
             percent: `${medicamentosPercentual}%`,
           },
           {
             number: preEmbarqueCount,
             label: 'Pré-Embarque',
-            color: '#3B82F6',
+            color: colors.secondary,
             percent: '0%',
           },
           {
             number: refeicoesCount,
             label: 'Refeições',
-            color: '#10B981',
+            color: colors.primary,
             percent: '0%',
           },
           {
             number: certificadosCount,
             label: 'Certificados',
-            color: '#8B5CF6',
+            color: colors.secondary,
             percent: `${certificadosPercentual}%`,
           },
           {
             number: vacinasCount,
             label: 'Vacinação',
-            color: '#3B82F6',
+            color: colors.success,
             percent: `${vacinasPercentual}%`,
           },
           {
             number: atestadosCount,
             label: 'Atestados',
-            color: '#EF4444',
+            color: colors.danger,
             percent: `${atestadosPercentual}%`,
-          },
-          {
-            number: stats.totalExames,
-            label: 'Toxicológico',
-            color: '#8B5CF6',
-            percent: `${toxPercentual}%`,
-          },
-          {
-            number: employees.length,
-            label: 'Prontuários',
-            color: '#F59E0B',
-            percent: '100%',
           },
         ].map((item, idx) => (
           <div
             key={idx}
             style={styles.secondaryStatCard}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow =
-                '0 25px 50px rgba(15,23,42,0.08)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = `0 12px 30px rgba(0, 0, 0, 0.08)`;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow =
-                '0 15px 40px rgba(15,23,42,0.04)';
+              e.currentTarget.style.boxShadow = `0 8px 20px rgba(0, 0, 0, 0.04)`;
             }}
           >
             <div style={{ ...styles.secondaryStatNumber, color: item.color }}>
@@ -1015,512 +1122,313 @@ export default function DashboardModule({
         ))}
       </div>
 
-      {/* ===== GRID PRINCIPAL ===== */}
+      {/* ===== MAIN CONTENT GRID ===== */}
       <div style={styles.mainGrid}>
-        {/* PIRÂMIDE DE SAÚDE - 5 colunas */}
-        <div style={{ ...styles.card, gridColumn: 'span 5' }}>
+        {/* ===== PYRAMID CARD (8 cols) ===== */}
+        <div style={{ ...styles.card, gridColumn: 'span 8' }}>
           <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>
-              <i className="fas fa-chart-pie" style={{ color: '#10B981' }}></i>
-              Pirâmide de Saúde (IMC)
-            </h3>
+            <h2 style={styles.cardTitle}>📊 Pirâmide de Saúde (IMC)</h2>
             <span style={styles.cardBadge}>{totalAvaliados} avaliados</span>
           </div>
 
           {[
             {
-              nome: 'Obesidade Grave',
-              cor: '#EF4444',
-              icone: '🔴',
-              quantidade: nivel4,
+              name: 'Abaixo do peso',
+              imc: '< 18,5',
+              count: nivel1,
+              color: colors.secondary,
+              icon: '📉',
+            },
+            {
+              name: 'Saudável',
+              imc: '18,5 - 24,9',
+              count: nivel2,
+              color: colors.success,
+              icon: '✅',
+            },
+            {
+              name: 'Sobrepeso',
+              imc: '25 - 29,9',
+              count: nivel3,
+              color: colors.warning,
+              icon: '⚠️',
+            },
+            {
+              name: 'Obesidade Grave',
               imc: '≥ 35',
+              count: nivel4,
+              color: colors.danger,
+              icon: '🔴',
             },
-            {
-              nome: 'Obesidade',
-              cor: '#F59E0B',
-              icone: '🟠',
-              quantidade: nivel3,
-              imc: '30-34.9',
-            },
-            {
-              nome: 'Sobrepeso',
-              cor: '#3B82F6',
-              icone: '🔵',
-              quantidade: nivel2,
-              imc: '25-29.9',
-            },
-            {
-              nome: 'Saudável',
-              cor: '#10B981',
-              icone: '🟢',
-              quantidade: nivel1,
-              imc: '18.5-24.9',
-            },
-          ].map((nivel, idx) => {
-            const percentual =
-              totalAvaliados > 0
-                ? (nivel.quantidade / totalAvaliados) * 100
-                : 0;
-            return (
-              <div key={idx} style={styles.pyramidLevel}>
-                <div style={styles.pyramidHeader}>
-                  <div style={styles.pyramidName}>
-                    <span>{nivel.icone}</span>
-                    {nivel.nome}
-                    <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                      ({nivel.imc})
-                    </span>
-                  </div>
-                  <div style={{ ...styles.pyramidStats, color: nivel.cor }}>
-                    {nivel.quantidade}{' '}
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 400,
-                        color: '#6B7280',
-                      }}
-                    >
-                      ({percentual.toFixed(1)}%)
-                    </span>
-                  </div>
+          ].map((level, idx) => (
+            <div key={idx} style={styles.pyramidLevel}>
+              <div style={styles.pyramidHeader}>
+                <div style={styles.pyramidName}>
+                  <span>{level.icon}</span>
+                  <span>
+                    {level.name} ({level.imc})
+                  </span>
                 </div>
-                <div style={styles.pyramidBar}>
-                  <div style={styles.pyramidFill(percentual, nivel.cor)}></div>
+                <div style={{ ...styles.pyramidStats, color: level.color }}>
+                  {level.count} (
+                  {Math.round((level.count / totalAvaliados) * 100)}%)
                 </div>
               </div>
-            );
-          })}
+              <div style={styles.pyramidBar}>
+                <div
+                  style={styles.pyramidFill(
+                    (level.count / totalAvaliados) * 100,
+                    level.color
+                  )}
+                ></div>
+              </div>
+            </div>
+          ))}
+
+          <div
+            style={{
+              marginTop: '20px',
+              padding: '16px',
+              background: colors.primaryLight,
+              borderRadius: '16px',
+              fontSize: '13px',
+              color: colors.primary,
+              fontWeight: 600,
+            }}
+          >
+            ℹ️ Total de registros: {totalAvaliados} colaboradores avaliados
+          </div>
         </div>
 
-        {/* EXAMES TOXICOLÓGICOS - 4 colunas */}
+        {/* ===== TOXICOLOGICAL EXAMS CARD (4 cols) ===== */}
         <div style={{ ...styles.card, gridColumn: 'span 4' }}>
           <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>
-              <i className="fas fa-microscope" style={{ color: '#8B5CF6' }}></i>
-              Exames Toxicológicos
-            </h3>
-            <span style={styles.cardBadge}>{stats.totalExames} total</span>
+            <h2 style={styles.cardTitle}>🧪 Exames Toxicológicos</h2>
           </div>
 
           <div style={styles.toxGrid}>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Ativos</div>
-              <div style={{ ...styles.toxValue, color: '#10B981' }}>
-                {stats.ativos}
+            {[
+              { label: 'Ativos', value: stats.ativos, color: colors.success },
+              {
+                label: 'Vencidos',
+                value: stats.vencidos,
+                color: colors.danger,
+              },
+              {
+                label: 'Próx. Vencer',
+                value: stats.proximosVencer,
+                color: colors.warning,
+              },
+              {
+                label: 'Total',
+                value: stats.totalExames,
+                color: colors.secondary,
+              },
+            ].map((item, idx) => (
+              <div key={idx} style={styles.toxItem}>
+                <div style={styles.toxLabel}>{item.label}</div>
+                <div style={{ ...styles.toxValue, color: item.color }}>
+                  {item.value}
+                </div>
               </div>
-            </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Vencidos</div>
-              <div style={{ ...styles.toxValue, color: '#EF4444' }}>
-                {stats.vencidos}
-              </div>
-            </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Negativos</div>
-              <div style={{ ...styles.toxValue, color: '#10B981' }}>
-                {stats.resultadosNegativos}
-              </div>
-            </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Positivos</div>
-              <div style={{ ...styles.toxValue, color: '#EF4444' }}>
-                {stats.resultadosPositivos}
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div>
+          <div style={{ marginBottom: '16px' }}>
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: colors.gray,
+                marginBottom: '8px',
               }}
             >
-              <span
-                style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}
-              >
-                Conformidade Geral
-              </span>
-              <span
-                style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}
-              >
-                {stats.percentualConformidade}%
-              </span>
+              CONFORMIDADE GERAL
             </div>
             <div
               style={{
-                height: '8px',
-                background: '#f1f5f9',
-                borderRadius: '4px',
+                height: '24px',
+                background: colors.lightGray,
+                borderRadius: '12px',
                 overflow: 'hidden',
               }}
             >
               <div
                 style={{
-                  width: `${stats.percentualConformidade}%`,
                   height: '100%',
-                  background: '#8B5CF6',
-                  borderRadius: '4px',
+                  width: `${stats.percentualConformidade}%`,
+                  background: `linear-gradient(90deg, ${colors.primary}, ${colors.success})`,
                   transition: 'width 0.8s ease',
                 }}
-              />
+              ></div>
             </div>
-          </div>
-
-          {stats.proximosVencer > 0 && (
             <div
               style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'rgba(245,158,11,0.08)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: '#92400e',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: colors.dark,
+                marginTop: '8px',
               }}
             >
-              ⚠️ {stats.proximosVencer} exame(s) próximo(s) ao vencimento
+              {stats.percentualConformidade}%
             </div>
-          )}
-        </div>
-
-        {/* ATIVIDADES RECENTES - 3 colunas */}
-        <div style={{ ...styles.card, gridColumn: 'span 3' }}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>
-              <i className="fas fa-history" style={{ color: '#3B82F6' }}></i>
-              Atividades Recentes
-            </h3>
-            <span style={styles.cardBadge}>Hoje</span>
           </div>
 
-          <div style={styles.timeline}>
-            {ultimosExames.length === 0 && atestadosPendentes.length === 0 ? (
-              <p style={styles.emptyState}>Nenhuma atividade recente</p>
-            ) : (
-              <>
-                {ultimosExames.slice(0, 2).map((exame, idx) => (
-                  <div key={idx} style={styles.timelineItem}>
-                    <div
-                      style={{
-                        ...styles.timelineIcon,
-                        background: 'rgba(139,92,246,0.08)',
-                        color: '#8B5CF6',
-                      }}
-                    >
-                      <i className="fas fa-flask"></i>
-                    </div>
-                    <div style={styles.timelineContent}>
-                      <div style={styles.timelineName}>
-                        {exame.funcionarioNome || 'Colaborador'}
-                      </div>
-                      <div style={styles.timelineDesc}>
-                        Novo exame toxicológico
-                      </div>
-                    </div>
-                    <div style={styles.timelineTime}>hoje</div>
-                    <span
-                      style={styles.timelineBadge(
-                        exame.resultado === 'negativo'
-                          ? 'rgba(16,185,129,0.12)'
-                          : 'rgba(239,68,68,0.12)',
-                        exame.resultado === 'negativo' ? '#10B981' : '#EF4444'
-                      )}
-                    >
-                      {exame.resultado}
-                    </span>
-                  </div>
-                ))}
-                {atestadosPendentes.slice(0, 1).map((atestado) => (
-                  <div key={atestado.id} style={styles.timelineItem}>
-                    <div
-                      style={{
-                        ...styles.timelineIcon,
-                        background: 'rgba(239,68,68,0.08)',
-                        color: '#EF4444',
-                      }}
-                    >
-                      <i className="fas fa-file-medical"></i>
-                    </div>
-                    <div style={styles.timelineContent}>
-                      <div style={styles.timelineName}>
-                        {atestado.colaborador_nome}
-                      </div>
-                      <div style={styles.timelineDesc}>Atestado pendente</div>
-                    </div>
-                    <div style={styles.timelineTime}>hoje</div>
-                    <span
-                      style={styles.timelineBadge(
-                        'rgba(239,68,68,0.12)',
-                        '#EF4444'
-                      )}
-                    >
-                      Pendente
-                    </span>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ===== AÇÕES RÁPIDAS ===== */}
-      <div style={{ ...styles.card, marginBottom: '32px' }}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>
-            <i className="fas fa-bolt" style={{ color: '#F59E0B' }}></i>
-            Ações Rápidas
-          </h3>
-        </div>
-        <div style={styles.actionsGrid}>
-          {[
-            {
-              icon: 'fa-weight-scale',
-              label: 'Novo IMC',
-              color: '#10B981',
-              bg: 'rgba(16,185,129,0.05)',
-            },
-            {
-              icon: 'fa-heartbeat',
-              label: 'Nova Pressão',
-              color: '#3B82F6',
-              bg: 'rgba(59,130,246,0.05)',
-            },
-            {
-              icon: 'fa-flask',
-              label: 'Novo Exame',
-              color: '#8B5CF6',
-              bg: 'rgba(139,92,246,0.05)',
-            },
-            {
-              icon: 'fa-file-alt',
-              label: 'Relatórios',
-              color: '#F59E0B',
-              bg: 'rgba(245,158,11,0.05)',
-            },
-            {
-              icon: 'fa-certificate',
-              label: 'Certificados',
-              color: '#10B981',
-              bg: 'rgba(16,185,129,0.05)',
-            },
-            {
-              icon: 'fa-file-medical',
-              label: 'Atestados',
-              color: '#EF4444',
-              bg: 'rgba(239,68,68,0.05)',
-            },
-          ].map((action, idx) => (
-            <button
-              key={idx}
-              style={styles.actionButton(action.color, action.bg)}
-              onClick={() => handleQuickAction(action.label)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform =
-                  'translateY(-4px) scale(1.01)';
-                e.currentTarget.style.boxShadow =
-                  '0 25px 50px rgba(15,23,42,0.08)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow =
-                  '0 15px 40px rgba(15,23,42,0.04)';
-              }}
-            >
-              <i className={`fas ${action.icon}`} style={styles.actionIcon}></i>
-              {action.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ===== RESUMO DOS MÓDULOS + VISÃO EPIDEMIOLÓGICA ===== */}
-      <div style={styles.mainGrid}>
-        {/* RESUMO DOS MÓDULOS - 6 colunas */}
-        <div style={{ ...styles.card, gridColumn: 'span 6' }}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>
-              <i className="fas fa-th-list" style={{ color: '#6B7280' }}></i>
-              Resumo dos Módulos
-            </h3>
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '12px',
-            }}
-          >
+          <div style={styles.toxGrid}>
             {[
               {
-                number: employees.length,
-                label: 'Colaboradores',
-                color: '#3B82F6',
+                label: 'Negativos',
+                value: stats.resultadosNegativos,
+                color: colors.success,
               },
               {
-                number: preMerCount,
-                label: 'Pré-mergulho',
-                color: '#8B5CF6',
+                label: 'Positivos',
+                value: stats.resultadosPositivos,
+                color: colors.danger,
               },
               {
-                number: registrosMesAtual || totalColaboradoresIMC,
-                label: 'Registros IMC',
-                color: '#10B981',
-              },
-              {
-                number: bloodPressureRecords.length,
-                label: 'Pressão Arterial',
-                color: '#EF4444',
-              },
-              {
-                number: medicamentosCount,
-                label: 'Medicamentos',
-                color: '#F59E0B',
-              },
-              {
-                number: preEmbarqueCount,
-                label: 'Pré-Embarque',
-                color: '#3B82F6',
-              },
-              {
-                number: refeicoesCount,
-                label: 'Refeições',
-                color: '#10B981',
-              },
-              {
-                number: certificadosCount,
-                label: 'Certificados',
-                color: '#8B5CF6',
-              },
-              {
-                number: vacinasCount,
-                label: 'Vacinação',
-                color: '#3B82F6',
-              },
-              {
-                number: atestadosCount,
-                label: 'Atestados',
-                color: '#EF4444',
-              },
-              {
-                number: stats.totalExames,
-                label: 'Toxicológico',
-                color: '#8B5CF6',
-              },
-              {
-                number: employees.length,
-                label: 'Prontuários',
-                color: '#F59E0B',
+                label: 'Inconclusivos',
+                value: stats.resultadosInconclusivos,
+                color: colors.warning,
               },
             ].map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  padding: '12px',
-                  border: '1px solid #eef2f7',
-                  textAlign: 'center' as const,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: 800,
-                    color: item.color,
-                  }}
-                >
-                  {item.number}
-                </div>
-                <div
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    color: '#6B7280',
-                    textTransform: 'uppercase' as const,
-                  }}
-                >
-                  {item.label}
+              <div key={idx} style={styles.toxItem}>
+                <div style={styles.toxLabel}>{item.label}</div>
+                <div style={{ ...styles.toxValue, color: item.color }}>
+                  {item.value}
                 </div>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* VISÃO EPIDEMIOLÓGICA - 6 colunas */}
+      {/* ===== RECENT ACTIVITIES & EPIDEMIOLOGICAL VIEW ===== */}
+      <div style={styles.mainGrid}>
+        {/* ===== RECENT ACTIVITIES (6 cols) ===== */}
         <div style={{ ...styles.card, gridColumn: 'span 6' }}>
           <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>
-              <i
-                className="fas fa-notes-medical"
-                style={{ color: '#F59E0B' }}
-              ></i>
-              Visão Epidemiológica
-            </h3>
+            <h2 style={styles.cardTitle}>⏱️ Atividades Recentes</h2>
           </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '12px',
-              marginBottom: '16px',
-            }}
-          >
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Colaboradores</div>
-              <div style={styles.toxValue}>{employees.length}</div>
+
+          {atestadosPendentes.length > 0 ? (
+            <div style={styles.timeline}>
+              {atestadosPendentes.map((item, idx) => (
+                <div key={idx} style={styles.timelineItem}>
+                  <div
+                    style={{
+                      ...styles.timelineIcon,
+                      background: '#FFF0E6',
+                      color: colors.accent,
+                    }}
+                  >
+                    📄
+                  </div>
+                  <div style={styles.timelineContent}>
+                    <div style={styles.timelineName}>
+                      {item.colaborador_nome}
+                    </div>
+                    <div style={styles.timelineDesc}>Atestado pendente</div>
+                  </div>
+                  <div
+                    style={{
+                      ...styles.timelineBadge('#FFF0E6', colors.accent),
+                    }}
+                  >
+                    Pendente
+                  </div>
+                </div>
+              ))}
             </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Com IMC Alto</div>
-              <div style={{ ...styles.toxValue, color: '#EF4444' }}>
-                {nivel2 + nivel3 + nivel4}
-              </div>
-            </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Pressão Crítica</div>
-              <div style={{ ...styles.toxValue, color: '#EF4444' }}>
-                {
-                  bloodPressureRecords.filter(
-                    (r) => r.systolic >= 140 || r.diastolic >= 90
-                  ).length
-                }
-              </div>
-            </div>
-            <div style={styles.toxItem}>
-              <div style={styles.toxLabel}>Exames Vencidos</div>
-              <div style={{ ...styles.toxValue, color: '#EF4444' }}>
-                {stats.vencidos}
-              </div>
-            </div>
+          ) : (
+            <div style={styles.emptyState}>✅ Nenhuma atividade pendente</div>
+          )}
+        </div>
+
+        {/* ===== EPIDEMIOLOGICAL VIEW (6 cols) ===== */}
+        <div style={{ ...styles.card, gridColumn: 'span 6' }}>
+          <div style={styles.cardHeader}>
+            <h2 style={styles.cardTitle}>👁️ Visão Epidemiológica</h2>
           </div>
-          <div
-            style={{
-              padding: '12px 16px',
-              background: 'rgba(245,158,11,0.05)',
-              borderRadius: '12px',
-              border: '1px solid rgba(245,158,11,0.15)',
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontSize: '12px',
-                color: '#92400e',
-                textAlign: 'center',
+
+          <div style={styles.toxGrid}>
+            {[
+              {
+                label: 'Total de Casos',
+                value: stats.totalExames,
+                color: colors.secondary,
+              },
+              {
+                label: 'Taxa de Absenteísmo',
+                value: '0%',
+                color: colors.success,
+              },
+            ].map((item, idx) => (
+              <div key={idx} style={styles.toxItem}>
+                <div style={styles.toxLabel}>{item.label}</div>
+                <div style={{ ...styles.toxValue, color: item.color }}>
+                  {item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== QUICK ACTIONS ===== */}
+      <div
+        style={{
+          marginTop: '40px',
+          padding: '32px',
+          background: colors.white,
+          borderRadius: '28px',
+          border: `1px solid ${colors.lightGray}`,
+          boxShadow: `0 10px 30px rgba(0, 0, 0, 0.05)`,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: '18px',
+            fontWeight: 700,
+            color: colors.dark,
+            marginBottom: '24px',
+            margin: 0,
+            marginBottom: '24px',
+          }}
+        >
+          ⚡ Ações Rápidas
+        </h2>
+
+        <div style={styles.actionsGrid}>
+          {[
+            { label: 'Novo IMC', icon: '⚖️', color: colors.primary },
+            { label: 'Nova Pressão', icon: '❤️', color: colors.secondary },
+            { label: 'Novo Exame', icon: '🧪', color: colors.accent },
+            { label: 'Certificados', icon: '📜', color: colors.secondary },
+            { label: 'Atestados', icon: '📋', color: colors.danger },
+            { label: 'Vacinação', icon: '💉', color: colors.success },
+            { label: 'Pré-Mergulho', icon: '🤿', color: colors.secondary },
+            { label: 'Colaboradores', icon: '👥', color: colors.primary },
+          ].map((action, idx) => (
+            <button
+              key={idx}
+              style={styles.actionButton(action.color, `${action.color}08`)}
+              onClick={() => handleQuickAction(action.label)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `${action.color}15`;
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = `0 12px 30px ${action.color}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = `${action.color}08`;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = `0 8px 20px rgba(0, 0, 0, 0.04)`;
               }}
             >
-              <i
-                className="fas fa-info-circle"
-                style={{ marginRight: '8px' }}
-              ></i>
-              {stats.vencidos > 0 || nivel2 + nivel3 + nivel4 > 0
-                ? `⚠️ ${stats.vencidos} exames vencidos e ${
-                    nivel2 + nivel3 + nivel4
-                  } colaboradores com sobrepeso/obesidade`
-                : '✅ Todos os indicadores estão dentro dos parâmetros esperados.'}
-            </p>
-          </div>
+              <div style={styles.actionIcon}>{action.icon}</div>
+              <div>{action.label}</div>
+            </button>
+          ))}
         </div>
       </div>
     </div>
