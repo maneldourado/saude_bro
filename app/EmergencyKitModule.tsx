@@ -126,7 +126,7 @@ export default function MedicationControlModule({
   const [formCategory, setFormCategory] = useState('medicamento');
   const [formQuantity, setFormQuantity] = useState(1);
   const [formExpiryDate, setFormExpiryDate] = useState('');
-  const [formLocation, setFormLocation] = useState('');
+  const [formLocation, setFormLocation] = useState('BASMAC');
   const [formBatch, setFormBatch] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [isExistingMedication, setIsExistingMedication] = useState(false);
@@ -264,7 +264,7 @@ export default function MedicationControlModule({
   const clearSelection = () => {
     setFormName('');
     setFormCategory('medicamento');
-    setFormLocation('');
+    setFormLocation('BASMAC');
     setFormBatch('');
     setFormExpiryDate('');
     setFormQuantity(1);
@@ -355,7 +355,7 @@ export default function MedicationControlModule({
     setFormCategory('medicamento');
     setFormQuantity(1);
     setFormExpiryDate('');
-    setFormLocation('');
+    setFormLocation('BASMAC'); 
     setFormBatch('');
     setFormNotes('');
     setIsExistingMedication(false);
