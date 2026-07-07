@@ -43,6 +43,24 @@ export default function IMCModule({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchColaborador, setSearchColaborador] = useState('');
+  const [periodoFiltro, setPeriodoFiltro] = useState<'mensal' | 'trimestral'>(
+    'mensal'
+  );
+  const [showInaptosTable, setShowInaptosTable] = useState(false);
+
+  // Estados para período personalizado
+  const [dataInicio, setDataInicio] = useState<string>(() => {
+    const now = new Date();
+    const primeiroDia = new Date(now.getFullYear(), now.getMonth(), 1);
+    return primeiroDia.toISOString().split('T')[0];
+  });
+  const [dataFim, setDataFim] = useState<string>(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  });
+  const [periodoAtivo, setPeriodoAtivo] = useState<'todos' | 'personalizado'>(
+    'todos'
+  );
 
   const [manualRecord, setManualRecord] = useState({
     colaboradorId: '',
@@ -63,6 +81,92 @@ export default function IMCModule({
     circunferencia: 6,
     empresa: 8,
   });
+
+  // ==================== FUNÇÕES DE CONVERSÃO DE DATA ====================
+
+  // Converte número serial do Excel (ex: 44932) para Date
+  const excelSerialToDate = (serial: number): Date | null => {
+    if (typeof serial !== 'number' || isNaN(serial) || serial <= 0) return null;
+    // Excel considera 1º de janeiro de 1900 como número 1
+    // Mas tem um bug: considera 1900 como ano bissexto
+    // Para datas após 28/02/1900, subtraímos 1 dia
+    const epoch = new Date(1899, 11, 30); // 30/12/1899
+    const days = serial;
+    const date = new Date(epoch.getTime() + days * 86400000);
+    if (isNaN(date.getTime())) return null;
+    return date;
+  };
+
+  // Converte qualquer formato de data para Date
+  const converterData = (dataRaw: any): Date | null => {
+    if (!dataRaw) return null;
+
+    // Se já for Date válido
+    if (dataRaw instanceof Date && !isNaN(dataRaw.getTime())) {
+      return dataRaw;
+    }
+
+    // Se for número (serial do Excel ou timestamp)
+    if (typeof dataRaw === 'number') {
+      // Timestamp (milissegundos desde 1970)
+      if (dataRaw > 1000000000000) {
+        const d = new Date(dataRaw);
+        if (!isNaN(d.getTime())) return d;
+      }
+      // Serial do Excel
+      if (dataRaw > 1 && dataRaw < 100000) {
+        const d = excelSerialToDate(dataRaw);
+        if (d && !isNaN(d.getTime())) return d;
+      }
+    }
+
+    // Se for string (pode ser "44932" - serial como texto)
+    if (typeof dataRaw === 'string') {
+      // Tenta converter para número (serial do Excel como string)
+      const num = parseFloat(dataRaw);
+      if (!isNaN(num) && num > 1 && num < 100000) {
+        const d = excelSerialToDate(num);
+        if (d && !isNaN(d.getTime())) return d;
+      }
+
+      // Tenta ISO (yyyy-mm-dd)
+      let d = new Date(dataRaw);
+      if (!isNaN(d.getTime())) return d;
+
+      // Tenta dd/mm/yyyy
+      const parts = dataRaw.split('/');
+      if (parts.length === 3) {
+        const dia = parseInt(parts[0], 10);
+        const mes = parseInt(parts[1], 10) - 1;
+        const ano = parseInt(parts[2], 10);
+        if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
+          d = new Date(ano, mes, dia);
+          if (!isNaN(d.getTime())) return d;
+        }
+      }
+
+      // Tenta yyyy-mm-dd
+      const parts2 = dataRaw.split('-');
+      if (parts2.length === 3) {
+        const ano = parseInt(parts2[0], 10);
+        const mes = parseInt(parts2[1], 10) - 1;
+        const dia = parseInt(parts2[2], 10);
+        if (!isNaN(ano) && !isNaN(mes) && !isNaN(dia)) {
+          d = new Date(ano, mes, dia);
+          if (!isNaN(d.getTime())) return d;
+        }
+      }
+
+      return null;
+    }
+
+    // Se for objeto com .v (formato do XLSX)
+    if (dataRaw && typeof dataRaw === 'object' && dataRaw.v !== undefined) {
+      return converterData(dataRaw.v);
+    }
+
+    return null;
+  };
 
   // ==================== CARREGAR DADOS ====================
   const loadFromSupabase = async () => {
@@ -116,7 +220,9 @@ export default function IMCModule({
           const pesoAnterior = index > 0 ? sorted[index - 1].peso : record.peso;
           const variacaoPeso = record.peso - pesoAnterior;
 
-          const bmi = calculateBMI(record.peso, record.altura);
+          const alturaM =
+            record.altura > 3 ? record.altura / 100 : record.altura;
+          const bmi = record.peso / (alturaM * alturaM);
           const statusImc = getBMIClassification(bmi);
 
           return {
@@ -194,6 +300,199 @@ export default function IMCModule({
     }
   }, [searchColaborador, colaboradores]);
 
+  // ==================== CÁLCULO DE INAPTOS ====================
+  const calcularInaptos = useMemo(() => {
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+
+    // Filtra por ano e período personalizado
+    let registrosBase = employees.filter(
+      (e) =>
+        e.ano === selectedYear &&
+        e.weight > 0 &&
+        e.height > 0 &&
+        e.circunferencia > 0
+    );
+
+    // Aplica filtro de período personalizado se estiver ativo
+    if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
+      const inicio = new Date(dataInicio);
+      const fim = new Date(dataFim);
+      fim.setHours(23, 59, 59, 999);
+
+      registrosBase = registrosBase.filter((e) => {
+        const dataRegistro = converterData(e.dataRaw);
+        if (!dataRegistro) return false;
+        return dataRegistro >= inicio && dataRegistro <= fim;
+      });
+    }
+
+    const registrosAno = registrosBase;
+
+    const porMes: Record<string, any> = {};
+    const porTrimestre: Record<string, any> = {};
+
+    meses.forEach((mes, idx) => {
+      const registrosMes = registrosAno.filter((e) => e.mes === idx);
+
+      let inaptosIMC_Circ = 0;
+      let inaptosCirc = 0;
+      let inaptosIMC = 0;
+      let detalhes: any[] = [];
+      let totalRegistros = registrosMes.length;
+
+      registrosMes.forEach((e) => {
+        const alturaM = e.height > 3 ? e.height / 100 : e.height;
+        const imc = e.weight / (alturaM * alturaM);
+        const circunferencia = e.circunferencia || 0;
+        const relacaoCircAltura = alturaM > 0 ? circunferencia / alturaM : 0;
+
+        const isInaptoIMC_Circ = imc >= 30 && circunferencia >= 102;
+        const isInaptoCirc = circunferencia >= 102;
+        const isInaptoIMC = imc >= 30;
+
+        if (isInaptoIMC_Circ || isInaptoCirc || isInaptoIMC) {
+          detalhes.push({
+            codigo: e.codigo,
+            peso: e.weight,
+            altura: e.height,
+            circunferencia: circunferencia,
+            imc: imc,
+            relacaoCircAltura: relacaoCircAltura,
+            data: e.dataStr,
+            empresa: e.company,
+            motivo: isInaptoIMC_Circ
+              ? 'IMC ≥ 30 + Circ ≥ 102'
+              : isInaptoCirc
+              ? 'Circ ≥ 102'
+              : 'IMC ≥ 30',
+          });
+        }
+
+        if (isInaptoIMC_Circ) inaptosIMC_Circ++;
+        if (isInaptoCirc) inaptosCirc++;
+        if (isInaptoIMC) inaptosIMC++;
+      });
+
+      porMes[mes] = {
+        total: totalRegistros,
+        inaptosIMC_Circ: inaptosIMC_Circ,
+        inaptosCirc: inaptosCirc,
+        inaptosIMC: inaptosIMC,
+        detalhes: detalhes,
+        percentual:
+          totalRegistros > 0
+            ? ((inaptosIMC_Circ / totalRegistros) * 100).toFixed(1)
+            : 0,
+      };
+    });
+
+    const trimestres = [
+      { nome: 'Q1', meses: ['Jan', 'Fev', 'Mar'] },
+      { nome: 'Q2', meses: ['Abr', 'Mai', 'Jun'] },
+      { nome: 'Q3', meses: ['Jul', 'Ago', 'Set'] },
+      { nome: 'Q4', meses: ['Out', 'Nov', 'Dez'] },
+    ];
+
+    trimestres.forEach((trim) => {
+      let total = 0,
+        inaptosIMC_Circ = 0,
+        inaptosCirc = 0,
+        inaptosIMC = 0;
+      let detalhes: any[] = [];
+
+      trim.meses.forEach((mes) => {
+        const data = porMes[mes];
+        if (data) {
+          total += data.total;
+          inaptosIMC_Circ += data.inaptosIMC_Circ;
+          inaptosCirc += data.inaptosCirc;
+          inaptosIMC += data.inaptosIMC;
+          detalhes = [...detalhes, ...data.detalhes];
+        }
+      });
+
+      porTrimestre[trim.nome] = {
+        total: total,
+        inaptosIMC_Circ: inaptosIMC_Circ,
+        inaptosCirc: inaptosCirc,
+        inaptosIMC: inaptosIMC,
+        detalhes: detalhes,
+        percentual:
+          total > 0 ? ((inaptosIMC_Circ / total) * 100).toFixed(1) : 0,
+      };
+    });
+
+    const totalGeral = registrosAno.length;
+    const totalInaptosIMC_Circ = registrosAno.filter((e) => {
+      const alturaM = e.height > 3 ? e.height / 100 : e.height;
+      const imc = e.weight / (alturaM * alturaM);
+      return imc >= 30 && e.circunferencia >= 102;
+    }).length;
+    const totalInaptosCirc = registrosAno.filter(
+      (e) => e.circunferencia >= 102
+    ).length;
+    const totalInaptosIMC = registrosAno.filter((e) => {
+      const alturaM = e.height > 3 ? e.height / 100 : e.height;
+      const imc = e.weight / (alturaM * alturaM);
+      return imc >= 30;
+    }).length;
+
+    return {
+      porMes,
+      porTrimestre,
+      totalGeral,
+      totalInaptosIMC_Circ,
+      totalInaptosCirc,
+      totalInaptosIMC,
+      todosInaptos: registrosAno
+        .filter((e) => {
+          const alturaM = e.height > 3 ? e.height / 100 : e.height;
+          const imc = e.weight / (alturaM * alturaM);
+          return (
+            (imc >= 30 && e.circunferencia >= 102) ||
+            e.circunferencia >= 102 ||
+            imc >= 30
+          );
+        })
+        .map((e) => {
+          const alturaM = e.height > 3 ? e.height / 100 : e.height;
+          const imc = e.weight / (alturaM * alturaM);
+          const isInaptoIMC_Circ = imc >= 30 && e.circunferencia >= 102;
+          const isInaptoCirc = e.circunferencia >= 102;
+          const isInaptoIMC = imc >= 30;
+          return {
+            codigo: e.codigo,
+            peso: e.weight,
+            altura: e.height,
+            circunferencia: e.circunferencia,
+            imc: imc,
+            relacaoCircAltura: alturaM > 0 ? e.circunferencia / alturaM : 0,
+            data: e.dataStr,
+            empresa: e.company,
+            mes: e.mes,
+            motivo: isInaptoIMC_Circ
+              ? 'IMC ≥ 30 + Circ ≥ 102'
+              : isInaptoCirc
+              ? 'Circ ≥ 102'
+              : 'IMC ≥ 30',
+          };
+        }),
+    };
+  }, [employees, selectedYear, dataInicio, dataFim, periodoAtivo]);
+
   // ==================== FUNÇÕES DE IMPORTAÇÃO ====================
   const toSafeString = (value: any): string => {
     if (value === undefined || value === null) return '';
@@ -224,22 +523,12 @@ export default function IMCModule({
   ): { dataStr: string; ano: number; mes: number; mesNome: string } | null => {
     if (!value) return null;
     let data: Date | null = null;
-    if (typeof value === 'number') {
-      try {
-        const dateCode = XLSX.SSF.parse_date_code(value);
-        if (dateCode) data = new Date(dateCode.y, dateCode.m - 1, dateCode.d);
-      } catch (e) {}
-    }
-    if (typeof value === 'string' && !data) {
-      data = new Date(value);
-      if (isNaN(data.getTime())) data = null;
-    }
-    if (value instanceof Date && !data) data = value;
-    if (!data && value && typeof value === 'object' && value.v) {
-      data = new Date(value.v);
-      if (isNaN(data.getTime())) data = null;
-    }
+
+    // Tenta converter usando a função robusta
+    data = converterData(value);
+
     if (!data || isNaN(data.getTime())) return null;
+
     const meses = [
       'Jan',
       'Fev',
@@ -506,40 +795,94 @@ export default function IMCModule({
     'Dez',
   ];
 
-  const dadosMesSelecionado = useMemo(() => {
-    if (selectedMonth === null) return [];
-    return employees.filter(
-      (e) => e.ano === selectedYear && e.mes === selectedMonth
-    );
-  }, [employees, selectedYear, selectedMonth]);
+  // Aplica o filtro de período personalizado nos dados
+  const dadosComFiltroPeriodo = useMemo(() => {
+    let dados = employees;
 
-  const dadosMesRecente = useMemo(() => {
-    if (employees.length === 0) return [];
-    const latestRecord = employees.reduce((latest, current) => {
-      if (current.ano > latest.ano) return current;
-      if (current.ano === latest.ano && current.mes > latest.mes)
-        return current;
-      return latest;
-    });
-    return employees.filter(
-      (e) => e.ano === latestRecord.ano && e.mes === latestRecord.mes
-    );
-  }, [employees]);
+    // Filtra por ano
+    dados = dados.filter((e) => e.ano === selectedYear);
 
-  const dadosExibir =
-    selectedMonth !== null ? dadosMesSelecionado : dadosMesRecente;
+    // Filtra por mês se selecionado
+    if (selectedMonth !== null) {
+      dados = dados.filter((e) => e.mes === selectedMonth);
+    }
 
-  const getPeso = (e: any) => e?.weight || 0;
+    // Aplica filtro de período personalizado se estiver ativo
+    if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
+      const inicio = new Date(dataInicio);
+      const fim = new Date(dataFim);
+      fim.setHours(23, 59, 59, 999);
+
+      dados = dados.filter((e) => {
+        // Tenta converter a data de várias formas
+        let dataRegistro: Date | null = null;
+
+        // 1. Usa dataRaw (pode ser número, string, etc.)
+        if (e.dataRaw !== undefined && e.dataRaw !== null) {
+          dataRegistro = converterData(e.dataRaw);
+        }
+
+        // 2. Se falhou, tenta usar dataStr (formato dd/mm/yyyy)
+        if (!dataRegistro && e.dataStr) {
+          const parts = e.dataStr.split('/');
+          if (parts.length === 3) {
+            const dia = parseInt(parts[0], 10);
+            const mes = parseInt(parts[1], 10) - 1;
+            const ano = parseInt(parts[2], 10);
+            if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
+              dataRegistro = new Date(ano, mes, dia);
+            }
+          }
+        }
+
+        // 3. Se ainda falhou, tenta construir a partir do ano e mês
+        if (!dataRegistro && e.ano !== undefined && e.mes !== undefined) {
+          dataRegistro = new Date(e.ano, e.mes, 1);
+        }
+
+        if (!dataRegistro || isNaN(dataRegistro.getTime())) {
+          return false;
+        }
+
+        return dataRegistro >= inicio && dataRegistro <= fim;
+      });
+    }
+
+    return dados;
+  }, [
+    employees,
+    selectedYear,
+    selectedMonth,
+    dataInicio,
+    dataFim,
+    periodoAtivo,
+  ]);
+
+  // ==================== FUNÇÕES AUXILIARES ====================
+  const getPeso = (e: any) => {
+    if (!e) return 0;
+    return e?.weight || 0;
+  };
+
   const getAlturaM = (e: any) => {
+    if (!e) return 0;
     const a = e?.height || 0;
     return a > 3 ? a / 100 : a;
   };
+
   const getIMC = (e: any) => {
-    const p = getPeso(e),
-      a = getAlturaM(e);
-    return p && a ? calculateBMI(p, a) : 0;
+    if (!e) return 0;
+    const p = getPeso(e);
+    const a = getAlturaM(e);
+    if (!p || !a) return 0;
+    return calculateBMI(p, a);
   };
-  const temDados = (e: any) => getIMC(e) > 0;
+
+  const temDados = (e: any) => {
+    if (!e) return false;
+    const imc = getIMC(e);
+    return imc > 0 && !isNaN(imc);
+  };
 
   // ==================== STATUS COUNTS ====================
   const allowedStatuses = [
@@ -551,28 +894,46 @@ export default function IMCModule({
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    dadosExibir.forEach((e) => {
-      if (!temDados(e)) return;
-      const status = e.statusImc || getBMIClassification(getIMC(e));
-      if (!allowedStatuses.includes(status)) return;
-      counts[status] = (counts[status] || 0) + 1;
+
+    if (!dadosComFiltroPeriodo || dadosComFiltroPeriodo.length === 0) {
+      return counts;
+    }
+
+    dadosComFiltroPeriodo.forEach((e) => {
+      try {
+        if (!e) return;
+        if (!temDados(e)) return;
+
+        const imc = getIMC(e);
+        if (!imc || isNaN(imc)) return;
+
+        const status = e.statusImc || getBMIClassification(imc);
+        if (!status) return;
+
+        if (!allowedStatuses.includes(status)) return;
+
+        counts[status] = (counts[status] || 0) + 1;
+      } catch (error) {
+        console.error('Erro ao processar registro:', e, error);
+      }
     });
+
     return counts;
-  }, [dadosExibir]);
+  }, [dadosComFiltroPeriodo]);
 
   // ==================== VARIACAO PESO ====================
   const variacaoPeso = useMemo(() => {
     let diminuiu = 0,
       manteve = 0,
       aumentou = 0;
-    dadosExibir.forEach((e) => {
+    dadosComFiltroPeriodo.forEach((e) => {
       if (!temDados(e) || e.variacaoPeso === undefined) return;
       if (e.variacaoPeso < -0.5) diminuiu++;
       else if (e.variacaoPeso > 0.5) aumentou++;
       else manteve++;
     });
     return { diminuiu, manteve, aumentou };
-  }, [dadosExibir]);
+  }, [dadosComFiltroPeriodo]);
 
   // ==================== TOTAL POR MES ====================
   const totalPorMes = useMemo(() => {
@@ -585,14 +946,6 @@ export default function IMCModule({
 
   const maxTotal = Math.max(...totalPorMes, 1);
 
-  const handleMonthClick = (monthIndex: number) => {
-    if (selectedMonth === monthIndex) {
-      setSelectedMonth(null);
-    } else {
-      setSelectedMonth(monthIndex);
-    }
-  };
-
   // ==================== EVOLUÇÃO ANUAL POR STATUS ====================
   const evolucaoPorStatus = useMemo(() => {
     const statusList = [
@@ -602,7 +955,6 @@ export default function IMCModule({
       'Obesidade grau II',
     ];
     const result: Record<string, number[]> = {};
-
     statusList.forEach((status) => {
       result[status] = meses.map((_, i) => {
         return employees.filter(
@@ -614,49 +966,82 @@ export default function IMCModule({
         ).length;
       });
     });
-
     const statusColors: Record<string, string> = {
       'Peso normal': '#5B9BD5',
       Sobrepeso: '#F4B942',
       'Obesidade grau I': '#ED7D31',
       'Obesidade grau II': '#C0504D',
     };
-
     const maxCount = Math.max(...Object.values(result).flat(), 1);
-
     return { data: result, colors: statusColors, maxCount };
   }, [employees, selectedYear]);
 
-  // ==================== STATUS POR MES/ANO ====================
-  const statusPorMesAno = useMemo(() => {
-    const statusMap = new Map();
-    dadosExibir.forEach((e) => {
-      if (!temDados(e)) return;
+  // ==================== MÉDIA DO PERÍODO SELECIONADO ====================
+  const mediaPeriodo = useMemo(() => {
+    if (!dataInicio || !dataFim) return null;
+
+    const inicio = new Date(dataInicio);
+    const fim = new Date(dataFim);
+    fim.setHours(23, 59, 59, 999);
+
+    const registrosPeriodo = employees.filter((e) => {
+      if (!e.dataRaw) return false;
+      const dataRegistro = converterData(e.dataRaw);
+      return (
+        dataRegistro &&
+        dataRegistro >= inicio &&
+        dataRegistro <= fim &&
+        temDados(e)
+      );
+    });
+
+    if (registrosPeriodo.length === 0) return null;
+
+    const totalImc = registrosPeriodo.reduce((acc, e) => acc + getIMC(e), 0);
+    const mediaImc = totalImc / registrosPeriodo.length;
+
+    const totalCirc = registrosPeriodo.reduce(
+      (acc, e) => acc + (e.circunferencia || 0),
+      0
+    );
+    const mediaCirc = totalCirc / registrosPeriodo.length;
+
+    const statusCount: Record<string, number> = {};
+    registrosPeriodo.forEach((e) => {
       const status = e.statusImc || getBMIClassification(getIMC(e));
-      const key = `${e.ano}-${e.mes}-${status}`;
-      if (!statusMap.has(key)) {
-        statusMap.set(key, { ano: e.ano, mes: e.mes, status, count: 0 });
-      }
-      statusMap.get(key).count++;
+      statusCount[status] = (statusCount[status] || 0) + 1;
     });
+    const statusMaisFreq =
+      Object.entries(statusCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
-    const mesTotal = new Map();
-    statusMap.forEach((value) => {
-      const key = `${value.ano}-${value.mes}`;
-      if (!mesTotal.has(key)) {
-        mesTotal.set(key, 0);
-      }
-      mesTotal.set(key, mesTotal.get(key) + value.count);
-    });
+    const formatDate = (date: Date) => {
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    };
 
-    const sorted = Array.from(statusMap.values()).sort((a, b) => {
-      if (a.ano !== b.ano) return b.ano - a.ano;
-      if (a.mes !== b.mes) return b.mes - a.mes;
-      return a.status.localeCompare(b.status);
-    });
+    return {
+      mediaImc,
+      mediaCirc,
+      statusMaisFreq,
+      periodoInicio: formatDate(inicio),
+      periodoFim: formatDate(fim),
+      totalRegistros: registrosPeriodo.length,
+    };
+  }, [employees, dataInicio, dataFim]);
 
-    return { data: sorted, mesTotal };
-  }, [dadosExibir]);
+  // ==================== HANDLE MONTH CLICK ====================
+  const handleMonthClick = (monthIndex: number) => {
+    if (selectedMonth === monthIndex) {
+      setSelectedMonth(null);
+    } else {
+      setSelectedMonth(monthIndex);
+    }
+  };
+
+  // ==================== DADOS INAPTOS ====================
+  const inaptosData = calcularInaptos;
 
   // ==================== MODAIS ====================
   const MappingModal = () => {
@@ -1232,6 +1617,8 @@ export default function IMCModule({
     );
   }
 
+  const inaptos = inaptosData;
+
   return (
     <div style={styles.imcContainer}>
       <MappingModal />
@@ -1277,7 +1664,7 @@ export default function IMCModule({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '32px',
+          marginBottom: '24px',
           flexWrap: 'wrap',
           gap: '16px',
         }}
@@ -1298,7 +1685,14 @@ export default function IMCModule({
             CONTROLE DE IMC
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
           <button
             onClick={() => setShowManualModal(true)}
             style={{
@@ -1373,10 +1767,770 @@ export default function IMCModule({
                 </option>
               ))}
           </select>
+
+          {/* SELEÇÃO DE PERÍODO COM BOTÃO APLICAR */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: textSecondary,
+              }}
+            >
+              De:
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '13px',
+                background: 'white',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            />
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: textSecondary,
+              }}
+            >
+              Até:
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '13px',
+                background: 'white',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => {
+                setPeriodoAtivo(
+                  periodoAtivo === 'todos' ? 'personalizado' : 'todos'
+                );
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background:
+                  periodoAtivo === 'personalizado' ? '#EF4444' : '#10B981',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {periodoAtivo === 'todos' ? 'Aplicar Filtro' : 'Remover Filtro'}
+            </button>
+          </div>
+          {periodoAtivo === 'personalizado' && (
+            <span
+              style={{
+                background: '#EF444420',
+                color: '#EF4444',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              <i className="fas fa-filter" style={{ marginRight: '4px' }}></i>
+              Filtro: {new Date(dataInicio).toLocaleDateString('pt-BR')} -{' '}
+              {new Date(dataFim).toLocaleDateString('pt-BR')}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* ===== CARDS SUPERIORES ===== */}
+      {/* ===== CARDS DE INAPTOS ===== */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '16px',
+          marginBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '20px',
+            border: `1px solid ${cardBorder}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+          >
+            <i
+              className="fas fa-users"
+              style={{ marginRight: '6px', color: accentColor }}
+            ></i>
+            Total Avaliados
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              color: textPrimary,
+              marginTop: '8px',
+            }}
+          >
+            {inaptos.totalGeral}
+          </div>
+        </div>
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '20px',
+            border: `1px solid ${cardBorder}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+          >
+            <i
+              className="fas fa-times-circle"
+              style={{ marginRight: '6px', color: '#EF4444' }}
+            ></i>
+            IMC ≥ 30 + Circ ≥ 102
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              color: '#EF4444',
+              marginTop: '8px',
+            }}
+          >
+            {inaptos.totalInaptosIMC_Circ}
+          </div>
+          <div style={{ fontSize: '12px', color: textSecondary }}>
+            {inaptos.totalGeral > 0
+              ? (
+                  (inaptos.totalInaptosIMC_Circ / inaptos.totalGeral) *
+                  100
+                ).toFixed(1)
+              : 0}
+            % do total
+          </div>
+        </div>
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '20px',
+            border: `1px solid ${cardBorder}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+          >
+            <i
+              className="fas fa-arrow-left-right"
+              style={{ marginRight: '6px', color: '#F59E0B' }}
+            ></i>
+            Circ ≥ 102 (IMC &lt; 30)
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              color: '#F59E0B',
+              marginTop: '8px',
+            }}
+          >
+            {inaptos.totalInaptosCirc - inaptos.totalInaptosIMC_Circ}
+          </div>
+          <div style={{ fontSize: '12px', color: textSecondary }}>
+            {inaptos.totalGeral > 0
+              ? (
+                  ((inaptos.totalInaptosCirc - inaptos.totalInaptosIMC_Circ) /
+                    inaptos.totalGeral) *
+                  100
+                ).toFixed(1)
+              : 0}
+            % do total
+          </div>
+        </div>
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '20px',
+            border: `1px solid ${cardBorder}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+          >
+            <i
+              className="fas fa-exclamation-triangle"
+              style={{ marginRight: '6px', color: '#F97316' }}
+            ></i>
+            Total Inaptos (Geral)
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              color: '#F97316',
+              marginTop: '8px',
+            }}
+          >
+            {inaptos.todosInaptos.length}
+          </div>
+          <div style={{ fontSize: '12px', color: textSecondary }}>
+            {inaptos.totalGeral > 0
+              ? (
+                  (inaptos.todosInaptos.length / inaptos.totalGeral) *
+                  100
+                ).toFixed(1)
+              : 0}
+            % do total
+          </div>
+        </div>
+      </div>
+
+      {/* ===== SEÇÃO DE INAPTOS POR PERÍODO ===== */}
+      <div
+        style={{
+          background: bgCard,
+          borderRadius: '16px',
+          padding: '24px',
+          border: `1px solid ${cardBorder}`,
+          marginBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '16px',
+              fontWeight: 700,
+              color: textPrimary,
+              margin: 0,
+            }}
+          >
+            <i
+              className="fas fa-user-times"
+              style={{ color: '#EF4444', marginRight: '8px' }}
+            ></i>
+            Inaptos por {periodoFiltro === 'mensal' ? 'Mês' : 'Trimestre'}
+          </h3>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setPeriodoFiltro('mensal')}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: `1px solid ${
+                  periodoFiltro === 'mensal' ? accentColor : cardBorder
+                }`,
+                background:
+                  periodoFiltro === 'mensal' ? accentColor : 'transparent',
+                color: periodoFiltro === 'mensal' ? 'white' : textSecondary,
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              Mensal
+            </button>
+            <button
+              onClick={() => setPeriodoFiltro('trimestral')}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: `1px solid ${
+                  periodoFiltro === 'trimestral' ? accentColor : cardBorder
+                }`,
+                background:
+                  periodoFiltro === 'trimestral' ? accentColor : 'transparent',
+                color: periodoFiltro === 'trimestral' ? 'white' : textSecondary,
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              Trimestral
+            </button>
+            <button
+              onClick={() => setShowInaptosTable(!showInaptosTable)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: `1px solid ${cardBorder}`,
+                background: 'transparent',
+                color: textSecondary,
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              {showInaptosTable ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+            </button>
+          </div>
+        </div>
+
+        {/* Tabela de Inaptos por Período */}
+        <div style={{ overflowX: 'auto' }}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '13px',
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: '#f8f9fa',
+                  borderBottom: `2px solid ${cardBorder}`,
+                }}
+              >
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Período
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: textPrimary,
+                  }}
+                >
+                  Total
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#EF4444',
+                  }}
+                >
+                  IMC ≥ 30 + Circ ≥ 102
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#F59E0B',
+                  }}
+                >
+                  Circ ≥ 102 (IMC &lt; 30)
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#F97316',
+                  }}
+                >
+                  IMC ≥ 30
+                </th>
+                <th
+                  style={{
+                    padding: '10px 12px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#6B7280',
+                  }}
+                >
+                  % Inaptos
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {periodoFiltro === 'mensal'
+                ? meses.map((mes, idx) => {
+                    const data = inaptos.porMes[mes];
+                    if (!data || data.total === 0) return null;
+                    return (
+                      <tr
+                        key={idx}
+                        style={{ borderBottom: `1px solid ${cardBorder}` }}
+                      >
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            fontWeight: 600,
+                            color: textPrimary,
+                          }}
+                        >
+                          {mes}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            color: textSecondary,
+                          }}
+                        >
+                          {data.total}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#EF4444',
+                          }}
+                        >
+                          {data.inaptosIMC_Circ}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#F59E0B',
+                          }}
+                        >
+                          {data.inaptosCirc - data.inaptosIMC_Circ}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#F97316',
+                          }}
+                        >
+                          {data.inaptosIMC}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#6B7280',
+                          }}
+                        >
+                          {data.percentual}%
+                        </td>
+                      </tr>
+                    );
+                  })
+                : ['Q1', 'Q2', 'Q3', 'Q4'].map((trim) => {
+                    const data = inaptos.porTrimestre[trim];
+                    if (!data || data.total === 0) return null;
+                    return (
+                      <tr
+                        key={trim}
+                        style={{ borderBottom: `1px solid ${cardBorder}` }}
+                      >
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            fontWeight: 700,
+                            color: textPrimary,
+                          }}
+                        >
+                          {trim}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            color: textSecondary,
+                          }}
+                        >
+                          {data.total}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#EF4444',
+                          }}
+                        >
+                          {data.inaptosIMC_Circ}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#F59E0B',
+                          }}
+                        >
+                          {data.inaptosCirc - data.inaptosIMC_Circ}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#F97316',
+                          }}
+                        >
+                          {data.inaptosIMC}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            color: '#6B7280',
+                          }}
+                        >
+                          {data.percentual}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+            </tbody>
+          </table>
+          {inaptos.todosInaptos.length === 0 && (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '20px',
+                color: textSecondary,
+              }}
+            >
+              <i
+                className="fas fa-check-circle"
+                style={{ color: '#10B981', marginRight: '8px' }}
+              ></i>
+              Nenhum colaborador inapto encontrado neste período.
+            </div>
+          )}
+        </div>
+
+        {/* Tabela de Detalhes dos Inaptos */}
+        {showInaptosTable && inaptos.todosInaptos.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <h4
+              style={{
+                fontSize: '14px',
+                fontWeight: 700,
+                color: textPrimary,
+                marginBottom: '12px',
+              }}
+            >
+              <i
+                className="fas fa-list"
+                style={{ color: accentColor, marginRight: '8px' }}
+              ></i>
+              Detalhes dos Inaptos
+            </h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '12px',
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      background: '#f8f9fa',
+                      borderBottom: `2px solid ${cardBorder}`,
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'left',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Código
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'left',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Data
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      IMC
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Circ (cm)
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Circ/Altura
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'left',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Motivo
+                    </th>
+                    <th
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'left',
+                        fontWeight: 700,
+                        color: textPrimary,
+                      }}
+                    >
+                      Empresa
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inaptos.todosInaptos.map((item, idx) => (
+                    <tr
+                      key={idx}
+                      style={{ borderBottom: `1px solid ${cardBorder}` }}
+                    >
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          fontWeight: 600,
+                          color: textPrimary,
+                        }}
+                      >
+                        {item.codigo}
+                      </td>
+                      <td style={{ padding: '8px 10px', color: textSecondary }}>
+                        {item.data || '-'}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          color: item.imc >= 30 ? '#EF4444' : '#10B981',
+                        }}
+                      >
+                        {item.imc.toFixed(2)}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          color:
+                            item.circunferencia >= 102 ? '#EF4444' : '#10B981',
+                        }}
+                      >
+                        {item.circunferencia}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          color:
+                            item.relacaoCircAltura >= 0.5
+                              ? '#EF4444'
+                              : '#10B981',
+                        }}
+                      >
+                        {item.relacaoCircAltura.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            background:
+                              item.motivo === 'IMC ≥ 30 + Circ ≥ 102'
+                                ? '#EF444420'
+                                : item.motivo === 'Circ ≥ 102'
+                                ? '#F59E0B20'
+                                : '#F9731620',
+                            color:
+                              item.motivo === 'IMC ≥ 30 + Circ ≥ 102'
+                                ? '#EF4444'
+                                : item.motivo === 'Circ ≥ 102'
+                                ? '#F59E0B'
+                                : '#F97316',
+                          }}
+                        >
+                          {item.motivo}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px 10px', color: textSecondary }}>
+                        {item.empresa || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===== CARDS SUPERIORES (MÉDIA DO PERÍODO) ===== */}
       <div
         style={{
           display: 'grid',
@@ -1390,26 +2544,25 @@ export default function IMCModule({
             icon: 'fa-weight-scale',
             label: 'IMC',
             value:
-              dadosExibir.length > 0
-                ? `${getIMC(dadosExibir[0]).toFixed(2)}`
+              mediaPeriodo && mediaPeriodo.mediaImc !== null
+                ? mediaPeriodo.mediaImc.toFixed(2)
                 : '-',
             color: '#10B981',
             bg: 'rgba(16,185,129,0.08)',
           },
           {
             icon: 'fa-calendar-alt',
-            label: 'Data',
-            value: dadosExibir.length > 0 ? dadosExibir[0].dataStr : '-',
+            label: 'Período',
+            value: mediaPeriodo
+              ? `${mediaPeriodo.periodoInicio} à ${mediaPeriodo.periodoFim}`
+              : '-',
             color: '#3B82F6',
             bg: 'rgba(59,130,246,0.08)',
           },
           {
             icon: 'fa-tag',
             label: 'Status',
-            value:
-              dadosExibir.length > 0
-                ? dadosExibir[0].statusImc || 'NORMAL'
-                : '-',
+            value: mediaPeriodo ? mediaPeriodo.statusMaisFreq : '-',
             color: '#F59E0B',
             bg: 'rgba(245,158,11,0.08)',
           },
@@ -1417,8 +2570,8 @@ export default function IMCModule({
             icon: 'fa-arrow-left-right',
             label: 'Circunferência',
             value:
-              dadosExibir.length > 0 && dadosExibir[0].circunferencia > 0
-                ? `${dadosExibir[0].circunferencia} cm`
+              mediaPeriodo && mediaPeriodo.mediaCirc !== null
+                ? `${mediaPeriodo.mediaCirc.toFixed(1)} cm`
                 : '-',
             color: '#8B5CF6',
             bg: 'rgba(139,92,246,0.08)',
@@ -1567,7 +2720,6 @@ export default function IMCModule({
               alignItems: 'center',
             }}
           >
-            {/* GRÁFICO DE PIZZA (ROSQUINHA) */}
             <div
               style={{
                 display: 'flex',
@@ -1592,7 +2744,7 @@ export default function IMCModule({
                 >
                   {Object.entries(statusCounts).map(
                     ([status, count], idx, arr) => {
-                      const total = dadosExibir.filter((e) =>
+                      const total = dadosComFiltroPeriodo.filter((e) =>
                         temDados(e)
                       ).length;
                       const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -1606,7 +2758,7 @@ export default function IMCModule({
 
                       let offset = 0;
                       for (let i = 0; i < idx; i++) {
-                        const prevTotal = dadosExibir.filter((e) =>
+                        const prevTotal = dadosComFiltroPeriodo.filter((e) =>
                           temDados(e)
                         ).length;
                         const prevCount = Object.values(statusCounts)[
@@ -1651,7 +2803,7 @@ export default function IMCModule({
                       color: textPrimary,
                     }}
                   >
-                    {dadosExibir.filter((e) => temDados(e)).length}
+                    {dadosComFiltroPeriodo.filter((e) => temDados(e)).length}
                   </div>
                   <div
                     style={{
@@ -1666,12 +2818,13 @@ export default function IMCModule({
               </div>
             </div>
 
-            {/* LEGENDA COM PERCENTUAIS */}
             <div
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
               {Object.entries(statusCounts).map(([status, count]) => {
-                const total = dadosExibir.filter((e) => temDados(e)).length;
+                const total = dadosComFiltroPeriodo.filter((e) =>
+                  temDados(e)
+                ).length;
                 const colors: Record<string, string> = {
                   'Peso normal': '#10B981',
                   Sobrepeso: '#F59E0B',
@@ -1866,7 +3019,6 @@ export default function IMCModule({
           Quantidade de registros por status ao longo dos meses
         </p>
 
-        {/* GRÁFICO SVG */}
         <div style={{ position: 'relative' }}>
           <svg viewBox="0 0 700 250" style={{ width: '100%', height: 'auto' }}>
             {/* Eixo Y */}
@@ -1997,11 +3149,7 @@ export default function IMCModule({
           {Object.entries(evolucaoPorStatus.colors).map(([status, color]) => (
             <div
               key={status}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <div
                 style={{
@@ -2032,180 +3180,6 @@ export default function IMCModule({
               </span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* ===== TABELA: STATUS DE IMC POR MÊS/ANO ===== */}
-      <div
-        style={{
-          background: bgCard,
-          borderRadius: '16px',
-          padding: '24px',
-          border: `1px solid ${cardBorder}`,
-          marginBottom: '24px',
-        }}
-      >
-        <h3
-          style={{
-            fontSize: '16px',
-            fontWeight: 700,
-            color: textPrimary,
-            marginBottom: '16px',
-          }}
-        >
-          <i
-            className="fas fa-table"
-            style={{ color: accentColor, marginRight: '8px' }}
-          ></i>
-          Status de IMC por Mês/Ano
-        </h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '13px',
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  background: '#f8f9fa',
-                  borderBottom: `2px solid ${cardBorder}`,
-                }}
-              >
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    fontWeight: 700,
-                    color: textPrimary,
-                  }}
-                >
-                  Ano
-                </th>
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    fontWeight: 700,
-                    color: textPrimary,
-                  }}
-                >
-                  Mês
-                </th>
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    fontWeight: 700,
-                    color: textPrimary,
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    fontWeight: 700,
-                    color: textPrimary,
-                  }}
-                >
-                  Quantidade
-                </th>
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    fontWeight: 700,
-                    color: textPrimary,
-                  }}
-                >
-                  %
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {statusPorMesAno.data.map((item, idx) => {
-                const total =
-                  statusPorMesAno.mesTotal.get(`${item.ano}-${item.mes}`) || 0;
-                const percentage =
-                  total > 0 ? Math.round((item.count / total) * 100) : 0;
-                const statusColors: Record<string, string> = {
-                  NORMAL: '#10B981',
-                  SOBREPESO: '#F59E0B',
-                  'OBESIDADE I': '#F97316',
-                  'OBESIDADE II': '#EF4444',
-                  'OBESIDADE III': '#7F1D1D',
-                };
-                const color = statusColors[item.status] || '#6B7280';
-
-                return (
-                  <tr
-                    key={idx}
-                    style={{ borderBottom: `1px solid ${cardBorder}` }}
-                  >
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        fontWeight: 600,
-                        color: textPrimary,
-                      }}
-                    >
-                      {item.ano}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: textSecondary }}>
-                      {meses[item.mes]}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background: `${color}20`,
-                          color: color,
-                        }}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        fontWeight: 600,
-                        color: textPrimary,
-                      }}
-                    >
-                      {item.count}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        fontWeight: 700,
-                        color: color,
-                      }}
-                    >
-                      {percentage}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {statusPorMesAno.data.length === 0 && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '20px',
-                color: textSecondary,
-              }}
-            >
-              Nenhum registro encontrado.
-            </div>
-          )}
         </div>
       </div>
 
@@ -2259,7 +3233,7 @@ export default function IMCModule({
               }}
             >
               <i className="fas fa-sync-alt" style={{ marginRight: '4px' }}></i>
-              {dadosExibir.length} registros
+              {dadosComFiltroPeriodo.length} registros
             </span>
           </div>
         </div>
@@ -2351,7 +3325,7 @@ export default function IMCModule({
               </tr>
             </thead>
             <tbody id="table-body">
-              {dadosExibir.map((emp, idx) => {
+              {dadosComFiltroPeriodo.map((emp, idx) => {
                 const bmi = getIMC(emp);
                 const status = emp.statusImc || getBMIClassification(bmi);
                 let statusColor = '#6B7280';
@@ -2476,7 +3450,7 @@ export default function IMCModule({
               })}
             </tbody>
           </table>
-          {dadosExibir.length === 0 && (
+          {dadosComFiltroPeriodo.length === 0 && (
             <div
               style={{
                 textAlign: 'center',
