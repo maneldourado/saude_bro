@@ -34,7 +34,7 @@ export default function IMCModule({
   const [showMapping, setShowMapping] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [fileData, setFileData] = useState<any>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(0); // 0 = todos os anos
+  const [selectedYear, setSelectedYear] = useState<number>(0);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,6 @@ export default function IMCModule({
   );
   const [showInaptosTable, setShowInaptosTable] = useState(false);
 
-  // Estados para período personalizado
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const now = new Date();
     const primeiroDia = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -82,56 +81,43 @@ export default function IMCModule({
 
   // ==================== FUNÇÕES DE CONVERSÃO DE DATA ====================
 
-  // Converte número serial do Excel (ex: 44932) para Date
   const excelSerialToDate = (serial: number): Date | null => {
     if (typeof serial !== 'number' || isNaN(serial) || serial <= 0) return null;
-    // Excel considera 1º de janeiro de 1900 como número 1
-    // Mas tem um bug: considera 1900 como ano bissexto
-    // Para datas após 28/02/1900, subtraímos 1 dia
-    const epoch = new Date(1899, 11, 30); // 30/12/1899
+    const epoch = new Date(1899, 11, 30);
     const days = serial;
     const date = new Date(epoch.getTime() + days * 86400000);
     if (isNaN(date.getTime())) return null;
     return date;
   };
 
-  // Converte qualquer formato de data para Date
   const converterData = (dataRaw: any): Date | null => {
     if (!dataRaw) return null;
 
-    // Se já for Date válido
     if (dataRaw instanceof Date && !isNaN(dataRaw.getTime())) {
       return dataRaw;
     }
 
-    // Se for número (serial do Excel ou timestamp)
     if (typeof dataRaw === 'number') {
-      // Timestamp (milissegundos desde 1970)
       if (dataRaw > 1000000000000) {
         const d = new Date(dataRaw);
         if (!isNaN(d.getTime())) return d;
       }
-      // Serial do Excel
       if (dataRaw > 1 && dataRaw < 100000) {
         const d = excelSerialToDate(dataRaw);
         if (d && !isNaN(d.getTime())) return d;
       }
     }
 
-    // Se for string (pode ser "44932" - serial como texto)
     if (typeof dataRaw === 'string') {
-      // Tenta converter para número (serial do Excel como string)
       const num = parseFloat(dataRaw);
       if (!isNaN(num) && num > 1 && num < 100000) {
         const d = excelSerialToDate(num);
         if (d && !isNaN(d.getTime())) return d;
       }
 
-      // Tenta ISO (yyyy-mm-dd)
       let d = new Date(dataRaw);
       if (!isNaN(d.getTime())) return d;
 
-      // Tenta dd/mm/yyyy
       const parts = dataRaw.split('/');
       if (parts.length === 3) {
         const dia = parseInt(parts[0], 10);
@@ -143,7 +129,6 @@ export default function IMCModule({
         }
       }
 
-      // Tenta yyyy-mm-dd
       const parts2 = dataRaw.split('-');
       if (parts2.length === 3) {
         const ano = parseInt(parts2[0], 10);
@@ -158,7 +143,6 @@ export default function IMCModule({
       return null;
     }
 
-    // Se for objeto com .v (formato do XLSX)
     if (dataRaw && typeof dataRaw === 'object' && dataRaw.v !== undefined) {
       return converterData(dataRaw.v);
     }
@@ -243,8 +227,6 @@ export default function IMCModule({
         });
 
         setEmployees(formattedData);
-
-        // NÃO define selectedYear automaticamente; deixa como 0 (todos)
       } else {
         setEmployees([]);
       }
@@ -308,17 +290,14 @@ export default function IMCModule({
       'Dez',
     ];
 
-    // FILTRO BASE: peso, altura, circunferência > 0
     let registrosBase = employees.filter(
       (e) => e.weight > 0 && e.height > 0 && e.circunferencia > 0
     );
 
-    // SÓ FILTRA POR ANO SE UM ANO ESPECÍFICO FOI SELECIONADO (selectedYear > 0)
     if (selectedYear > 0) {
       registrosBase = registrosBase.filter((e) => e.ano === selectedYear);
     }
 
-    // Aplica filtro de período personalizado se estiver ativo
     if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
       const inicio = new Date(dataInicio);
       const fim = new Date(dataFim);
@@ -331,10 +310,6 @@ export default function IMCModule({
       });
     }
 
-    // TOTAL DE AVALIADOS = todos os registros (pode repetir código)
-    const totalAvaliados = registrosBase.length;
-
-    // --- PARA INAPTOS: Agrupa por código e pega o PRIMEIRO registro de cada colaborador ---
     const colaboradorMap = new Map();
     registrosBase.forEach((e) => {
       if (!colaboradorMap.has(e.codigo)) {
@@ -342,15 +317,13 @@ export default function IMCModule({
       }
     });
 
-    // Converte o Map para array de registros únicos (primeiro de cada colaborador)
     const registrosUnicos = Array.from(colaboradorMap.values());
+    const totalAvaliados = registrosUnicos.length;
 
     const porMes: Record<string, any> = {};
     const porTrimestre: Record<string, any> = {};
 
-    // Para cada mês, conta os registros únicos (colaboradores únicos)
     meses.forEach((mes, idx) => {
-      // Filtra os registros únicos por mês
       const registrosMes = registrosUnicos.filter((e) => e.mes === idx);
 
       let inaptosIMC_Circ = 0;
@@ -393,7 +366,7 @@ export default function IMCModule({
       });
 
       porMes[mes] = {
-        total: totalRegistros, // total de colaboradores únicos no mês
+        total: totalRegistros,
         inaptosIMC_Circ: inaptosIMC_Circ,
         inaptosCirc: inaptosCirc,
         inaptosIMC: inaptosIMC,
@@ -431,7 +404,7 @@ export default function IMCModule({
       });
 
       porTrimestre[trim.nome] = {
-        total: total, // total de colaboradores únicos no trimestre
+        total: total,
         inaptosIMC_Circ: inaptosIMC_Circ,
         inaptosCirc: inaptosCirc,
         inaptosIMC: inaptosIMC,
@@ -441,7 +414,6 @@ export default function IMCModule({
       };
     });
 
-    // --- TOTAIS GERAIS (APENAS COLABORADORES ÚNICOS PARA INAPTOS) ---
     const totalGeralUnicos = registrosUnicos.length;
 
     const totalInaptosIMC_Circ = registrosUnicos.filter((e) => {
@@ -463,9 +435,7 @@ export default function IMCModule({
     return {
       porMes,
       porTrimestre,
-      // TOTAL AVALIADOS = todos os registros (com repetição)
       totalAvaliados: totalAvaliados,
-      // INAPTOS = apenas colaboradores únicos
       totalGeral: totalGeralUnicos,
       totalInaptosIMC_Circ,
       totalInaptosCirc,
@@ -536,10 +506,7 @@ export default function IMCModule({
   ): { dataStr: string; ano: number; mes: number; mesNome: string } | null => {
     if (!value) return null;
     let data: Date | null = null;
-
-    // Tenta converter usando a função robusta
     data = converterData(value);
-
     if (!data || isNaN(data.getTime())) return null;
 
     const meses = [
@@ -808,36 +775,30 @@ export default function IMCModule({
     'Dez',
   ];
 
-  // Aplica o filtro de período personalizado nos dados
+  // DADOS PARA A TABELA DE DETALHAMENTO (com repetição)
   const dadosComFiltroPeriodo = useMemo(() => {
     let dados = employees;
 
-    // SÓ FILTRA POR ANO SE UM ANO ESPECÍFICO FOI SELECIONADO (selectedYear > 0)
     if (selectedYear > 0) {
       dados = dados.filter((e) => e.ano === selectedYear);
     }
 
-    // Filtra por mês se selecionado
     if (selectedMonth !== null) {
       dados = dados.filter((e) => e.mes === selectedMonth);
     }
 
-    // Aplica filtro de período personalizado se estiver ativo
     if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
       const inicio = new Date(dataInicio);
       const fim = new Date(dataFim);
       fim.setHours(23, 59, 59, 999);
 
       dados = dados.filter((e) => {
-        // Tenta converter a data de várias formas
         let dataRegistro: Date | null = null;
 
-        // 1. Usa dataRaw (pode ser número, string, etc.)
         if (e.dataRaw !== undefined && e.dataRaw !== null) {
           dataRegistro = converterData(e.dataRaw);
         }
 
-        // 2. Se falhou, tenta usar dataStr (formato dd/mm/yyyy)
         if (!dataRegistro && e.dataStr) {
           const parts = e.dataStr.split('/');
           if (parts.length === 3) {
@@ -850,7 +811,6 @@ export default function IMCModule({
           }
         }
 
-        // 3. Se ainda falhou, tenta construir a partir do ano e mês
         if (!dataRegistro && e.ano !== undefined && e.mes !== undefined) {
           dataRegistro = new Date(e.ano, e.mes, 1);
         }
@@ -899,6 +859,65 @@ export default function IMCModule({
     return imc > 0 && !isNaN(imc);
   };
 
+  // ==================== DADOS ÚNICOS POR COLABORADOR ====================
+  const dadosUnicosPorColaborador = useMemo(() => {
+    const colaboradorMap = new Map();
+
+    let dados = employees;
+
+    if (selectedYear > 0) {
+      dados = dados.filter((e) => e.ano === selectedYear);
+    }
+
+    if (selectedMonth !== null) {
+      dados = dados.filter((e) => e.mes === selectedMonth);
+    }
+
+    if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
+      const inicio = new Date(dataInicio);
+      const fim = new Date(dataFim);
+      fim.setHours(23, 59, 59, 999);
+
+      dados = dados.filter((e) => {
+        let dataRegistro: Date | null = null;
+        if (e.dataRaw !== undefined && e.dataRaw !== null) {
+          dataRegistro = converterData(e.dataRaw);
+        }
+        if (!dataRegistro && e.dataStr) {
+          const parts = e.dataStr.split('/');
+          if (parts.length === 3) {
+            const dia = parseInt(parts[0], 10);
+            const mes = parseInt(parts[1], 10) - 1;
+            const ano = parseInt(parts[2], 10);
+            if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
+              dataRegistro = new Date(ano, mes, dia);
+            }
+          }
+        }
+        if (!dataRegistro && e.ano !== undefined && e.mes !== undefined) {
+          dataRegistro = new Date(e.ano, e.mes, 1);
+        }
+        if (!dataRegistro || isNaN(dataRegistro.getTime())) return false;
+        return dataRegistro >= inicio && dataRegistro <= fim;
+      });
+    }
+
+    dados.forEach((e) => {
+      if (!colaboradorMap.has(e.codigo) && temDados(e)) {
+        colaboradorMap.set(e.codigo, e);
+      }
+    });
+
+    return Array.from(colaboradorMap.values());
+  }, [
+    employees,
+    selectedYear,
+    selectedMonth,
+    dataInicio,
+    dataFim,
+    periodoAtivo,
+  ]);
+
   // ==================== STATUS COUNTS ====================
   const allowedStatuses = [
     'Peso normal',
@@ -910,11 +929,11 @@ export default function IMCModule({
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
-    if (!dadosComFiltroPeriodo || dadosComFiltroPeriodo.length === 0) {
+    if (!dadosUnicosPorColaborador || dadosUnicosPorColaborador.length === 0) {
       return counts;
     }
 
-    dadosComFiltroPeriodo.forEach((e) => {
+    dadosUnicosPorColaborador.forEach((e) => {
       try {
         if (!e) return;
         if (!temDados(e)) return;
@@ -934,7 +953,7 @@ export default function IMCModule({
     });
 
     return counts;
-  }, [dadosComFiltroPeriodo]);
+  }, [dadosUnicosPorColaborador]);
 
   // ==================== VARIACAO PESO ====================
   const variacaoPeso = useMemo(() => {
@@ -1676,125 +1695,222 @@ export default function IMCModule({
         </div>
       )}
 
-      {/* HEADER */}
+      {/* ===== HEADER REFORMULADO ===== */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          background: 'white',
+          borderRadius: '16px',
+          padding: '20px 24px',
           marginBottom: '24px',
-          flexWrap: 'wrap',
-          gap: '16px',
+          border: '1px solid #eef2f6',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}
       >
-        <div>
-          <h1
-            style={{
-              fontSize: '24px',
-              fontWeight: 700,
-              color: textPrimary,
-              margin: 0,
-            }}
-          >
-            <i
-              className="fas fa-weight"
-              style={{ marginRight: '12px', color: accentColor }}
-            ></i>
-            CONTROLE DE IMC
-          </h1>
-        </div>
+        {/* Linha 1: Título + Ações principais */}
         <div
           style={{
             display: 'flex',
-            gap: '12px',
-            flexWrap: 'wrap',
+            justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+            marginBottom: '16px',
           }}
         >
-          <button
-            onClick={() => setShowManualModal(true)}
-            style={{
-              background: `linear-gradient(135deg, ${accentColor} 0%, #059669 100%)`,
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <i className="fas fa-plus-circle"></i> Lançar IMC
-          </button>
-          <label
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {importing ? (
-              <>
-                <i className="fas fa-spinner fa-spin"></i> Importando...
-              </>
-            ) : (
-              <>
-                <i className="fas fa-file-import"></i> Importar Planilha
-              </>
-            )}
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-              disabled={importing}
-            />
-          </label>
-          <select
-            value={selectedYear}
-            onChange={(e) => {
-              setSelectedYear(parseInt(e.target.value));
-              setSelectedMonth(null);
-            }}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '12px',
-              border: `1px solid ${cardBorder}`,
-              fontSize: '13px',
-              background: 'white',
-              cursor: 'pointer',
-              fontWeight: 600,
-              outline: 'none',
-            }}
-          >
-            <option value={0}>Todos os Anos</option>
-            {[...new Set(employees.filter((e) => e.ano > 0).map((e) => e.ano))]
-              .sort((a, b) => b - a)
-              .map((ano) => (
-                <option key={ano} value={ano}>
-                  {ano}
-                </option>
-              ))}
-          </select>
+          {/* Título */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '10px',
+                background: `linear-gradient(135deg, ${accentColor}, #059669)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+              }}
+            >
+              <i className="fas fa-weight"></i>
+            </div>
+            <div>
+              <h1
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  color: '#1a1a2e',
+                  margin: 0,
+                  letterSpacing: '-0.3px',
+                }}
+              >
+                Controle de IMC
+              </h1>
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: '#8892a0',
+                  margin: '2px 0 0 0',
+                }}
+              >
+                Gestão de avaliações e indicadores de saúde
+              </p>
+            </div>
+          </div>
 
-          {/* SELEÇÃO DE PERÍODO COM BOTÃO APLICAR */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Ações principais */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowManualModal(true)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: `linear-gradient(135deg, ${accentColor}, #059669)`,
+                color: 'white',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow =
+                  '0 4px 12px rgba(16,185,129,0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow =
+                  '0 2px 8px rgba(16,185,129,0.25)';
+              }}
+            >
+              <i className="fas fa-plus-circle"></i>
+              Lançar IMC
+            </button>
+
             <label
               style={{
-                fontSize: '12px',
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: 'white',
+                fontSize: '13px',
                 fontWeight: 600,
-                color: textSecondary,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow =
+                  '0 4px 12px rgba(99,102,241,0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow =
+                  '0 2px 8px rgba(99,102,241,0.25)';
+              }}
+            >
+              {importing ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Importando...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-file-import"></i> Importar Planilha
+                </>
+              )}
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+                disabled={importing}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Linha 2: Filtros */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+            paddingTop: '14px',
+            borderTop: '1px solid #f0f2f5',
+          }}
+        >
+          {/* Seletor de Ano */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <i
+              className="fas fa-calendar"
+              style={{ fontSize: '13px', color: '#8892a0' }}
+            ></i>
+            <select
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(parseInt(e.target.value));
+                setSelectedMonth(null);
+              }}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: '13px',
+                background: 'white',
+                cursor: 'pointer',
+                fontWeight: 500,
+                color: '#1a1a2e',
+                outline: 'none',
+                transition: 'border-color 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = accentColor;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              <option value={0}>Todos os Anos</option>
+              {[
+                ...new Set(
+                  employees.filter((e) => e.ano > 0).map((e) => e.ano)
+                ),
+              ]
+                .sort((a, b) => b - a)
+                .map((ano) => (
+                  <option key={ano} value={ano}>
+                    {ano}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div
+            style={{ width: '1px', height: '28px', background: '#e2e8f0' }}
+          ></div>
+
+          {/* Período personalizado */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <label
+              style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}
             >
               De:
             </label>
@@ -1803,21 +1919,27 @@ export default function IMCModule({
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
               style={{
-                padding: '8px 12px',
+                padding: '6px 10px',
                 borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
-                fontSize: '13px',
+                border: '1px solid #e2e8f0',
+                fontSize: '12px',
                 background: 'white',
                 cursor: 'pointer',
                 outline: 'none',
+                color: '#1a1a2e',
+                transition: 'border-color 0.2s ease',
+                minWidth: '140px',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = accentColor;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
               }}
             />
+
             <label
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: textSecondary,
-              }}
+              style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}
             >
               Até:
             </label>
@@ -1826,15 +1948,25 @@ export default function IMCModule({
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
               style={{
-                padding: '8px 12px',
+                padding: '6px 10px',
                 borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
-                fontSize: '13px',
+                border: '1px solid #e2e8f0',
+                fontSize: '12px',
                 background: 'white',
                 cursor: 'pointer',
                 outline: 'none',
+                color: '#1a1a2e',
+                transition: 'border-color 0.2s ease',
+                minWidth: '140px',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = accentColor;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
               }}
             />
+
             <button
               onClick={() => {
                 setPeriodoAtivo(
@@ -1842,40 +1974,79 @@ export default function IMCModule({
                 );
               }}
               style={{
-                padding: '8px 16px',
+                padding: '7px 18px',
                 borderRadius: '8px',
                 border: 'none',
                 background:
-                  periodoAtivo === 'personalizado' ? '#EF4444' : '#10B981',
+                  periodoAtivo === 'personalizado' ? '#ef4444' : accentColor,
                 color: 'white',
                 fontWeight: 600,
                 fontSize: '12px',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow:
+                  periodoAtivo === 'personalizado'
+                    ? '0 2px 8px rgba(239,68,68,0.25)'
+                    : '0 2px 8px rgba(16,185,129,0.2)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
+              <i
+                className={`fas ${
+                  periodoAtivo === 'personalizado' ? 'fa-times' : 'fa-filter'
+                }`}
+              ></i>
               {periodoAtivo === 'todos' ? 'Aplicar Filtro' : 'Remover Filtro'}
             </button>
           </div>
+
+          {/* Badge de filtro ativo */}
           {periodoAtivo === 'personalizado' && (
             <span
               style={{
-                background: '#EF444420',
-                color: '#EF4444',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 14px',
+                borderRadius: '20px',
+                background: '#fef2f2',
+                color: '#dc2626',
+                fontSize: '11px',
                 fontWeight: 600,
+                border: '1px solid #fecaca',
               }}
             >
-              <i className="fas fa-filter" style={{ marginRight: '4px' }}></i>
-              Filtro: {new Date(dataInicio).toLocaleDateString('pt-BR')} -{' '}
+              <i className="fas fa-filter" style={{ fontSize: '10px' }}></i>
+              {new Date(dataInicio).toLocaleDateString('pt-BR')} —{' '}
               {new Date(dataFim).toLocaleDateString('pt-BR')}
             </span>
           )}
+
+          {/* Contador de registros (opcional) */}
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: '12px',
+              color: '#94a3b8',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <i className="fas fa-database" style={{ fontSize: '11px' }}></i>
+            {employees.length} registros
+          </span>
         </div>
       </div>
-
       {/* ===== CARDS DE INAPTOS ===== */}
       <div
         style={{
@@ -1885,7 +2056,6 @@ export default function IMCModule({
           marginBottom: '24px',
         }}
       >
-        {/* TOTAL AVALIADOS - TODOS OS REGISTROS (COM REPETIÇÃO) */}
         <div
           style={{
             background: bgCard,
@@ -1958,7 +2128,7 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total (únicos)
+            % do total
           </div>
         </div>
 
@@ -1998,7 +2168,7 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total (únicos)
+            % do total
           </div>
         </div>
 
@@ -2037,7 +2207,7 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total (únicos)
+            % do total
           </div>
         </div>
       </div>
@@ -2165,7 +2335,7 @@ export default function IMCModule({
                     color: textPrimary,
                   }}
                 >
-                  Total
+                  Total Avaliados
                 </th>
                 <th
                   style={{
@@ -2186,16 +2356,6 @@ export default function IMCModule({
                   }}
                 >
                   Circ ≥ 102 (IMC &lt; 30)
-                </th>
-                <th
-                  style={{
-                    padding: '10px 12px',
-                    textAlign: 'center',
-                    fontWeight: 700,
-                    color: '#F97316',
-                  }}
-                >
-                  IMC ≥ 30
                 </th>
                 <th
                   style={{
@@ -2262,16 +2422,6 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#F97316',
-                          }}
-                        >
-                          {data.inaptosIMC}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            textAlign: 'center',
-                            fontWeight: 700,
                             color: '#6B7280',
                           }}
                         >
@@ -2325,16 +2475,6 @@ export default function IMCModule({
                           }}
                         >
                           {data.inaptosCirc - data.inaptosIMC_Circ}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            textAlign: 'center',
-                            fontWeight: 700,
-                            color: '#F97316',
-                          }}
-                        >
-                          {data.inaptosIMC}
                         </td>
                         <td
                           style={{
@@ -2560,7 +2700,7 @@ export default function IMCModule({
         )}
       </div>
 
-      {/* ===== CARDS SUPERIORES (MÉDIA DO PERÍODO) ===== */}
+      {/* ===== CARDS SUPERIORES ===== */}
       <div
         style={{
           display: 'grid',
@@ -2717,7 +2857,7 @@ export default function IMCModule({
         ))}
       </div>
 
-      {/* ===== GRÁFICO DE PIZZA - STATUS DE IMC ===== */}
+      {/* ===== GRÁFICO DE PIZZA ===== */}
       {Object.keys(statusCounts).length > 0 && (
         <div
           style={{
@@ -2774,7 +2914,7 @@ export default function IMCModule({
                 >
                   {Object.entries(statusCounts).map(
                     ([status, count], idx, arr) => {
-                      const total = dadosComFiltroPeriodo.filter((e) =>
+                      const total = dadosUnicosPorColaborador.filter((e) =>
                         temDados(e)
                       ).length;
                       const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -2788,8 +2928,8 @@ export default function IMCModule({
 
                       let offset = 0;
                       for (let i = 0; i < idx; i++) {
-                        const prevTotal = dadosComFiltroPeriodo.filter((e) =>
-                          temDados(e)
+                        const prevTotal = dadosUnicosPorColaborador.filter(
+                          (e) => temDados(e)
                         ).length;
                         const prevCount = Object.values(statusCounts)[
                           i
@@ -2833,7 +2973,10 @@ export default function IMCModule({
                       color: textPrimary,
                     }}
                   >
-                    {dadosComFiltroPeriodo.filter((e) => temDados(e)).length}
+                    {
+                      dadosUnicosPorColaborador.filter((e) => temDados(e))
+                        .length
+                    }
                   </div>
                   <div
                     style={{
@@ -2852,7 +2995,7 @@ export default function IMCModule({
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
               {Object.entries(statusCounts).map(([status, count]) => {
-                const total = dadosComFiltroPeriodo.filter((e) =>
+                const total = dadosUnicosPorColaborador.filter((e) =>
                   temDados(e)
                 ).length;
                 const colors: Record<string, string> = {
@@ -3016,7 +3159,7 @@ export default function IMCModule({
         </div>
       </div>
 
-      {/* ===== GRÁFICO DE LINHAS - EVOLUÇÃO ANUAL DE IMC ===== */}
+      {/* ===== GRÁFICO DE LINHAS ===== */}
       <div
         style={{
           background: bgCard,
