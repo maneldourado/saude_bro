@@ -34,9 +34,7 @@ export default function IMCModule({
   const [showMapping, setShowMapping] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [fileData, setFileData] = useState<any>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear()
-  );
+  const [selectedYear, setSelectedYear] = useState<number>(0); // 0 = todos os anos
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -246,14 +244,7 @@ export default function IMCModule({
 
         setEmployees(formattedData);
 
-        const anos = [
-          ...new Set(
-            formattedData.filter((e: any) => e.ano > 0).map((e: any) => e.ano)
-          ),
-        ];
-        if (anos.length > 0) {
-          setSelectedYear(Math.max(...anos));
-        }
+        // NÃO define selectedYear automaticamente; deixa como 0 (todos)
       } else {
         setEmployees([]);
       }
@@ -317,14 +308,15 @@ export default function IMCModule({
       'Dez',
     ];
 
-    // Filtra por ano e período personalizado
+    // FILTRO BASE: peso, altura, circunferência > 0
     let registrosBase = employees.filter(
-      (e) =>
-        e.ano === selectedYear &&
-        e.weight > 0 &&
-        e.height > 0 &&
-        e.circunferencia > 0
+      (e) => e.weight > 0 && e.height > 0 && e.circunferencia > 0
     );
+
+    // SÓ FILTRA POR ANO SE UM ANO ESPECÍFICO FOI SELECIONADO (selectedYear > 0)
+    if (selectedYear > 0) {
+      registrosBase = registrosBase.filter((e) => e.ano === selectedYear);
+    }
 
     // Aplica filtro de período personalizado se estiver ativo
     if (periodoAtivo === 'personalizado' && dataInicio && dataFim) {
@@ -339,13 +331,27 @@ export default function IMCModule({
       });
     }
 
-    const registrosAno = registrosBase;
+    // TOTAL DE AVALIADOS = todos os registros (pode repetir código)
+    const totalAvaliados = registrosBase.length;
+
+    // --- PARA INAPTOS: Agrupa por código e pega o PRIMEIRO registro de cada colaborador ---
+    const colaboradorMap = new Map();
+    registrosBase.forEach((e) => {
+      if (!colaboradorMap.has(e.codigo)) {
+        colaboradorMap.set(e.codigo, e);
+      }
+    });
+
+    // Converte o Map para array de registros únicos (primeiro de cada colaborador)
+    const registrosUnicos = Array.from(colaboradorMap.values());
 
     const porMes: Record<string, any> = {};
     const porTrimestre: Record<string, any> = {};
 
+    // Para cada mês, conta os registros únicos (colaboradores únicos)
     meses.forEach((mes, idx) => {
-      const registrosMes = registrosAno.filter((e) => e.mes === idx);
+      // Filtra os registros únicos por mês
+      const registrosMes = registrosUnicos.filter((e) => e.mes === idx);
 
       let inaptosIMC_Circ = 0;
       let inaptosCirc = 0;
@@ -387,7 +393,7 @@ export default function IMCModule({
       });
 
       porMes[mes] = {
-        total: totalRegistros,
+        total: totalRegistros, // total de colaboradores únicos no mês
         inaptosIMC_Circ: inaptosIMC_Circ,
         inaptosCirc: inaptosCirc,
         inaptosIMC: inaptosIMC,
@@ -425,7 +431,7 @@ export default function IMCModule({
       });
 
       porTrimestre[trim.nome] = {
-        total: total,
+        total: total, // total de colaboradores únicos no trimestre
         inaptosIMC_Circ: inaptosIMC_Circ,
         inaptosCirc: inaptosCirc,
         inaptosIMC: inaptosIMC,
@@ -435,16 +441,20 @@ export default function IMCModule({
       };
     });
 
-    const totalGeral = registrosAno.length;
-    const totalInaptosIMC_Circ = registrosAno.filter((e) => {
+    // --- TOTAIS GERAIS (APENAS COLABORADORES ÚNICOS PARA INAPTOS) ---
+    const totalGeralUnicos = registrosUnicos.length;
+
+    const totalInaptosIMC_Circ = registrosUnicos.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
       return imc >= 30 && e.circunferencia >= 102;
     }).length;
-    const totalInaptosCirc = registrosAno.filter(
+
+    const totalInaptosCirc = registrosUnicos.filter(
       (e) => e.circunferencia >= 102
     ).length;
-    const totalInaptosIMC = registrosAno.filter((e) => {
+
+    const totalInaptosIMC = registrosUnicos.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
       return imc >= 30;
@@ -453,11 +463,14 @@ export default function IMCModule({
     return {
       porMes,
       porTrimestre,
-      totalGeral,
+      // TOTAL AVALIADOS = todos os registros (com repetição)
+      totalAvaliados: totalAvaliados,
+      // INAPTOS = apenas colaboradores únicos
+      totalGeral: totalGeralUnicos,
       totalInaptosIMC_Circ,
       totalInaptosCirc,
       totalInaptosIMC,
-      todosInaptos: registrosAno
+      todosInaptos: registrosUnicos
         .filter((e) => {
           const alturaM = e.height > 3 ? e.height / 100 : e.height;
           const imc = e.weight / (alturaM * alturaM);
@@ -799,8 +812,10 @@ export default function IMCModule({
   const dadosComFiltroPeriodo = useMemo(() => {
     let dados = employees;
 
-    // Filtra por ano
-    dados = dados.filter((e) => e.ano === selectedYear);
+    // SÓ FILTRA POR ANO SE UM ANO ESPECÍFICO FOI SELECIONADO (selectedYear > 0)
+    if (selectedYear > 0) {
+      dados = dados.filter((e) => e.ano === selectedYear);
+    }
 
     // Filtra por mês se selecionado
     if (selectedMonth !== null) {
@@ -939,7 +954,10 @@ export default function IMCModule({
   const totalPorMes = useMemo(() => {
     return meses.map((_, i) => {
       return employees.filter(
-        (e) => e.ano === selectedYear && e.mes === i && temDados(e)
+        (e) =>
+          (selectedYear === 0 || e.ano === selectedYear) &&
+          e.mes === i &&
+          temDados(e)
       ).length;
     });
   }, [employees, selectedYear]);
@@ -959,7 +977,7 @@ export default function IMCModule({
       result[status] = meses.map((_, i) => {
         return employees.filter(
           (e) =>
-            e.ano === selectedYear &&
+            (selectedYear === 0 || e.ano === selectedYear) &&
             e.mes === i &&
             temDados(e) &&
             (e.statusImc || getBMIClassification(getIMC(e))) === status
@@ -1759,6 +1777,7 @@ export default function IMCModule({
               outline: 'none',
             }}
           >
+            <option value={0}>Todos os Anos</option>
             {[...new Set(employees.filter((e) => e.ano > 0).map((e) => e.ano))]
               .sort((a, b) => b - a)
               .map((ano) => (
@@ -1866,6 +1885,7 @@ export default function IMCModule({
           marginBottom: '24px',
         }}
       >
+        {/* TOTAL AVALIADOS - TODOS OS REGISTROS (COM REPETIÇÃO) */}
         <div
           style={{
             background: bgCard,
@@ -1892,9 +1912,17 @@ export default function IMCModule({
               marginTop: '8px',
             }}
           >
-            {inaptos.totalGeral}
+            {inaptos.totalAvaliados}
+          </div>
+          <div style={{ fontSize: '12px', color: textSecondary }}>
+            {periodoAtivo === 'personalizado'
+              ? 'Período filtrado'
+              : selectedYear > 0
+              ? `Ano ${selectedYear}`
+              : 'Todos os anos'}
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -1930,9 +1958,10 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total
+            % do total (únicos)
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -1969,9 +1998,10 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total
+            % do total (únicos)
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -2007,7 +2037,7 @@ export default function IMCModule({
                   100
                 ).toFixed(1)
               : 0}
-            % do total
+            % do total (únicos)
           </div>
         </div>
       </div>
@@ -2901,7 +2931,8 @@ export default function IMCModule({
             className="fas fa-chart-bar"
             style={{ color: accentColor, marginRight: '8px' }}
           ></i>
-          Total de funcionários atendidos {selectedYear}
+          Total de funcionários atendidos{' '}
+          {selectedYear > 0 ? selectedYear : 'todos os anos'}
         </h3>
         <div
           style={{
