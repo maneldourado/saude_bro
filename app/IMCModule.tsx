@@ -273,7 +273,6 @@ export default function IMCModule({
     }
   }, [searchColaborador, colaboradores]);
 
-  // ==================== CÁLCULO DE INAPTOS (APENAS COLABORADORES ÚNICOS) ====================
   // ==================== CÁLCULO DE INAPTOS (APENAS COLABORADORES ÚNICOS POR MÊS) ====================
   const calcularInaptos = useMemo(() => {
     const meses = [
@@ -317,10 +316,8 @@ export default function IMCModule({
 
     // ===== PARA CADA MÊS, FAZ A CONTAGEM DE COLABORADORES ÚNICOS =====
     meses.forEach((mes, idx) => {
-      // Pega todos os registros do mês
       const registrosMes = registrosBase.filter((e) => e.mes === idx);
 
-      // Agrupa por código dentro do mês (colaboradores únicos NO MÊS)
       const colaboradorMapMes = new Map();
       registrosMes.forEach((e) => {
         if (!colaboradorMapMes.has(e.codigo)) {
@@ -328,13 +325,11 @@ export default function IMCModule({
         }
       });
 
-      // Converte para array de registros únicos do mês
       const registrosUnicosMes = Array.from(colaboradorMapMes.values());
       const totalRegistros = registrosUnicosMes.length;
 
-      let inaptosIMC_Circ = 0;
-      let inaptosCirc = 0;
-      let inaptosIMC = 0;
+      let inaptosIMC35_Circ = 0; // IMC >= 35 E Circ >= 102
+      let inaptosCirc_IMC30 = 0; // Circ >= 102 E IMC < 30
       let detalhes: any[] = [];
 
       registrosUnicosMes.forEach((e) => {
@@ -343,11 +338,10 @@ export default function IMCModule({
         const circunferencia = e.circunferencia || 0;
         const relacaoCircAltura = alturaM > 0 ? circunferencia / alturaM : 0;
 
-        const isInaptoIMC_Circ = imc >= 30 && circunferencia >= 102;
-        const isInaptoCirc = circunferencia >= 102;
-        const isInaptoIMC = imc >= 30;
+        const isInaptoIMC35_Circ = imc >= 35 && circunferencia >= 102;
+        const isInaptoCirc_IMC30 = circunferencia >= 102 && imc < 30;
 
-        if (isInaptoIMC_Circ || isInaptoCirc || isInaptoIMC) {
+        if (isInaptoIMC35_Circ || isInaptoCirc_IMC30) {
           detalhes.push({
             codigo: e.codigo,
             peso: e.weight,
@@ -357,29 +351,25 @@ export default function IMCModule({
             relacaoCircAltura: relacaoCircAltura,
             data: e.dataStr,
             empresa: e.company,
-            motivo: isInaptoIMC_Circ
-              ? 'IMC ≥ 30 + Circ ≥ 102'
-              : isInaptoCirc
-              ? 'Circ ≥ 102'
-              : 'IMC ≥ 30',
+            motivo: isInaptoIMC35_Circ
+              ? 'IMC ≥ 35 + Circ ≥ 102'
+              : 'Circ ≥ 102 (IMC < 30)',
           });
         }
 
-        if (isInaptoIMC_Circ) inaptosIMC_Circ++;
-        if (isInaptoCirc) inaptosCirc++;
-        if (isInaptoIMC) inaptosIMC++;
+        if (isInaptoIMC35_Circ) inaptosIMC35_Circ++;
+        if (isInaptoCirc_IMC30) inaptosCirc_IMC30++;
       });
 
       porMes[mes] = {
         total: totalRegistros,
-        inaptosIMC_Circ: inaptosIMC_Circ,
-        inaptosCirc: inaptosCirc,
-        inaptosIMC: inaptosIMC,
+        inaptosIMC35_Circ: inaptosIMC35_Circ,
+        inaptosCirc_IMC30: inaptosCirc_IMC30,
         detalhes: detalhes,
         percentual:
           totalRegistros > 0
-            ? ((inaptosIMC_Circ / totalRegistros) * 100).toFixed(1)
-            : 0,
+            ? ((inaptosIMC35_Circ / totalRegistros) * 100).toFixed(1)
+            : '0.0',
       };
     });
 
@@ -393,30 +383,27 @@ export default function IMCModule({
 
     trimestres.forEach((trim) => {
       let total = 0,
-        inaptosIMC_Circ = 0,
-        inaptosCirc = 0,
-        inaptosIMC = 0;
+        inaptosIMC35_Circ = 0,
+        inaptosCirc_IMC30 = 0;
       let detalhes: any[] = [];
 
       trim.meses.forEach((mes) => {
         const data = porMes[mes];
         if (data) {
           total += data.total;
-          inaptosIMC_Circ += data.inaptosIMC_Circ;
-          inaptosCirc += data.inaptosCirc;
-          inaptosIMC += data.inaptosIMC;
+          inaptosIMC35_Circ += data.inaptosIMC35_Circ;
+          inaptosCirc_IMC30 += data.inaptosCirc_IMC30;
           detalhes = [...detalhes, ...data.detalhes];
         }
       });
 
       porTrimestre[trim.nome] = {
         total: total,
-        inaptosIMC_Circ: inaptosIMC_Circ,
-        inaptosCirc: inaptosCirc,
-        inaptosIMC: inaptosIMC,
+        inaptosIMC35_Circ: inaptosIMC35_Circ,
+        inaptosCirc_IMC30: inaptosCirc_IMC30,
         detalhes: detalhes,
         percentual:
-          total > 0 ? ((inaptosIMC_Circ / total) * 100).toFixed(1) : 0,
+          total > 0 ? ((inaptosIMC35_Circ / total) * 100).toFixed(1) : '0.0',
       };
     });
 
@@ -430,63 +417,54 @@ export default function IMCModule({
     const registrosUnicosGeral = Array.from(colaboradorMapGeral.values());
     const totalAvaliados = registrosUnicosGeral.length;
 
-    const totalInaptosIMC_Circ = registrosUnicosGeral.filter((e) => {
+    const totalInaptosIMC35_Circ = registrosUnicosGeral.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
-      return imc >= 30 && e.circunferencia >= 102;
+      return imc >= 35 && e.circunferencia >= 102;
     }).length;
 
-    const totalInaptosCirc = registrosUnicosGeral.filter(
-      (e) => e.circunferencia >= 102
-    ).length;
-
-    const totalInaptosIMC = registrosUnicosGeral.filter((e) => {
+    const totalInaptosCirc_IMC30 = registrosUnicosGeral.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
-      return imc >= 30;
+      return e.circunferencia >= 102 && imc < 30;
     }).length;
+
+    const todosInaptos = registrosUnicosGeral.filter((e) => {
+      const alturaM = e.height > 3 ? e.height / 100 : e.height;
+      const imc = e.weight / (alturaM * alturaM);
+      return (
+        (imc >= 35 && e.circunferencia >= 102) ||
+        (e.circunferencia >= 102 && imc < 30)
+      );
+    });
 
     return {
       porMes,
       porTrimestre,
       totalAvaliados: totalAvaliados,
       totalGeral: totalAvaliados,
-      totalInaptosIMC_Circ,
-      totalInaptosCirc,
-      totalInaptosIMC,
-      todosInaptos: registrosUnicosGeral
-        .filter((e) => {
-          const alturaM = e.height > 3 ? e.height / 100 : e.height;
-          const imc = e.weight / (alturaM * alturaM);
-          return (
-            (imc >= 30 && e.circunferencia >= 102) ||
-            e.circunferencia >= 102 ||
-            imc >= 30
-          );
-        })
-        .map((e) => {
-          const alturaM = e.height > 3 ? e.height / 100 : e.height;
-          const imc = e.weight / (alturaM * alturaM);
-          const isInaptoIMC_Circ = imc >= 30 && e.circunferencia >= 102;
-          const isInaptoCirc = e.circunferencia >= 102;
-          const isInaptoIMC = imc >= 30;
-          return {
-            codigo: e.codigo,
-            peso: e.weight,
-            altura: e.height,
-            circunferencia: e.circunferencia,
-            imc: imc,
-            relacaoCircAltura: alturaM > 0 ? e.circunferencia / alturaM : 0,
-            data: e.dataStr,
-            empresa: e.company,
-            mes: e.mes,
-            motivo: isInaptoIMC_Circ
-              ? 'IMC ≥ 30 + Circ ≥ 102'
-              : isInaptoCirc
-              ? 'Circ ≥ 102'
-              : 'IMC ≥ 30',
-          };
-        }),
+      totalInaptosIMC35_Circ,
+      totalInaptosCirc_IMC30,
+      todosInaptos: todosInaptos.map((e) => {
+        const alturaM = e.height > 3 ? e.height / 100 : e.height;
+        const imc = e.weight / (alturaM * alturaM);
+        const isInaptoIMC35_Circ = imc >= 35 && e.circunferencia >= 102;
+        const isInaptoCirc_IMC30 = e.circunferencia >= 102 && imc < 30;
+        return {
+          codigo: e.codigo,
+          peso: e.weight,
+          altura: e.height,
+          circunferencia: e.circunferencia,
+          imc: imc,
+          relacaoCircAltura: alturaM > 0 ? e.circunferencia / alturaM : 0,
+          data: e.dataStr,
+          empresa: e.company,
+          mes: e.mes,
+          motivo: isInaptoIMC35_Circ
+            ? 'IMC ≥ 35 + Circ ≥ 102'
+            : 'Circ ≥ 102 (IMC < 30)',
+        };
+      }),
     };
   }, [employees, selectedYear, dataInicio, dataFim, periodoAtivo]);
 
@@ -990,7 +968,6 @@ export default function IMCModule({
       manteve = 0,
       aumentou = 0;
 
-    // USA dadosUnicosPorColaborador (SEM REPETIÇÃO)
     dadosUnicosPorColaborador.forEach((e) => {
       if (!temDados(e) || e.variacaoPeso === undefined) return;
       if (e.variacaoPeso < -0.5) diminuiu++;
@@ -1108,10 +1085,561 @@ export default function IMCModule({
 
   // ==================== MODAIS ====================
   const MappingModal = () => {
-    /* ... manter o código existente ... */
+    if (!showMapping || !fileData) return null;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(4px)',
+        }}
+      >
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '28px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            border: `1px solid ${cardBorder}`,
+          }}
+        >
+          <h2
+            style={{
+              marginBottom: '8px',
+              fontSize: '24px',
+              color: textPrimary,
+            }}
+          >
+            <i
+              className="fas fa-table"
+              style={{ color: accentColor, marginRight: '8px' }}
+            ></i>
+            Mapear Colunas
+          </h2>
+          <p
+            style={{
+              marginBottom: '24px',
+              fontSize: '14px',
+              color: textSecondary,
+            }}
+          >
+            Selecione qual coluna corresponde a cada informação:
+          </p>
+          {[
+            { key: 'codigo', label: 'Código', icon: 'fa-id-badge' },
+            { key: 'data', label: 'Data', icon: 'fa-calendar-alt' },
+            { key: 'peso', label: 'Peso (kg)', icon: 'fa-weight' },
+            { key: 'altura', label: 'Altura (cm)', icon: 'fa-ruler-vertical' },
+            {
+              key: 'circunferencia',
+              label: 'Circunferência (cm)',
+              icon: 'fa-arrow-left-right',
+            },
+            {
+              key: 'empresa',
+              label: 'Empresa / Frente Serviço',
+              icon: 'fa-building',
+            },
+          ].map(({ key, label, icon }) => (
+            <div key={key} style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontWeight: 600,
+                  color: textPrimary,
+                  fontSize: '13px',
+                }}
+              >
+                <i
+                  className={icon}
+                  style={{ marginRight: '6px', color: accentColor }}
+                ></i>
+                {label}
+              </label>
+              <select
+                value={columnMapping[key as keyof typeof columnMapping]}
+                onChange={(e) =>
+                  setColumnMapping({
+                    ...columnMapping,
+                    [key]: parseInt(e.target.value),
+                  })
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${cardBorder}`,
+                  fontSize: '14px',
+                  background: '#f8f9fa',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {fileData.headers.map((h: any, i: number) => (
+                  <option key={i} value={i}>
+                    {i}: {String(h || `Coluna ${String.fromCharCode(65 + i)}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <button
+              onClick={processImport}
+              disabled={saving}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: saving ? '#95a5a6' : '#3498db',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {saving ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Salvando...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-check"></i> Confirmar Importação
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setShowMapping(false);
+                setFileData(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: '#e74c3c',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <i className="fas fa-times"></i> Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
+
   const ManualModal = () => {
-    /* ... manter o código existente ... */
+    if (!showManualModal) return null;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(4px)',
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowManualModal(false);
+            setSearchColaborador('');
+          }
+        }}
+      >
+        <div
+          style={{
+            background: bgCard,
+            borderRadius: '16px',
+            padding: '28px',
+            maxWidth: '550px',
+            width: '90%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            border: `1px solid ${cardBorder}`,
+          }}
+        >
+          <h2
+            style={{
+              marginBottom: '8px',
+              fontSize: '24px',
+              color: textPrimary,
+            }}
+          >
+            <i
+              className="fas fa-plus-circle"
+              style={{ color: accentColor, marginRight: '8px' }}
+            ></i>
+            Lançar IMC Manual
+          </h2>
+          <p
+            style={{
+              marginBottom: '24px',
+              fontSize: '14px',
+              color: textSecondary,
+            }}
+          >
+            Selecione um colaborador e informe os dados:
+          </p>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '6px',
+                fontWeight: 600,
+                color: textPrimary,
+                fontSize: '13px',
+              }}
+            >
+              <i
+                className="fas fa-search"
+                style={{ marginRight: '6px', color: accentColor }}
+              ></i>
+              Buscar Colaborador
+            </label>
+            <input
+              type="text"
+              placeholder="Digite nome ou código..."
+              value={searchColaborador}
+              onChange={(e) => setSearchColaborador(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '14px',
+                marginBottom: '8px',
+                outline: 'none',
+              }}
+            />
+            <div
+              style={{
+                maxHeight: 200,
+                overflowY: 'auto',
+                border: `1px solid ${cardBorder}`,
+                borderRadius: '8px',
+              }}
+            >
+              {colaboradoresFiltrados.length === 0 ? (
+                <div
+                  style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: textSecondary,
+                  }}
+                >
+                  {searchColaborador
+                    ? 'Nenhum colaborador encontrado'
+                    : 'Digite para buscar'}
+                </div>
+              ) : (
+                colaboradoresFiltrados.map((col) => (
+                  <div
+                    key={col.id}
+                    onClick={() => handleColaboradorSelect(col.id)}
+                    style={{
+                      padding: '10px 12px',
+                      cursor: 'pointer',
+                      borderBottom: `1px solid ${cardBorder}`,
+                      background:
+                        manualRecord.colaboradorId === col.id
+                          ? `rgba(16, 185, 129, 0.08)`
+                          : 'white',
+                    }}
+                  >
+                    <div style={{ fontWeight: 500, color: textPrimary }}>
+                      {col.nome}
+                    </div>
+                    <div style={{ fontSize: '12px', color: textSecondary }}>
+                      Código: {col.codigo}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {manualRecord.colaboradorNome && (
+            <div
+              style={{
+                marginBottom: '16px',
+                padding: '12px',
+                background: `rgba(16, 185, 129, 0.08)`,
+                borderRadius: '8px',
+                border: `1px solid ${accentColor}`,
+              }}
+            >
+              <span style={{ fontSize: '13px', color: textSecondary }}>
+                <i
+                  className="fas fa-user-check"
+                  style={{ color: accentColor, marginRight: '6px' }}
+                ></i>
+                Colaborador selecionado:{' '}
+                <strong style={{ color: textPrimary }}>
+                  {manualRecord.colaboradorNome}
+                </strong>
+              </span>
+            </div>
+          )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '6px',
+                fontWeight: 600,
+                color: textPrimary,
+                fontSize: '13px',
+              }}
+            >
+              <i
+                className="fas fa-calendar-alt"
+                style={{ marginRight: '6px', color: accentColor }}
+              ></i>
+              Data da Medição
+            </label>
+            <input
+              type="date"
+              value={manualRecord.data}
+              onChange={(e) =>
+                setManualRecord({ ...manualRecord, data: e.target.value })
+              }
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontWeight: 600,
+                  color: textPrimary,
+                  fontSize: '13px',
+                }}
+              >
+                <i
+                  className="fas fa-weight"
+                  style={{ marginRight: '6px', color: accentColor }}
+                ></i>
+                Peso (kg)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Ex: 75.5"
+                value={manualRecord.peso}
+                onChange={(e) =>
+                  setManualRecord({ ...manualRecord, peso: e.target.value })
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${cardBorder}`,
+                  fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontWeight: 600,
+                  color: textPrimary,
+                  fontSize: '13px',
+                }}
+              >
+                <i
+                  className="fas fa-ruler-vertical"
+                  style={{ marginRight: '6px', color: accentColor }}
+                ></i>
+                Altura (cm)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Ex: 175"
+                value={manualRecord.altura}
+                onChange={(e) =>
+                  setManualRecord({ ...manualRecord, altura: e.target.value })
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${cardBorder}`,
+                  fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '6px',
+                fontWeight: 600,
+                color: textPrimary,
+                fontSize: '13px',
+              }}
+            >
+              <i
+                className="fas fa-arrow-left-right"
+                style={{ marginRight: '6px', color: accentColor }}
+              ></i>
+              Circunferência (cm)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              placeholder="Ex: 95.5"
+              value={manualRecord.circunferencia}
+              onChange={(e) =>
+                setManualRecord({
+                  ...manualRecord,
+                  circunferencia: e.target.value,
+                })
+              }
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '6px',
+                fontWeight: 600,
+                color: textPrimary,
+                fontSize: '13px',
+              }}
+            >
+              <i
+                className="fas fa-building"
+                style={{ marginRight: '6px', color: accentColor }}
+              ></i>
+              Frente de Serviço / Empresa
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: SM Continental, MER, etc."
+              value={manualRecord.frenteServico}
+              onChange={(e) =>
+                setManualRecord({
+                  ...manualRecord,
+                  frenteServico: e.target.value,
+                })
+              }
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${cardBorder}`,
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <button
+              onClick={saveManualRecord}
+              disabled={saving}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: saving ? '#95a5a6' : accentColor,
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {saving ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Salvando...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save"></i> Salvar Registro
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setShowManualModal(false);
+                setSearchColaborador('');
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: '#e74c3c',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <i className="fas fa-times"></i> Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ==================== RENDER ====================
@@ -1537,6 +2065,7 @@ export default function IMCModule({
               : 'Todos os anos'}
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -1553,7 +2082,7 @@ export default function IMCModule({
               className="fas fa-times-circle"
               style={{ marginRight: '6px', color: '#EF4444' }}
             ></i>
-            IMC ≥ 30 + Circ ≥ 102
+            IMC ≥ 35 + Circ ≥ 102
           </div>
           <div
             style={{
@@ -1563,18 +2092,19 @@ export default function IMCModule({
               marginTop: '8px',
             }}
           >
-            {inaptos.totalInaptosIMC_Circ}
+            {inaptos.totalInaptosIMC35_Circ}
           </div>
           <div style={{ fontSize: '12px', color: textSecondary }}>
             {inaptos.totalGeral > 0
               ? (
-                  (inaptos.totalInaptosIMC_Circ / inaptos.totalGeral) *
+                  (inaptos.totalInaptosIMC35_Circ / inaptos.totalGeral) *
                   100
                 ).toFixed(1)
               : 0}
             % do total
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -1601,19 +2131,19 @@ export default function IMCModule({
               marginTop: '8px',
             }}
           >
-            {inaptos.totalInaptosCirc - inaptos.totalInaptosIMC_Circ}
+            {inaptos.totalInaptosCirc_IMC30}
           </div>
           <div style={{ fontSize: '12px', color: textSecondary }}>
             {inaptos.totalGeral > 0
               ? (
-                  ((inaptos.totalInaptosCirc - inaptos.totalInaptosIMC_Circ) /
-                    inaptos.totalGeral) *
+                  (inaptos.totalInaptosCirc_IMC30 / inaptos.totalGeral) *
                   100
                 ).toFixed(1)
               : 0}
             % do total
           </div>
         </div>
+
         <div
           style={{
             background: bgCard,
@@ -1785,7 +2315,7 @@ export default function IMCModule({
                     color: '#EF4444',
                   }}
                 >
-                  IMC ≥ 30 + Circ ≥ 102
+                  IMC ≥ 35 + Circ ≥ 102
                 </th>
                 <th
                   style={{
@@ -1835,7 +2365,7 @@ export default function IMCModule({
                             color: textSecondary,
                           }}
                         >
-                          {data.totalRegistros || data.total}
+                          {data.total}
                         </td>
                         <td
                           style={{
@@ -1845,7 +2375,7 @@ export default function IMCModule({
                             color: '#EF4444',
                           }}
                         >
-                          {data.inaptosIMC_Circ}
+                          {data.inaptosIMC35_Circ}
                         </td>
                         <td
                           style={{
@@ -1855,7 +2385,7 @@ export default function IMCModule({
                             color: '#F59E0B',
                           }}
                         >
-                          {data.inaptosCirc - data.inaptosIMC_Circ}
+                          {data.inaptosCirc_IMC30}
                         </td>
                         <td
                           style={{
@@ -1894,7 +2424,7 @@ export default function IMCModule({
                             color: textSecondary,
                           }}
                         >
-                          {data.totalRegistros || data.total}
+                          {data.total}
                         </td>
                         <td
                           style={{
@@ -1904,7 +2434,7 @@ export default function IMCModule({
                             color: '#EF4444',
                           }}
                         >
-                          {data.inaptosIMC_Circ}
+                          {data.inaptosIMC35_Circ}
                         </td>
                         <td
                           style={{
@@ -1914,7 +2444,7 @@ export default function IMCModule({
                             color: '#F59E0B',
                           }}
                         >
-                          {data.inaptosCirc - data.inaptosIMC_Circ}
+                          {data.inaptosCirc_IMC30}
                         </td>
                         <td
                           style={{
@@ -2110,15 +2640,15 @@ export default function IMCModule({
                             fontSize: '10px',
                             fontWeight: 600,
                             background:
-                              item.motivo === 'IMC ≥ 30 + Circ ≥ 102'
+                              item.motivo === 'IMC ≥ 35 + Circ ≥ 102'
                                 ? '#EF444420'
-                                : item.motivo === 'Circ ≥ 102'
+                                : item.motivo === 'Circ ≥ 102 (IMC < 30)'
                                 ? '#F59E0B20'
                                 : '#F9731620',
                             color:
-                              item.motivo === 'IMC ≥ 30 + Circ ≥ 102'
+                              item.motivo === 'IMC ≥ 35 + Circ ≥ 102'
                                 ? '#EF4444'
-                                : item.motivo === 'Circ ≥ 102'
+                                : item.motivo === 'Circ ≥ 102 (IMC < 30)'
                                 ? '#F59E0B'
                                 : '#F97316',
                           }}
