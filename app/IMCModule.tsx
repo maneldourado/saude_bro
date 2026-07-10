@@ -12,12 +12,42 @@ interface IMCModuleProps {
   styles: any;
 }
 
-const accentColor = '#10b981';
-const accentGlow = 'rgba(16, 185, 129, 0.15)';
-const bgCard = '#ffffff';
-const cardBorder = 'rgba(0, 0, 0, 0.08)';
-const textPrimary = '#1a1a1a';
-const textSecondary = '#6b5f55';
+// Paleta de Cores Neutra e Profissional
+const colors = {
+  primary: '#800000', // slate-800
+  primaryDark: '#1C1C1C', // slate-900
+  primaryLight: '#334155', // slate-700
+  accent: '#00BFFF', // blue-500
+  accentSoft: '#eff6ff', // blue-50
+  accentHover: '#2563eb', // blue-600
+  bgPage: '#f5f0eb', // slate-100
+  bgCard: '#ffffff',
+  border: '#e2e8f0',
+  borderStrong: '#cbd5e1',
+  textPrimary: '#0f172a',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  dangerSoft: '#fef2f2',
+  dangerBorder: '#fecaca',
+  orange: '#f97316',
+  orangeSoft: '#fff7ed',
+  amber: '#f59e0b',
+  amberSoft: '#fffbeb',
+  indigo: '#6366f1',
+  indigoSoft: '#eef2ff',
+  white: '#ffffff',
+};
+
+// Aliases para compatibilidade com o restante do código
+const accentColor = colors.accent;
+const accentGlow = 'rgba(59, 130, 246, 0.15)';
+const bgCard = colors.bgCard;
+const cardBorder = colors.border;
+const textPrimary = colors.textPrimary;
+const textSecondary = colors.textSecondary;
 
 export default function IMCModule({
   employees: initialEmployees,
@@ -273,7 +303,7 @@ export default function IMCModule({
     }
   }, [searchColaborador, colaboradores]);
 
-  // ==================== CÁLCULO DE INAPTOS (APENAS COLABORADORES ÚNICOS POR MÊS) ====================
+  // ==================== CÁLCULO DE INAPTOS ====================
   const calcularInaptos = useMemo(() => {
     const meses = [
       'Jan',
@@ -290,7 +320,6 @@ export default function IMCModule({
       'Dez',
     ];
 
-    // FILTRO BASE: peso, altura, circunferência > 0
     let registrosBase = employees.filter(
       (e) => e.weight > 0 && e.height > 0 && e.circunferencia > 0
     );
@@ -314,7 +343,6 @@ export default function IMCModule({
     const porMes: Record<string, any> = {};
     const porTrimestre: Record<string, any> = {};
 
-    // ===== PARA CADA MÊS, FAZ A CONTAGEM DE COLABORADORES ÚNICOS =====
     meses.forEach((mes, idx) => {
       const registrosMes = registrosBase.filter((e) => e.mes === idx);
 
@@ -328,8 +356,9 @@ export default function IMCModule({
       const registrosUnicosMes = Array.from(colaboradorMapMes.values());
       const totalRegistros = registrosUnicosMes.length;
 
-      let inaptosIMC35_Circ = 0; // IMC >= 35 E Circ >= 102
-      let inaptosCirc_IMC30 = 0; // Circ >= 102 E IMC < 30
+      let inaptosIMC35_Circ = 0;
+      let inaptosCirc_IMC30 = 0;
+      let inaptosCircTotal = 0;
       let detalhes: any[] = [];
 
       registrosUnicosMes.forEach((e) => {
@@ -338,10 +367,22 @@ export default function IMCModule({
         const circunferencia = e.circunferencia || 0;
         const relacaoCircAltura = alturaM > 0 ? circunferencia / alturaM : 0;
 
-        const isInaptoIMC35_Circ = imc >= 35 && circunferencia >= 102;
-        const isInaptoCirc_IMC30 = circunferencia >= 102 && imc < 30;
+        const isIMC35_Circ = imc >= 35 && circunferencia >= 102;
+        const isCirc_IMC30 = circunferencia >= 102 && imc < 30;
+        const isCirc = circunferencia >= 102;
 
-        if (isInaptoIMC35_Circ || isInaptoCirc_IMC30) {
+        const isInapto = isIMC35_Circ || isCirc_IMC30 || isCirc;
+
+        if (isInapto) {
+          let motivo = '';
+          if (isIMC35_Circ) {
+            motivo = 'IMC ≥ 35 + Circ ≥ 102';
+          } else if (isCirc_IMC30) {
+            motivo = 'Circ ≥ 102 (IMC < 30)';
+          } else {
+            motivo = 'Circ ≥ 102';
+          }
+
           detalhes.push({
             codigo: e.codigo,
             peso: e.weight,
@@ -351,29 +392,28 @@ export default function IMCModule({
             relacaoCircAltura: relacaoCircAltura,
             data: e.dataStr,
             empresa: e.company,
-            motivo: isInaptoIMC35_Circ
-              ? 'IMC ≥ 35 + Circ ≥ 102'
-              : 'Circ ≥ 102 (IMC < 30)',
+            motivo: motivo,
           });
         }
 
-        if (isInaptoIMC35_Circ) inaptosIMC35_Circ++;
-        if (isInaptoCirc_IMC30) inaptosCirc_IMC30++;
+        if (isIMC35_Circ) inaptosIMC35_Circ++;
+        if (isCirc_IMC30) inaptosCirc_IMC30++;
+        if (isCirc) inaptosCircTotal++;
       });
 
       porMes[mes] = {
         total: totalRegistros,
-        inaptosIMC35_Circ: inaptosIMC35_Circ,
-        inaptosCirc_IMC30: inaptosCirc_IMC30,
-        detalhes: detalhes,
+        inaptosIMC35_Circ,
+        inaptosCirc_IMC30,
+        inaptosCircTotal,
+        detalhes,
         percentual:
           totalRegistros > 0
-            ? ((inaptosIMC35_Circ / totalRegistros) * 100).toFixed(1)
+            ? ((inaptosCircTotal / totalRegistros) * 100).toFixed(1)
             : '0.0',
       };
     });
 
-    // ===== TRIMESTRES =====
     const trimestres = [
       { nome: 'Q1', meses: ['Jan', 'Fev', 'Mar'] },
       { nome: 'Q2', meses: ['Abr', 'Mai', 'Jun'] },
@@ -384,7 +424,8 @@ export default function IMCModule({
     trimestres.forEach((trim) => {
       let total = 0,
         inaptosIMC35_Circ = 0,
-        inaptosCirc_IMC30 = 0;
+        inaptosCirc_IMC30 = 0,
+        inaptosCircTotal = 0;
       let detalhes: any[] = [];
 
       trim.meses.forEach((mes) => {
@@ -393,21 +434,22 @@ export default function IMCModule({
           total += data.total;
           inaptosIMC35_Circ += data.inaptosIMC35_Circ;
           inaptosCirc_IMC30 += data.inaptosCirc_IMC30;
+          inaptosCircTotal += data.inaptosCircTotal;
           detalhes = [...detalhes, ...data.detalhes];
         }
       });
 
       porTrimestre[trim.nome] = {
-        total: total,
-        inaptosIMC35_Circ: inaptosIMC35_Circ,
-        inaptosCirc_IMC30: inaptosCirc_IMC30,
-        detalhes: detalhes,
+        total,
+        inaptosIMC35_Circ,
+        inaptosCirc_IMC30,
+        inaptosCircTotal,
+        detalhes,
         percentual:
-          total > 0 ? ((inaptosIMC35_Circ / total) * 100).toFixed(1) : '0.0',
+          total > 0 ? ((inaptosCircTotal / total) * 100).toFixed(1) : '0.0',
       };
     });
 
-    // ===== TOTAIS GERAIS (COLABORADORES ÚNICOS NO PERÍODO TODO) =====
     const colaboradorMapGeral = new Map();
     registrosBase.forEach((e) => {
       if (!colaboradorMapGeral.has(e.codigo)) {
@@ -417,39 +459,39 @@ export default function IMCModule({
     const registrosUnicosGeral = Array.from(colaboradorMapGeral.values());
     const totalAvaliados = registrosUnicosGeral.length;
 
-    const totalInaptosIMC35_Circ = registrosUnicosGeral.filter((e) => {
+    const totalIMC35_Circ = registrosUnicosGeral.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
       return imc >= 35 && e.circunferencia >= 102;
     }).length;
 
-    const totalInaptosCirc_IMC30 = registrosUnicosGeral.filter((e) => {
+    const totalCirc_IMC30 = registrosUnicosGeral.filter((e) => {
       const alturaM = e.height > 3 ? e.height / 100 : e.height;
       const imc = e.weight / (alturaM * alturaM);
       return e.circunferencia >= 102 && imc < 30;
     }).length;
 
-    const todosInaptos = registrosUnicosGeral.filter((e) => {
-      const alturaM = e.height > 3 ? e.height / 100 : e.height;
-      const imc = e.weight / (alturaM * alturaM);
-      return (
-        (imc >= 35 && e.circunferencia >= 102) ||
-        (e.circunferencia >= 102 && imc < 30)
-      );
-    });
+    const totalCirc = registrosUnicosGeral.filter(
+      (e) => e.circunferencia >= 102
+    ).length;
+
+    const todosInaptos = registrosUnicosGeral.filter(
+      (e) => e.circunferencia >= 102
+    );
 
     return {
       porMes,
       porTrimestre,
-      totalAvaliados: totalAvaliados,
+      totalAvaliados,
       totalGeral: totalAvaliados,
-      totalInaptosIMC35_Circ,
-      totalInaptosCirc_IMC30,
+      totalInaptosIMC35_Circ: totalIMC35_Circ,
+      totalInaptosCirc_IMC30: totalCirc_IMC30,
+      totalInaptosCirc: totalCirc,
       todosInaptos: todosInaptos.map((e) => {
         const alturaM = e.height > 3 ? e.height / 100 : e.height;
         const imc = e.weight / (alturaM * alturaM);
-        const isInaptoIMC35_Circ = imc >= 35 && e.circunferencia >= 102;
-        const isInaptoCirc_IMC30 = e.circunferencia >= 102 && imc < 30;
+        const isIMC35_Circ = imc >= 35 && e.circunferencia >= 102;
+        const isCirc_IMC30 = e.circunferencia >= 102 && imc < 30;
         return {
           codigo: e.codigo,
           peso: e.weight,
@@ -460,9 +502,11 @@ export default function IMCModule({
           data: e.dataStr,
           empresa: e.company,
           mes: e.mes,
-          motivo: isInaptoIMC35_Circ
+          motivo: isIMC35_Circ
             ? 'IMC ≥ 35 + Circ ≥ 102'
-            : 'Circ ≥ 102 (IMC < 30)',
+            : isCirc_IMC30
+            ? 'Circ ≥ 102 (IMC < 30)'
+            : 'Circ ≥ 102',
         };
       }),
     };
@@ -767,7 +811,6 @@ export default function IMCModule({
     'Dez',
   ];
 
-  // DADOS PARA A TABELA DE DETALHAMENTO (com repetição)
   const dadosComFiltroPeriodo = useMemo(() => {
     let dados = employees;
 
@@ -851,7 +894,6 @@ export default function IMCModule({
     return imc > 0 && !isNaN(imc);
   };
 
-  // ==================== COLABORADORES ÚNICOS POR MÊS ====================
   const colaboradoresUnicosPorMes = useMemo(() => {
     if (selectedYear === 0) return meses.map(() => 0);
 
@@ -866,7 +908,6 @@ export default function IMCModule({
     });
   }, [employees, selectedYear]);
 
-  // ==================== DADOS ÚNICOS POR COLABORADOR ====================
   const dadosUnicosPorColaborador = useMemo(() => {
     const colaboradorMap = new Map();
 
@@ -925,7 +966,6 @@ export default function IMCModule({
     periodoAtivo,
   ]);
 
-  // ==================== STATUS COUNTS ====================
   const allowedStatuses = [
     'Peso normal',
     'Sobrepeso',
@@ -962,7 +1002,6 @@ export default function IMCModule({
     return counts;
   }, [dadosUnicosPorColaborador]);
 
-  // ==================== VARIACAO PESO ====================
   const variacaoPeso = useMemo(() => {
     let diminuiu = 0,
       manteve = 0,
@@ -978,7 +1017,6 @@ export default function IMCModule({
     return { diminuiu, manteve, aumentou };
   }, [dadosUnicosPorColaborador]);
 
-  // ==================== TOTAL POR MES (USANDO COLABORADORES ÚNICOS) ====================
   const totalPorMes = useMemo(() => {
     if (selectedYear === 0) return meses.map(() => 0);
     return colaboradoresUnicosPorMes;
@@ -986,7 +1024,6 @@ export default function IMCModule({
 
   const maxTotal = Math.max(...totalPorMes, 1);
 
-  // ==================== EVOLUÇÃO ANUAL POR STATUS ====================
   const evolucaoPorStatus = useMemo(() => {
     const statusList = [
       'Peso normal',
@@ -1007,16 +1044,15 @@ export default function IMCModule({
       });
     });
     const statusColors: Record<string, string> = {
-      'Peso normal': '#5B9BD5',
-      Sobrepeso: '#F4B942',
-      'Obesidade grau I': '#ED7D31',
-      'Obesidade grau II': '#C0504D',
+      'Peso normal': colors.success,
+      Sobrepeso: colors.warning,
+      'Obesidade grau I': colors.orange,
+      'Obesidade grau II': colors.danger,
     };
     const maxCount = Math.max(...Object.values(result).flat(), 1);
     return { data: result, colors: statusColors, maxCount };
   }, [employees, selectedYear]);
 
-  // ==================== MÉDIA DO PERÍODO SELECIONADO ====================
   const mediaPeriodo = useMemo(() => {
     if (!dataInicio || !dataFim) return null;
 
@@ -1071,7 +1107,6 @@ export default function IMCModule({
     };
   }, [employees, dataInicio, dataFim]);
 
-  // ==================== HANDLE MONTH CLICK ====================
   const handleMonthClick = (monthIndex: number) => {
     if (selectedMonth === monthIndex) {
       setSelectedMonth(null);
@@ -1080,7 +1115,6 @@ export default function IMCModule({
     }
   };
 
-  // ==================== DADOS INAPTOS ====================
   const inaptosData = calcularInaptos;
 
   // ==================== MODAIS ====================
@@ -1094,35 +1128,42 @@ export default function IMCModule({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(15,23,42,0.5)',
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backdropFilter: 'blur(4px)',
         }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowMapping(false);
+            setFileData(null);
+          }
+        }}
       >
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '28px',
             maxWidth: '500px',
             width: '90%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            border: `1px solid ${cardBorder}`,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <h2
             style={{
               marginBottom: '8px',
-              fontSize: '24px',
-              color: textPrimary,
+              fontSize: '22px',
+              fontWeight: 700,
+              color: colors.textPrimary,
             }}
           >
             <i
               className="fas fa-table"
-              style={{ color: accentColor, marginRight: '8px' }}
+              style={{ color: colors.accent, marginRight: '8px' }}
             ></i>
             Mapear Colunas
           </h2>
@@ -1130,7 +1171,7 @@ export default function IMCModule({
             style={{
               marginBottom: '24px',
               fontSize: '14px',
-              color: textSecondary,
+              color: colors.textSecondary,
             }}
           >
             Selecione qual coluna corresponde a cada informação:
@@ -1157,13 +1198,13 @@ export default function IMCModule({
                   display: 'block',
                   marginBottom: '6px',
                   fontWeight: 600,
-                  color: textPrimary,
+                  color: colors.textPrimary,
                   fontSize: '13px',
                 }}
               >
                 <i
                   className={icon}
-                  style={{ marginRight: '6px', color: accentColor }}
+                  style={{ marginRight: '6px', color: colors.accent }}
                 ></i>
                 {label}
               </label>
@@ -1178,10 +1219,10 @@ export default function IMCModule({
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${cardBorder}`,
+                  borderRadius: '6px',
+                  border: `1px solid ${colors.border}`,
                   fontSize: '14px',
-                  background: '#f8f9fa',
+                  background: colors.bgPage,
                   cursor: 'pointer',
                   outline: 'none',
                 }}
@@ -1201,13 +1242,21 @@ export default function IMCModule({
               style={{
                 flex: 1,
                 padding: '12px',
-                background: saving ? '#95a5a6' : '#3498db',
-                color: 'white',
+                background: saving ? colors.textMuted : colors.accent,
+                color: colors.white,
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: saving ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!saving)
+                  e.currentTarget.style.background = colors.accentHover;
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) e.currentTarget.style.background = colors.accent;
               }}
             >
               {saving ? (
@@ -1228,13 +1277,20 @@ export default function IMCModule({
               style={{
                 flex: 1,
                 padding: '12px',
-                background: '#e74c3c',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                background: 'transparent',
+                color: colors.danger,
+                border: `1px solid ${colors.danger}`,
+                borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.dangerSoft;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
               }}
             >
               <i className="fas fa-times"></i> Cancelar
@@ -1255,7 +1311,7 @@ export default function IMCModule({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(15,23,42,0.5)',
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
@@ -1271,27 +1327,28 @@ export default function IMCModule({
       >
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '28px',
             maxWidth: '550px',
             width: '90%',
             maxHeight: '85vh',
             overflowY: 'auto',
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            border: `1px solid ${cardBorder}`,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <h2
             style={{
               marginBottom: '8px',
-              fontSize: '24px',
-              color: textPrimary,
+              fontSize: '22px',
+              fontWeight: 700,
+              color: colors.textPrimary,
             }}
           >
             <i
               className="fas fa-plus-circle"
-              style={{ color: accentColor, marginRight: '8px' }}
+              style={{ color: colors.accent, marginRight: '8px' }}
             ></i>
             Lançar IMC Manual
           </h2>
@@ -1299,7 +1356,7 @@ export default function IMCModule({
             style={{
               marginBottom: '24px',
               fontSize: '14px',
-              color: textSecondary,
+              color: colors.textSecondary,
             }}
           >
             Selecione um colaborador e informe os dados:
@@ -1311,13 +1368,13 @@ export default function IMCModule({
                 display: 'block',
                 marginBottom: '6px',
                 fontWeight: 600,
-                color: textPrimary,
+                color: colors.textPrimary,
                 fontSize: '13px',
               }}
             >
               <i
                 className="fas fa-search"
-                style={{ marginRight: '6px', color: accentColor }}
+                style={{ marginRight: '6px', color: colors.accent }}
               ></i>
               Buscar Colaborador
             </label>
@@ -1329,8 +1386,8 @@ export default function IMCModule({
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`,
                 fontSize: '14px',
                 marginBottom: '8px',
                 outline: 'none',
@@ -1340,8 +1397,8 @@ export default function IMCModule({
               style={{
                 maxHeight: 200,
                 overflowY: 'auto',
-                border: `1px solid ${cardBorder}`,
-                borderRadius: '8px',
+                border: `1px solid ${colors.border}`,
+                borderRadius: '6px',
               }}
             >
               {colaboradoresFiltrados.length === 0 ? (
@@ -1349,7 +1406,8 @@ export default function IMCModule({
                   style={{
                     padding: '20px',
                     textAlign: 'center',
-                    color: textSecondary,
+                    color: colors.textSecondary,
+                    fontSize: '14px',
                   }}
                 >
                   {searchColaborador
@@ -1364,17 +1422,39 @@ export default function IMCModule({
                     style={{
                       padding: '10px 12px',
                       cursor: 'pointer',
-                      borderBottom: `1px solid ${cardBorder}`,
+                      borderBottom: `1px solid ${colors.border}`,
                       background:
                         manualRecord.colaboradorId === col.id
-                          ? `rgba(16, 185, 129, 0.08)`
-                          : 'white',
+                          ? colors.accentSoft
+                          : colors.white,
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (manualRecord.colaboradorId !== col.id) {
+                        e.currentTarget.style.background = colors.bgPage;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (manualRecord.colaboradorId !== col.id) {
+                        e.currentTarget.style.background = colors.white;
+                      }
                     }}
                   >
-                    <div style={{ fontWeight: 500, color: textPrimary }}>
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        color: colors.textPrimary,
+                        fontSize: '14px',
+                      }}
+                    >
                       {col.nome}
                     </div>
-                    <div style={{ fontSize: '12px', color: textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: colors.textSecondary,
+                      }}
+                    >
                       Código: {col.codigo}
                     </div>
                   </div>
@@ -1388,18 +1468,18 @@ export default function IMCModule({
               style={{
                 marginBottom: '16px',
                 padding: '12px',
-                background: `rgba(16, 185, 129, 0.08)`,
-                borderRadius: '8px',
-                border: `1px solid ${accentColor}`,
+                background: colors.accentSoft,
+                borderRadius: '6px',
+                borderLeft: `3px solid ${colors.accent}`,
               }}
             >
-              <span style={{ fontSize: '13px', color: textSecondary }}>
+              <span style={{ fontSize: '13px', color: colors.textSecondary }}>
                 <i
                   className="fas fa-user-check"
-                  style={{ color: accentColor, marginRight: '6px' }}
+                  style={{ color: colors.accent, marginRight: '6px' }}
                 ></i>
                 Colaborador selecionado:{' '}
-                <strong style={{ color: textPrimary }}>
+                <strong style={{ color: colors.textPrimary }}>
                   {manualRecord.colaboradorNome}
                 </strong>
               </span>
@@ -1412,13 +1492,13 @@ export default function IMCModule({
                 display: 'block',
                 marginBottom: '6px',
                 fontWeight: 600,
-                color: textPrimary,
+                color: colors.textPrimary,
                 fontSize: '13px',
               }}
             >
               <i
                 className="fas fa-calendar-alt"
-                style={{ marginRight: '6px', color: accentColor }}
+                style={{ marginRight: '6px', color: colors.accent }}
               ></i>
               Data da Medição
             </label>
@@ -1431,8 +1511,8 @@ export default function IMCModule({
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`,
                 fontSize: '14px',
                 outline: 'none',
               }}
@@ -1452,13 +1532,13 @@ export default function IMCModule({
                   display: 'block',
                   marginBottom: '6px',
                   fontWeight: 600,
-                  color: textPrimary,
+                  color: colors.textPrimary,
                   fontSize: '13px',
                 }}
               >
                 <i
                   className="fas fa-weight"
-                  style={{ marginRight: '6px', color: accentColor }}
+                  style={{ marginRight: '6px', color: colors.accent }}
                 ></i>
                 Peso (kg)
               </label>
@@ -1473,8 +1553,8 @@ export default function IMCModule({
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${cardBorder}`,
+                  borderRadius: '6px',
+                  border: `1px solid ${colors.border}`,
                   fontSize: '14px',
                   outline: 'none',
                 }}
@@ -1486,13 +1566,13 @@ export default function IMCModule({
                   display: 'block',
                   marginBottom: '6px',
                   fontWeight: 600,
-                  color: textPrimary,
+                  color: colors.textPrimary,
                   fontSize: '13px',
                 }}
               >
                 <i
                   className="fas fa-ruler-vertical"
-                  style={{ marginRight: '6px', color: accentColor }}
+                  style={{ marginRight: '6px', color: colors.accent }}
                 ></i>
                 Altura (cm)
               </label>
@@ -1507,8 +1587,8 @@ export default function IMCModule({
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${cardBorder}`,
+                  borderRadius: '6px',
+                  border: `1px solid ${colors.border}`,
                   fontSize: '14px',
                   outline: 'none',
                 }}
@@ -1522,13 +1602,13 @@ export default function IMCModule({
                 display: 'block',
                 marginBottom: '6px',
                 fontWeight: 600,
-                color: textPrimary,
+                color: colors.textPrimary,
                 fontSize: '13px',
               }}
             >
               <i
                 className="fas fa-arrow-left-right"
-                style={{ marginRight: '6px', color: accentColor }}
+                style={{ marginRight: '6px', color: colors.accent }}
               ></i>
               Circunferência (cm)
             </label>
@@ -1546,8 +1626,8 @@ export default function IMCModule({
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`,
                 fontSize: '14px',
                 outline: 'none',
               }}
@@ -1560,13 +1640,13 @@ export default function IMCModule({
                 display: 'block',
                 marginBottom: '6px',
                 fontWeight: 600,
-                color: textPrimary,
+                color: colors.textPrimary,
                 fontSize: '13px',
               }}
             >
               <i
                 className="fas fa-building"
-                style={{ marginRight: '6px', color: accentColor }}
+                style={{ marginRight: '6px', color: colors.accent }}
               ></i>
               Frente de Serviço / Empresa
             </label>
@@ -1583,8 +1663,8 @@ export default function IMCModule({
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${cardBorder}`,
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`,
                 fontSize: '14px',
                 outline: 'none',
               }}
@@ -1598,13 +1678,21 @@ export default function IMCModule({
               style={{
                 flex: 1,
                 padding: '12px',
-                background: saving ? '#95a5a6' : accentColor,
-                color: 'white',
+                background: saving ? colors.textMuted : colors.accent,
+                color: colors.white,
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: saving ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!saving)
+                  e.currentTarget.style.background = colors.accentHover;
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) e.currentTarget.style.background = colors.accent;
               }}
             >
               {saving ? (
@@ -1625,13 +1713,20 @@ export default function IMCModule({
               style={{
                 flex: 1,
                 padding: '12px',
-                background: '#e74c3c',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                background: 'transparent',
+                color: colors.danger,
+                border: `1px solid ${colors.danger}`,
+                borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.dangerSoft;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
               }}
             >
               <i className="fas fa-times"></i> Cancelar
@@ -1645,12 +1740,25 @@ export default function IMCModule({
   // ==================== RENDER ====================
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '50px',
+          background: colors.bgPage,
+          minHeight: '100vh',
+        }}
+      >
         <i
           className="fas fa-spinner fa-spin"
-          style={{ fontSize: '40px', color: accentColor }}
+          style={{ fontSize: '32px', color: colors.accent }}
         ></i>
-        <p style={{ color: textSecondary, marginTop: '16px' }}>
+        <p
+          style={{
+            color: colors.textSecondary,
+            marginTop: '16px',
+            fontSize: '14px',
+          }}
+        >
           Carregando dados...
         </p>
       </div>
@@ -1660,19 +1768,29 @@ export default function IMCModule({
   const inaptos = inaptosData;
 
   return (
-    <div style={styles.imcContainer}>
+    <div
+      style={{
+        ...styles.imcContainer,
+        background: colors.bgPage,
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '24px',
+        minHeight: '100vh',
+      }}
+    >
       <MappingModal />
       <ManualModal />
 
       {error && (
         <div
           style={{
-            background: '#fce4ec',
-            color: '#dc2626',
+            background: colors.dangerSoft,
+            color: colors.danger,
             padding: '12px 16px',
-            borderRadius: '12px',
+            borderRadius: '6px',
             marginBottom: '16px',
-            border: '1px solid #f5c6cb',
+            border: `1px solid ${colors.dangerBorder}`,
+            fontSize: '14px',
           }}
         >
           <i
@@ -1685,12 +1803,13 @@ export default function IMCModule({
       {successMessage && (
         <div
           style={{
-            background: '#e8f5e9',
-            color: '#059669',
+            background: colors.accentSoft,
+            color: colors.accent,
             padding: '12px 16px',
-            borderRadius: '12px',
+            borderRadius: '6px',
             marginBottom: '16px',
-            border: '1px solid #c3e6cb',
+            border: `1px solid ${colors.accent}33`,
+            fontSize: '14px',
           }}
         >
           <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
@@ -1701,12 +1820,12 @@ export default function IMCModule({
       {/* ===== HEADER ===== */}
       <div
         style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '20px 24px',
-          marginBottom: '24px',
-          border: '1px solid #eef2f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          background: colors.bgCard,
+          borderRadius: '8px',
+          padding: '24px 28px',
+          marginBottom: '28px',
+          border: `1px solid ${colors.border}`,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
         }}
       >
         <div
@@ -1716,20 +1835,20 @@ export default function IMCModule({
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '16px',
-            marginBottom: '16px',
+            marginBottom: '20px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: '10px',
-                background: `linear-gradient(135deg, ${accentColor}, #059669)`,
+                width: '44px',
+                height: '44px',
+                borderRadius: '8px',
+                background: colors.primary,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
+                color: colors.white,
                 fontSize: '18px',
               }}
             >
@@ -1740,17 +1859,17 @@ export default function IMCModule({
                 style={{
                   fontSize: '20px',
                   fontWeight: 700,
-                  color: '#1a1a2e',
+                  color: colors.textPrimary,
                   margin: 0,
-                  letterSpacing: '-0.3px',
+                  letterSpacing: '-0.02em',
                 }}
               >
                 Controle de IMC
               </h1>
               <p
                 style={{
-                  fontSize: '12px',
-                  color: '#8892a0',
+                  fontSize: '13px',
+                  color: colors.textSecondary,
                   margin: '2px 0 0 0',
                 }}
               >
@@ -1758,62 +1877,56 @@ export default function IMCModule({
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setShowManualModal(true)}
               style={{
                 padding: '9px 18px',
-                borderRadius: '10px',
+                borderRadius: '6px',
                 border: 'none',
-                background: `linear-gradient(135deg, ${accentColor}, #059669)`,
-                color: 'white',
+                background: colors.primary,
+                color: colors.white,
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
+                transition: 'background 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 12px rgba(16,185,129,0.35)';
+                e.currentTarget.style.background = colors.primaryDark;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 2px 8px rgba(16,185,129,0.25)';
+                e.currentTarget.style.background = colors.primary;
               }}
             >
-              <i className="fas fa-plus-circle"></i> Lançar IMC
+              <i className="fas fa-plus"></i> Lançar IMC
             </button>
+
             <label
               style={{
                 padding: '9px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: 'white',
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`,
+                background: colors.white,
+                color: colors.textPrimary,
                 fontSize: '13px',
-                fontWeight: 600,
+                fontWeight: 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 12px rgba(99,102,241,0.35)';
+                e.currentTarget.style.background = colors.bgPage;
+                e.currentTarget.style.borderColor = colors.primary;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 2px 8px rgba(99,102,241,0.25)';
+                e.currentTarget.style.background = colors.white;
+                e.currentTarget.style.borderColor = colors.border;
               }}
             >
               {importing ? (
@@ -1835,20 +1948,31 @@ export default function IMCModule({
             </label>
           </div>
         </div>
+
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             flexWrap: 'wrap',
-            paddingTop: '14px',
-            borderTop: '1px solid #f0f2f5',
+            paddingTop: '18px',
+            borderTop: `1px solid ${colors.border}`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: colors.bgPage,
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <i
-              className="fas fa-calendar"
-              style={{ fontSize: '13px', color: '#8892a0' }}
+              className="fas fa-calendar-alt"
+              style={{ color: colors.textSecondary, fontSize: '13px' }}
             ></i>
             <select
               value={selectedYear}
@@ -1857,19 +1981,16 @@ export default function IMCModule({
                 setSelectedMonth(null);
               }}
               style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: 'none',
                 fontSize: '13px',
-                background: 'white',
+                background: 'transparent',
                 cursor: 'pointer',
-                fontWeight: 500,
-                color: '#1a1a2e',
+                fontWeight: 600,
+                color: colors.textPrimary,
                 outline: 'none',
-                transition: 'border-color 0.2s ease',
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = accentColor)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
             >
               {[
                 ...new Set(
@@ -1884,139 +2005,152 @@ export default function IMCModule({
                 ))}
             </select>
           </div>
-          <div
-            style={{ width: '1px', height: '28px', background: '#e2e8f0' }}
-          ></div>
+
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              flexWrap: 'wrap',
+              gap: '6px',
+              background: colors.bgPage,
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${colors.border}`,
             }}
           >
-            <label
-              style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: colors.textSecondary,
+                letterSpacing: '0.04em',
+              }}
             >
-              De:
-            </label>
+              De
+            </span>
             <input
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
               style={{
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '12px',
-                background: 'white',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: 'none',
+                fontSize: '13px',
+                background: 'transparent',
                 cursor: 'pointer',
                 outline: 'none',
-                color: '#1a1a2e',
-                transition: 'border-color 0.2s ease',
-                minWidth: '140px',
+                color: colors.textPrimary,
+                fontWeight: 500,
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = accentColor)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
             />
-            <label
-              style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: colors.textSecondary,
+                letterSpacing: '0.04em',
+                marginLeft: '4px',
+              }}
             >
-              Até:
-            </label>
+              Até
+            </span>
             <input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
               style={{
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '12px',
-                background: 'white',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: 'none',
+                fontSize: '13px',
+                background: 'transparent',
                 cursor: 'pointer',
                 outline: 'none',
-                color: '#1a1a2e',
-                transition: 'border-color 0.2s ease',
-                minWidth: '140px',
+                color: colors.textPrimary,
+                fontWeight: 500,
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = accentColor)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
             />
-            <button
-              onClick={() => {
-                setPeriodoAtivo(
-                  periodoAtivo === 'todos' ? 'personalizado' : 'todos'
-                );
-              }}
-              style={{
-                padding: '7px 18px',
-                borderRadius: '8px',
-                border: 'none',
-                background:
-                  periodoAtivo === 'personalizado' ? '#ef4444' : accentColor,
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow:
-                  periodoAtivo === 'personalizado'
-                    ? '0 2px 8px rgba(239,68,68,0.25)'
-                    : '0 2px 8px rgba(16,185,129,0.2)',
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform = 'translateY(-1px)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = 'translateY(0)')
-              }
-            >
-              <i
-                className={`fas ${
-                  periodoAtivo === 'personalizado' ? 'fa-times' : 'fa-filter'
-                }`}
-              ></i>
-              {periodoAtivo === 'todos' ? 'Aplicar Filtro' : 'Remover Filtro'}
-            </button>
           </div>
+
+          <button
+            onClick={() =>
+              setPeriodoAtivo(
+                periodoAtivo === 'todos' ? 'personalizado' : 'todos'
+              )
+            }
+            style={{
+              padding: '7px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              background:
+                periodoAtivo === 'personalizado'
+                  ? colors.danger
+                  : colors.accent,
+              color: colors.white,
+              fontWeight: 600,
+              fontSize: '12px',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.85';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <i
+              className={`fas ${
+                periodoAtivo === 'personalizado' ? 'fa-times' : 'fa-filter'
+              }`}
+            ></i>
+            {periodoAtivo === 'todos' ? 'Filtrar' : 'Limpar'}
+          </button>
+
           {periodoAtivo === 'personalizado' && (
-            <span
+            <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '4px 14px',
-                borderRadius: '20px',
-                background: '#fef2f2',
-                color: '#dc2626',
-                fontSize: '11px',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                background: colors.accentSoft,
+                color: colors.accent,
+                fontSize: '12px',
                 fontWeight: 600,
-                border: '1px solid #fecaca',
+                border: `1px solid ${colors.accent}33`,
               }}
             >
-              <i className="fas fa-filter" style={{ fontSize: '10px' }}></i>
+              <i className="fas fa-calendar-day"></i>
               {new Date(dataInicio).toLocaleDateString('pt-BR')} —{' '}
               {new Date(dataFim).toLocaleDateString('pt-BR')}
-            </span>
+            </div>
           )}
-          <span
+
+          <div
             style={{
               marginLeft: 'auto',
               fontSize: '12px',
-              color: '#94a3b8',
-              fontWeight: 500,
+              color: colors.textSecondary,
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '6px',
+              background: colors.bgPage,
+              padding: '6px 12px',
+              borderRadius: '6px',
             }}
           >
-            <i className="fas fa-database" style={{ fontSize: '11px' }}></i>
-            {employees.length} registros
-          </span>
+            <i className="fas fa-database" style={{ fontSize: '12px' }}></i>
+            <span>
+              {employees.length}{' '}
+              <span style={{ fontWeight: 400, opacity: 0.7 }}>registros</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -2031,33 +2165,40 @@ export default function IMCModule({
       >
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '20px',
-            border: `1px solid ${cardBorder}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: `1px solid ${colors.border}`,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            borderLeft: `3px solid ${colors.accent}`,
           }}
         >
           <div
-            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+            style={{
+              fontSize: '12px',
+              color: colors.textSecondary,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
           >
             <i
               className="fas fa-users"
-              style={{ marginRight: '6px', color: accentColor }}
+              style={{ marginRight: '6px', color: colors.accent }}
             ></i>
             Total Avaliados
           </div>
           <div
             style={{
               fontSize: '28px',
-              fontWeight: 800,
-              color: textPrimary,
+              fontWeight: 700,
+              color: colors.textPrimary,
               marginTop: '8px',
             }}
           >
             {inaptos.totalAvaliados}
           </div>
-          <div style={{ fontSize: '12px', color: textSecondary }}>
+          <div style={{ fontSize: '12px', color: colors.textSecondary }}>
             {periodoAtivo === 'personalizado'
               ? 'Período filtrado'
               : selectedYear > 0
@@ -2068,33 +2209,40 @@ export default function IMCModule({
 
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '20px',
-            border: `1px solid ${cardBorder}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: `1px solid ${colors.border}`,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            borderLeft: `3px solid ${colors.danger}`,
           }}
         >
           <div
-            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+            style={{
+              fontSize: '12px',
+              color: colors.textSecondary,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
           >
             <i
-              className="fas fa-times-circle"
-              style={{ marginRight: '6px', color: '#EF4444' }}
+              className="fas fa-exclamation-triangle"
+              style={{ marginRight: '6px', color: colors.danger }}
             ></i>
             IMC ≥ 35 + Circ ≥ 102
           </div>
           <div
             style={{
               fontSize: '28px',
-              fontWeight: 800,
-              color: '#EF4444',
+              fontWeight: 700,
+              color: colors.danger,
               marginTop: '8px',
             }}
           >
             {inaptos.totalInaptosIMC35_Circ}
           </div>
-          <div style={{ fontSize: '12px', color: textSecondary }}>
+          <div style={{ fontSize: '12px', color: colors.textSecondary }}>
             {inaptos.totalGeral > 0
               ? (
                   (inaptos.totalInaptosIMC35_Circ / inaptos.totalGeral) *
@@ -2107,33 +2255,40 @@ export default function IMCModule({
 
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '20px',
-            border: `1px solid ${cardBorder}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: `1px solid ${colors.border}`,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            borderLeft: `3px solid ${colors.warning}`,
           }}
         >
           <div
-            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+            style={{
+              fontSize: '12px',
+              color: colors.textSecondary,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
           >
             <i
-              className="fas fa-arrow-left-right"
-              style={{ marginRight: '6px', color: '#F59E0B' }}
+              className="fas fa-ruler-horizontal"
+              style={{ marginRight: '6px', color: colors.warning }}
             ></i>
             Circ ≥ 102 (IMC &lt; 30)
           </div>
           <div
             style={{
               fontSize: '28px',
-              fontWeight: 800,
-              color: '#F59E0B',
+              fontWeight: 700,
+              color: colors.warning,
               marginTop: '8px',
             }}
           >
             {inaptos.totalInaptosCirc_IMC30}
           </div>
-          <div style={{ fontSize: '12px', color: textSecondary }}>
+          <div style={{ fontSize: '12px', color: colors.textSecondary }}>
             {inaptos.totalGeral > 0
               ? (
                   (inaptos.totalInaptosCirc_IMC30 / inaptos.totalGeral) *
@@ -2146,33 +2301,40 @@ export default function IMCModule({
 
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '20px',
-            border: `1px solid ${cardBorder}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            border: `1px solid ${colors.border}`,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            borderLeft: `3px solid ${colors.orange}`,
           }}
         >
           <div
-            style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
+            style={{
+              fontSize: '12px',
+              color: colors.textSecondary,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
           >
             <i
-              className="fas fa-exclamation-triangle"
-              style={{ marginRight: '6px', color: '#F97316' }}
+              className="fas fa-user-slash"
+              style={{ marginRight: '6px', color: colors.orange }}
             ></i>
             Total Inaptos (Geral)
           </div>
           <div
             style={{
               fontSize: '28px',
-              fontWeight: 800,
-              color: '#F97316',
+              fontWeight: 700,
+              color: colors.orange,
               marginTop: '8px',
             }}
           >
             {inaptos.todosInaptos.length}
           </div>
-          <div style={{ fontSize: '12px', color: textSecondary }}>
+          <div style={{ fontSize: '12px', color: colors.textSecondary }}>
             {inaptos.totalGeral > 0
               ? (
                   (inaptos.todosInaptos.length / inaptos.totalGeral) *
@@ -2187,11 +2349,12 @@ export default function IMCModule({
       {/* ===== SEÇÃO DE INAPTOS POR PERÍODO ===== */}
       <div
         style={{
-          background: bgCard,
-          borderRadius: '16px',
+          background: colors.bgCard,
+          borderRadius: '8px',
           padding: '24px',
-          border: `1px solid ${cardBorder}`,
+          border: `1px solid ${colors.border}`,
           marginBottom: '24px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
         }}
       >
         <div
@@ -2206,15 +2369,15 @@ export default function IMCModule({
         >
           <h3
             style={{
-              fontSize: '16px',
+              fontSize: '15px',
               fontWeight: 700,
-              color: textPrimary,
+              color: colors.textPrimary,
               margin: 0,
             }}
           >
             <i
               className="fas fa-user-times"
-              style={{ color: '#EF4444', marginRight: '8px' }}
+              style={{ color: colors.danger, marginRight: '8px' }}
             ></i>
             Inaptos por {periodoFiltro === 'mensal' ? 'Mês' : 'Trimestre'}
           </h3>
@@ -2225,14 +2388,18 @@ export default function IMCModule({
                 padding: '6px 16px',
                 borderRadius: '20px',
                 border: `1px solid ${
-                  periodoFiltro === 'mensal' ? accentColor : cardBorder
+                  periodoFiltro === 'mensal' ? colors.accent : colors.border
                 }`,
                 background:
-                  periodoFiltro === 'mensal' ? accentColor : 'transparent',
-                color: periodoFiltro === 'mensal' ? 'white' : textSecondary,
+                  periodoFiltro === 'mensal' ? colors.accent : 'transparent',
+                color:
+                  periodoFiltro === 'mensal'
+                    ? colors.white
+                    : colors.textSecondary,
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 600,
+                transition: 'all 0.2s ease',
               }}
             >
               Mensal
@@ -2243,14 +2410,20 @@ export default function IMCModule({
                 padding: '6px 16px',
                 borderRadius: '20px',
                 border: `1px solid ${
-                  periodoFiltro === 'trimestral' ? accentColor : cardBorder
+                  periodoFiltro === 'trimestral' ? colors.accent : colors.border
                 }`,
                 background:
-                  periodoFiltro === 'trimestral' ? accentColor : 'transparent',
-                color: periodoFiltro === 'trimestral' ? 'white' : textSecondary,
+                  periodoFiltro === 'trimestral'
+                    ? colors.accent
+                    : 'transparent',
+                color:
+                  periodoFiltro === 'trimestral'
+                    ? colors.white
+                    : colors.textSecondary,
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 600,
+                transition: 'all 0.2s ease',
               }}
             >
               Trimestral
@@ -2260,12 +2433,19 @@ export default function IMCModule({
               style={{
                 padding: '6px 16px',
                 borderRadius: '20px',
-                border: `1px solid ${cardBorder}`,
+                border: `1px solid ${colors.border}`,
                 background: 'transparent',
-                color: textSecondary,
+                color: colors.textSecondary,
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 600,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.bgPage;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
               }}
             >
               {showInaptosTable ? 'Ocultar Detalhes' : 'Ver Detalhes'}
@@ -2283,8 +2463,8 @@ export default function IMCModule({
             <thead>
               <tr
                 style={{
-                  background: '#f8f9fa',
-                  borderBottom: `2px solid ${cardBorder}`,
+                  background: colors.bgPage,
+                  borderBottom: `2px solid ${colors.border}`,
                 }}
               >
                 <th
@@ -2292,7 +2472,7 @@ export default function IMCModule({
                     padding: '10px 12px',
                     textAlign: 'left',
                     fontWeight: 700,
-                    color: textPrimary,
+                    color: colors.textPrimary,
                   }}
                 >
                   Período
@@ -2302,17 +2482,17 @@ export default function IMCModule({
                     padding: '10px 12px',
                     textAlign: 'center',
                     fontWeight: 700,
-                    color: textPrimary,
+                    color: colors.textPrimary,
                   }}
                 >
-                  Total Avaliações
+                  Total Avaliados
                 </th>
                 <th
                   style={{
                     padding: '10px 12px',
                     textAlign: 'center',
                     fontWeight: 700,
-                    color: '#EF4444',
+                    color: colors.danger,
                   }}
                 >
                   IMC ≥ 35 + Circ ≥ 102
@@ -2322,7 +2502,7 @@ export default function IMCModule({
                     padding: '10px 12px',
                     textAlign: 'center',
                     fontWeight: 700,
-                    color: '#F59E0B',
+                    color: colors.warning,
                   }}
                 >
                   Circ ≥ 102 (IMC &lt; 30)
@@ -2332,7 +2512,7 @@ export default function IMCModule({
                     padding: '10px 12px',
                     textAlign: 'center',
                     fontWeight: 700,
-                    color: '#6B7280',
+                    color: colors.textSecondary,
                   }}
                 >
                   % Inaptos
@@ -2347,13 +2527,13 @@ export default function IMCModule({
                     return (
                       <tr
                         key={idx}
-                        style={{ borderBottom: `1px solid ${cardBorder}` }}
+                        style={{ borderBottom: `1px solid ${colors.border}` }}
                       >
                         <td
                           style={{
                             padding: '10px 12px',
                             fontWeight: 600,
-                            color: textPrimary,
+                            color: colors.textPrimary,
                           }}
                         >
                           {mes}
@@ -2362,7 +2542,7 @@ export default function IMCModule({
                           style={{
                             padding: '10px 12px',
                             textAlign: 'center',
-                            color: textSecondary,
+                            color: colors.textSecondary,
                           }}
                         >
                           {data.total}
@@ -2372,7 +2552,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#EF4444',
+                            color: colors.danger,
                           }}
                         >
                           {data.inaptosIMC35_Circ}
@@ -2382,7 +2562,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#F59E0B',
+                            color: colors.warning,
                           }}
                         >
                           {data.inaptosCirc_IMC30}
@@ -2392,7 +2572,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#6B7280',
+                            color: colors.textSecondary,
                           }}
                         >
                           {data.percentual}%
@@ -2406,13 +2586,13 @@ export default function IMCModule({
                     return (
                       <tr
                         key={trim}
-                        style={{ borderBottom: `1px solid ${cardBorder}` }}
+                        style={{ borderBottom: `1px solid ${colors.border}` }}
                       >
                         <td
                           style={{
                             padding: '10px 12px',
                             fontWeight: 700,
-                            color: textPrimary,
+                            color: colors.textPrimary,
                           }}
                         >
                           {trim}
@@ -2421,7 +2601,7 @@ export default function IMCModule({
                           style={{
                             padding: '10px 12px',
                             textAlign: 'center',
-                            color: textSecondary,
+                            color: colors.textSecondary,
                           }}
                         >
                           {data.total}
@@ -2431,7 +2611,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#EF4444',
+                            color: colors.danger,
                           }}
                         >
                           {data.inaptosIMC35_Circ}
@@ -2441,7 +2621,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#F59E0B',
+                            color: colors.warning,
                           }}
                         >
                           {data.inaptosCirc_IMC30}
@@ -2451,7 +2631,7 @@ export default function IMCModule({
                             padding: '10px 12px',
                             textAlign: 'center',
                             fontWeight: 700,
-                            color: '#6B7280',
+                            color: colors.textSecondary,
                           }}
                         >
                           {data.percentual}%
@@ -2466,12 +2646,13 @@ export default function IMCModule({
               style={{
                 textAlign: 'center',
                 padding: '20px',
-                color: textSecondary,
+                color: colors.textSecondary,
+                fontSize: '14px',
               }}
             >
               <i
                 className="fas fa-check-circle"
-                style={{ color: '#10B981', marginRight: '8px' }}
+                style={{ color: colors.success, marginRight: '8px' }}
               ></i>
               Nenhum colaborador inapto encontrado neste período.
             </div>
@@ -2483,13 +2664,13 @@ export default function IMCModule({
               style={{
                 fontSize: '14px',
                 fontWeight: 700,
-                color: textPrimary,
+                color: colors.textPrimary,
                 marginBottom: '12px',
               }}
             >
               <i
                 className="fas fa-list"
-                style={{ color: accentColor, marginRight: '8px' }}
+                style={{ color: colors.accent, marginRight: '8px' }}
               ></i>
               Detalhes dos Inaptos
             </h4>
@@ -2504,8 +2685,8 @@ export default function IMCModule({
                 <thead>
                   <tr
                     style={{
-                      background: '#f8f9fa',
-                      borderBottom: `2px solid ${cardBorder}`,
+                      background: colors.bgPage,
+                      borderBottom: `2px solid ${colors.border}`,
                     }}
                   >
                     <th
@@ -2513,7 +2694,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'left',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Código
@@ -2523,7 +2704,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'left',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Data
@@ -2533,7 +2714,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'center',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       IMC
@@ -2543,7 +2724,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'center',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Circ (cm)
@@ -2553,7 +2734,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'center',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Circ/Altura
@@ -2563,7 +2744,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'left',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Motivo
@@ -2573,7 +2754,7 @@ export default function IMCModule({
                         padding: '8px 10px',
                         textAlign: 'left',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       Empresa
@@ -2584,18 +2765,23 @@ export default function IMCModule({
                   {inaptos.todosInaptos.map((item, idx) => (
                     <tr
                       key={idx}
-                      style={{ borderBottom: `1px solid ${cardBorder}` }}
+                      style={{ borderBottom: `1px solid ${colors.border}` }}
                     >
                       <td
                         style={{
                           padding: '8px 10px',
                           fontWeight: 600,
-                          color: textPrimary,
+                          color: colors.textPrimary,
                         }}
                       >
                         {item.codigo}
                       </td>
-                      <td style={{ padding: '8px 10px', color: textSecondary }}>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          color: colors.textSecondary,
+                        }}
+                      >
                         {item.data || '-'}
                       </td>
                       <td
@@ -2603,7 +2789,8 @@ export default function IMCModule({
                           padding: '8px 10px',
                           textAlign: 'center',
                           fontWeight: 700,
-                          color: item.imc >= 30 ? '#EF4444' : '#10B981',
+                          color:
+                            item.imc >= 30 ? colors.danger : colors.success,
                         }}
                       >
                         {item.imc.toFixed(2)}
@@ -2614,7 +2801,9 @@ export default function IMCModule({
                           textAlign: 'center',
                           fontWeight: 700,
                           color:
-                            item.circunferencia >= 102 ? '#EF4444' : '#10B981',
+                            item.circunferencia >= 102
+                              ? colors.danger
+                              : colors.success,
                         }}
                       >
                         {item.circunferencia}
@@ -2626,8 +2815,8 @@ export default function IMCModule({
                           fontWeight: 700,
                           color:
                             item.relacaoCircAltura >= 0.5
-                              ? '#EF4444'
-                              : '#10B981',
+                              ? colors.danger
+                              : colors.success,
                         }}
                       >
                         {item.relacaoCircAltura.toFixed(2)}
@@ -2641,22 +2830,27 @@ export default function IMCModule({
                             fontWeight: 600,
                             background:
                               item.motivo === 'IMC ≥ 35 + Circ ≥ 102'
-                                ? '#EF444420'
+                                ? colors.dangerSoft
                                 : item.motivo === 'Circ ≥ 102 (IMC < 30)'
-                                ? '#F59E0B20'
-                                : '#F9731620',
+                                ? colors.amberSoft
+                                : colors.orangeSoft,
                             color:
                               item.motivo === 'IMC ≥ 35 + Circ ≥ 102'
-                                ? '#EF4444'
+                                ? colors.danger
                                 : item.motivo === 'Circ ≥ 102 (IMC < 30)'
-                                ? '#F59E0B'
-                                : '#F97316',
+                                ? colors.warning
+                                : colors.orange,
                           }}
                         >
                           {item.motivo}
                         </span>
                       </td>
-                      <td style={{ padding: '8px 10px', color: textSecondary }}>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          color: colors.textSecondary,
+                        }}
+                      >
                         {item.empresa || '-'}
                       </td>
                     </tr>
@@ -2680,13 +2874,13 @@ export default function IMCModule({
         {[
           {
             icon: 'fa-weight-scale',
-            label: 'IMC',
+            label: 'IMC Médio',
             value:
               mediaPeriodo && mediaPeriodo.mediaImc !== null
                 ? mediaPeriodo.mediaImc.toFixed(2)
                 : '-',
-            color: '#10B981',
-            bg: 'rgba(16,185,129,0.08)',
+            color: colors.accent,
+            bg: colors.accentSoft,
           },
           {
             icon: 'fa-calendar-alt',
@@ -2694,51 +2888,51 @@ export default function IMCModule({
             value: mediaPeriodo
               ? `${mediaPeriodo.periodoInicio} à ${mediaPeriodo.periodoFim}`
               : '-',
-            color: '#3B82F6',
-            bg: 'rgba(59,130,246,0.08)',
+            color: colors.indigo,
+            bg: colors.indigoSoft,
           },
           {
             icon: 'fa-tag',
-            label: 'Status',
+            label: 'Status Predominante',
             value: mediaPeriodo ? mediaPeriodo.statusMaisFreq : '-',
-            color: '#F59E0B',
-            bg: 'rgba(245,158,11,0.08)',
+            color: colors.warning,
+            bg: colors.amberSoft,
           },
           {
             icon: 'fa-arrow-left-right',
-            label: 'Circunferência',
+            label: 'Circunferência Média',
             value:
               mediaPeriodo && mediaPeriodo.mediaCirc !== null
                 ? `${mediaPeriodo.mediaCirc.toFixed(1)} cm`
                 : '-',
-            color: '#8B5CF6',
-            bg: 'rgba(139,92,246,0.08)',
+            color: colors.primary,
+            bg: colors.bgPage,
           },
         ].map((item, idx) => (
           <div
             key={idx}
             style={{
-              background: bgCard,
-              borderRadius: '16px',
-              padding: '20px',
-              border: `1px solid ${cardBorder}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              background: colors.bgCard,
+              borderRadius: '8px',
+              padding: '18px',
+              border: `1px solid ${colors.border}`,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
+              gap: '14px',
             }}
           >
             <div
               style={{
                 background: item.bg,
-                borderRadius: '12px',
+                borderRadius: '6px',
                 padding: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '20px',
-                minWidth: '48px',
-                minHeight: '48px',
+                fontSize: '18px',
+                minWidth: '44px',
+                minHeight: '44px',
                 color: item.color,
               }}
             >
@@ -2747,9 +2941,9 @@ export default function IMCModule({
             <div>
               <div
                 style={{
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 700,
-                  color: textPrimary,
+                  color: colors.textPrimary,
                 }}
               >
                 {item.value}
@@ -2757,8 +2951,11 @@ export default function IMCModule({
               <div
                 style={{
                   fontSize: '11px',
-                  color: textSecondary,
+                  color: colors.textSecondary,
                   fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginTop: '2px',
                 }}
               >
                 {item.label}
@@ -2781,42 +2978,48 @@ export default function IMCModule({
           {
             label: 'Diminuiu o peso',
             value: variacaoPeso.diminuiu,
-            color: '#10B981',
-            bg: 'rgba(16,185,129,0.08)',
+            color: colors.success,
           },
           {
             label: 'Manteve o peso',
             value: variacaoPeso.manteve,
-            color: '#F59E0B',
-            bg: 'rgba(245,158,11,0.08)',
+            color: colors.warning,
           },
           {
             label: 'Aumentou o peso',
             value: variacaoPeso.aumentou,
-            color: '#EF4444',
-            bg: 'rgba(239,68,68,0.08)',
+            color: colors.danger,
           },
         ].map((item, idx) => (
           <div
             key={idx}
             style={{
-              background: bgCard,
-              borderRadius: '16px',
+              background: colors.bgCard,
+              borderRadius: '8px',
               padding: '20px',
-              border: `1px solid ${cardBorder}`,
+              border: `1px solid ${colors.border}`,
+              borderBottom: `3px solid ${item.color}`,
               textAlign: 'center',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
             }}
           >
             <div
-              style={{ fontSize: '28px', fontWeight: 800, color: item.color }}
+              style={{
+                fontSize: '30px',
+                fontWeight: 700,
+                color: item.color,
+              }}
             >
               {item.value}
             </div>
             <div
               style={{
                 fontSize: '12px',
-                color: textSecondary,
+                color: colors.textSecondary,
                 fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginTop: '4px',
               }}
             >
               {item.label}
@@ -2829,24 +3032,25 @@ export default function IMCModule({
       {Object.keys(statusCounts).length > 0 && (
         <div
           style={{
-            background: bgCard,
-            borderRadius: '16px',
+            background: colors.bgCard,
+            borderRadius: '8px',
             padding: '24px',
-            border: `1px solid ${cardBorder}`,
+            border: `1px solid ${colors.border}`,
             marginBottom: '24px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
           }}
         >
           <h3
             style={{
-              fontSize: '16px',
+              fontSize: '15px',
               fontWeight: 700,
-              color: textPrimary,
+              color: colors.textPrimary,
               marginBottom: '16px',
             }}
           >
             <i
               className="fas fa-chart-pie"
-              style={{ color: accentColor, marginRight: '8px' }}
+              style={{ color: colors.accent, marginRight: '8px' }}
             ></i>
             Status de IMC
           </h3>
@@ -2886,13 +3090,13 @@ export default function IMCModule({
                         temDados(e)
                       ).length;
                       const percentage = total > 0 ? (count / total) * 100 : 0;
-                      const colors: Record<string, string> = {
-                        'Peso normal': '#10B981',
-                        Sobrepeso: '#F59E0B',
-                        'Obesidade grau I': '#F97316',
-                        'Obesidade grau II': '#EF4444',
+                      const colorsMap: Record<string, string> = {
+                        'Peso normal': colors.success,
+                        Sobrepeso: colors.warning,
+                        'Obesidade grau I': colors.orange,
+                        'Obesidade grau II': colors.danger,
                       };
-                      const color = colors[status] || '#6B7280';
+                      const color = colorsMap[status] || colors.textMuted;
                       let offset = 0;
                       for (let i = 0; i < idx; i++) {
                         const prevTotal = dadosUnicosPorColaborador.filter(
@@ -2933,9 +3137,9 @@ export default function IMCModule({
                 >
                   <div
                     style={{
-                      fontSize: '20px',
-                      fontWeight: 800,
-                      color: textPrimary,
+                      fontSize: '22px',
+                      fontWeight: 700,
+                      color: colors.textPrimary,
                     }}
                   >
                     {
@@ -2946,8 +3150,9 @@ export default function IMCModule({
                   <div
                     style={{
                       fontSize: '10px',
-                      color: textSecondary,
+                      color: colors.textSecondary,
                       fontWeight: 600,
+                      letterSpacing: '0.04em',
                     }}
                   >
                     TOTAL
@@ -2962,13 +3167,13 @@ export default function IMCModule({
                 const total = dadosUnicosPorColaborador.filter((e) =>
                   temDados(e)
                 ).length;
-                const colors: Record<string, string> = {
-                  'Peso normal': '#10B981',
-                  Sobrepeso: '#F59E0B',
-                  'Obesidade grau I': '#F97316',
-                  'Obesidade grau II': '#EF4444',
+                const colorsMap: Record<string, string> = {
+                  'Peso normal': colors.success,
+                  Sobrepeso: colors.warning,
+                  'Obesidade grau I': colors.orange,
+                  'Obesidade grau II': colors.danger,
                 };
-                const color = colors[status] || '#6B7280';
+                const color = colorsMap[status] || colors.textMuted;
                 const percentage =
                   total > 0 ? Math.round((count / total) * 100) : 0;
                 return (
@@ -2982,8 +3187,8 @@ export default function IMCModule({
                   >
                     <div
                       style={{
-                        width: '16px',
-                        height: '16px',
+                        width: '14px',
+                        height: '14px',
                         borderRadius: '4px',
                         background: color,
                         flexShrink: 0,
@@ -2991,8 +3196,8 @@ export default function IMCModule({
                     ></div>
                     <span
                       style={{
-                        fontSize: '14px',
-                        color: textSecondary,
+                        fontSize: '13px',
+                        color: colors.textSecondary,
                         flex: 1,
                       }}
                     >
@@ -3000,9 +3205,9 @@ export default function IMCModule({
                     </span>
                     <span
                       style={{
-                        fontSize: '16px',
+                        fontSize: '15px',
                         fontWeight: 700,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       {percentage}%
@@ -3018,24 +3223,25 @@ export default function IMCModule({
       {/* ===== GRÁFICO DE BARRAS ===== */}
       <div
         style={{
-          background: bgCard,
-          borderRadius: '16px',
+          background: colors.bgCard,
+          borderRadius: '8px',
           padding: '24px',
-          border: `1px solid ${cardBorder}`,
+          border: `1px solid ${colors.border}`,
           marginBottom: '24px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
         }}
       >
         <h3
           style={{
-            fontSize: '16px',
+            fontSize: '15px',
             fontWeight: 700,
-            color: textPrimary,
+            color: colors.textPrimary,
             marginBottom: '16px',
           }}
         >
           <i
             className="fas fa-chart-bar"
-            style={{ color: accentColor, marginRight: '8px' }}
+            style={{ color: colors.accent, marginRight: '8px' }}
           ></i>
           Colaboradores únicos por mês em {selectedYear}
         </h3>
@@ -3077,29 +3283,24 @@ export default function IMCModule({
                   <div
                     style={{
                       height: `${altura}px`,
-                      background: `linear-gradient(180deg, ${
+                      background:
                         valor > 0
                           ? isSelected
-                            ? '#e74c3c'
-                            : accentColor
-                          : '#ecf0f1'
-                      } 0%, ${
-                        valor > 0
-                          ? isSelected
-                            ? '#c0392b'
-                            : '#059669'
-                          : '#bdc3c7'
-                      } 100%)`,
-                      borderRadius: '8px 8px 4px 4px',
+                            ? colors.danger
+                            : colors.accent
+                          : colors.bgPage,
+                      borderRadius: '4px 4px 2px 2px',
                       transition: 'height 0.3s, background 0.2s',
                       display: 'flex',
                       alignItems: 'flex-start',
                       justifyContent: 'center',
-                      color: 'white',
+                      color: colors.white,
                       fontSize: '11px',
                       fontWeight: 700,
                       paddingTop: '4px',
-                      boxShadow: isSelected ? '0 0 0 3px #e74c3c' : 'none',
+                      boxShadow: isSelected
+                        ? `0 0 0 2px ${colors.dangerSoft}`
+                        : 'none',
                     }}
                   >
                     {valor > 0 && <span>{valor}</span>}
@@ -3110,7 +3311,7 @@ export default function IMCModule({
                     marginTop: '8px',
                     fontSize: '11px',
                     fontWeight: isSelected ? 700 : 600,
-                    color: isSelected ? '#e74c3c' : textSecondary,
+                    color: isSelected ? colors.danger : colors.textSecondary,
                   }}
                 >
                   {mes}
@@ -3124,31 +3325,32 @@ export default function IMCModule({
       {/* ===== GRÁFICO DE LINHAS ===== */}
       <div
         style={{
-          background: bgCard,
-          borderRadius: '16px',
+          background: colors.bgCard,
+          borderRadius: '8px',
           padding: '24px',
-          border: `1px solid ${cardBorder}`,
+          border: `1px solid ${colors.border}`,
           marginBottom: '24px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
         }}
       >
         <h3
           style={{
-            fontSize: '16px',
+            fontSize: '15px',
             fontWeight: 700,
-            color: textPrimary,
-            marginBottom: '8px',
+            color: colors.textPrimary,
+            marginBottom: '4px',
           }}
         >
           <i
             className="fas fa-chart-line"
-            style={{ color: accentColor, marginRight: '8px' }}
+            style={{ color: colors.accent, marginRight: '8px' }}
           ></i>
           Evolução Anual de IMC
         </h3>
         <p
           style={{
             fontSize: '12px',
-            color: textSecondary,
+            color: colors.textSecondary,
             marginBottom: '20px',
           }}
         >
@@ -3166,7 +3368,7 @@ export default function IMCModule({
                     y1={y}
                     x2="680"
                     y2={y}
-                    stroke="#e5e7eb"
+                    stroke={colors.border}
                     strokeWidth="1"
                     strokeDasharray={pct === 0 ? '0' : '4 4'}
                   />
@@ -3175,7 +3377,7 @@ export default function IMCModule({
                     y={y + 4}
                     textAnchor="end"
                     fontSize="10"
-                    fill="#6b7280"
+                    fill={colors.textMuted}
                   >
                     {label}
                   </text>
@@ -3191,7 +3393,7 @@ export default function IMCModule({
                     y1={20}
                     x2={x}
                     y2={220}
-                    stroke="#f3f4f6"
+                    stroke={colors.border}
                     strokeWidth="1"
                   />
                   <text
@@ -3199,7 +3401,7 @@ export default function IMCModule({
                     y={240}
                     textAnchor="middle"
                     fontSize="10"
-                    fill="#6b7280"
+                    fill={colors.textSecondary}
                   >
                     {mes}
                   </text>
@@ -3207,7 +3409,8 @@ export default function IMCModule({
               );
             })}
             {Object.entries(evolucaoPorStatus.data).map(([status, values]) => {
-              const color = evolucaoPorStatus.colors[status] || '#6B7280';
+              const color =
+                evolucaoPorStatus.colors[status] || colors.textMuted;
               const points = values
                 .map((v, i) => {
                   const x = 50 + (i / 11) * 630;
@@ -3224,7 +3427,7 @@ export default function IMCModule({
                     points={points}
                     fill="none"
                     stroke={color}
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                     strokeLinejoin="round"
                     strokeLinecap="round"
                   />
@@ -3239,8 +3442,8 @@ export default function IMCModule({
                         <circle
                           cx={x}
                           cy={y}
-                          r="5"
-                          fill="white"
+                          r="4.5"
+                          fill={colors.white}
                           stroke={color}
                           strokeWidth="2.5"
                         />
@@ -3280,26 +3483,26 @@ export default function IMCModule({
             >
               <div
                 style={{
-                  width: '32px',
-                  height: '3px',
+                  width: '28px',
+                  height: '2.5px',
                   background: color,
                   borderRadius: '2px',
                 }}
               />
               <div
                 style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '10px',
+                  height: '10px',
                   borderRadius: '50%',
                   background: color,
-                  border: '2px solid white',
+                  border: `2px solid ${colors.white}`,
                   boxShadow: `0 0 0 1px ${color}`,
                 }}
               />
               <span
                 style={{
-                  fontSize: '13px',
-                  color: textSecondary,
+                  fontSize: '12px',
+                  color: colors.textSecondary,
                   fontWeight: 600,
                 }}
               >
@@ -3313,11 +3516,12 @@ export default function IMCModule({
       {/* ===== TABELA DE DETALHAMENTO ===== */}
       <div
         style={{
-          background: bgCard,
-          borderRadius: '16px',
+          background: colors.bgCard,
+          borderRadius: '8px',
           padding: '24px',
-          border: `1px solid ${cardBorder}`,
+          border: `1px solid ${colors.border}`,
           overflow: 'hidden',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
         }}
       >
         <div
@@ -3332,15 +3536,15 @@ export default function IMCModule({
         >
           <h3
             style={{
-              fontSize: '16px',
+              fontSize: '15px',
               fontWeight: 700,
-              color: textPrimary,
+              color: colors.textPrimary,
               margin: 0,
             }}
           >
             <i
               className="fas fa-table"
-              style={{ color: accentColor, marginRight: '8px' }}
+              style={{ color: colors.accent, marginRight: '8px' }}
             ></i>
             Detalhamento
           </h3>
@@ -3354,8 +3558,8 @@ export default function IMCModule({
           >
             <span
               style={{
-                fontSize: '13px',
-                color: textSecondary,
+                fontSize: '12px',
+                color: colors.textSecondary,
                 fontWeight: 600,
               }}
             >
@@ -3375,8 +3579,8 @@ export default function IMCModule({
             <thead>
               <tr
                 style={{
-                  background: '#f8f9fa',
-                  borderBottom: `2px solid ${cardBorder}`,
+                  background: colors.bgPage,
+                  borderBottom: `2px solid ${colors.border}`,
                 }}
               >
                 {[
@@ -3397,7 +3601,7 @@ export default function IMCModule({
                       padding: '10px 12px',
                       textAlign: 'left',
                       fontWeight: 700,
-                      color: textPrimary,
+                      color: colors.textPrimary,
                       minWidth: '100px',
                     }}
                   >
@@ -3408,7 +3612,16 @@ export default function IMCModule({
                         gap: '4px',
                       }}
                     >
-                      <span>{col.label}</span>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {col.label}
+                      </span>
                       <input
                         type="text"
                         placeholder="Filtrar..."
@@ -3431,18 +3644,18 @@ export default function IMCModule({
                         style={{
                           padding: '4px 8px',
                           borderRadius: '4px',
-                          border: `1px solid ${cardBorder}`,
+                          border: `1px solid ${colors.border}`,
                           fontSize: '11px',
                           outline: 'none',
                           width: '100%',
                           minWidth: '80px',
-                          background: '#fafafa',
+                          background: colors.bgPage,
                         }}
                         onFocus={(e) =>
-                          (e.currentTarget.style.borderColor = accentColor)
+                          (e.currentTarget.style.borderColor = colors.accent)
                         }
                         onBlur={(e) =>
-                          (e.currentTarget.style.borderColor = cardBorder)
+                          (e.currentTarget.style.borderColor = colors.border)
                         }
                       />
                     </div>
@@ -3454,12 +3667,12 @@ export default function IMCModule({
               {dadosComFiltroPeriodo.map((emp, idx) => {
                 const bmi = getIMC(emp);
                 const status = emp.statusImc || getBMIClassification(bmi);
-                let statusColor = '#6B7280';
-                if (status === 'NORMAL') statusColor = '#10B981';
-                else if (status === 'SOBREPESO') statusColor = '#F59E0B';
-                else if (status === 'OBESIDADE I') statusColor = '#F97316';
-                else if (status === 'OBESIDADE II') statusColor = '#EF4444';
-                else if (status === 'OBESIDADE III') statusColor = '#7F1D1D';
+                let statusColor = colors.textMuted;
+                if (status === 'NORMAL') statusColor = colors.success;
+                else if (status === 'SOBREPESO') statusColor = colors.warning;
+                else if (status === 'OBESIDADE I') statusColor = colors.orange;
+                else if (status === 'OBESIDADE II') statusColor = colors.danger;
+                else if (status === 'OBESIDADE III') statusColor = '#7A1913';
 
                 const variacao = emp.variacaoPeso || 0;
                 const variacaoLabel =
@@ -3470,35 +3683,41 @@ export default function IMCModule({
                     : 'Manteve';
                 const variacaoColor =
                   variacao > 0.5
-                    ? '#EF4444'
+                    ? colors.danger
                     : variacao < -0.5
-                    ? '#10B981'
-                    : '#F59E0B';
+                    ? colors.success
+                    : colors.warning;
 
                 return (
                   <tr
                     key={emp.id}
-                    style={{ borderBottom: `1px solid ${cardBorder}` }}
+                    style={{ borderBottom: `1px solid ${colors.border}` }}
                   >
                     <td
                       data-key="codigo"
                       style={{
                         padding: '10px 12px',
                         fontWeight: 600,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       {emp.codigo}
                     </td>
                     <td
                       data-key="data"
-                      style={{ padding: '10px 12px', color: textSecondary }}
+                      style={{
+                        padding: '10px 12px',
+                        color: colors.textSecondary,
+                      }}
                     >
                       {emp.dataStr || '-'}
                     </td>
                     <td
                       data-key="altura"
-                      style={{ padding: '10px 12px', color: textSecondary }}
+                      style={{
+                        padding: '10px 12px',
+                        color: colors.textSecondary,
+                      }}
                     >
                       {emp.height ? `${emp.height} cm` : '-'}
                     </td>
@@ -3507,7 +3726,7 @@ export default function IMCModule({
                       style={{
                         padding: '10px 12px',
                         fontWeight: 600,
-                        color: textPrimary,
+                        color: colors.textPrimary,
                       }}
                     >
                       {emp.weight.toFixed(1)}
@@ -3517,7 +3736,7 @@ export default function IMCModule({
                       style={{
                         padding: '10px 12px',
                         fontWeight: 700,
-                        color: bmi >= 25 ? '#EF4444' : '#10B981',
+                        color: bmi >= 25 ? colors.danger : colors.success,
                       }}
                     >
                       {bmi > 0 ? bmi.toFixed(2) : '-'}
@@ -3526,7 +3745,7 @@ export default function IMCModule({
                       <span
                         style={{
                           padding: '4px 12px',
-                          borderRadius: '20px',
+                          borderRadius: '12px',
                           fontSize: '11px',
                           fontWeight: 600,
                           background: `${statusColor}20`,
@@ -3538,7 +3757,10 @@ export default function IMCModule({
                     </td>
                     <td
                       data-key="circunferencia"
-                      style={{ padding: '10px 12px', color: textSecondary }}
+                      style={{
+                        padding: '10px 12px',
+                        color: colors.textSecondary,
+                      }}
                     >
                       {emp.circunferencia > 0
                         ? `${emp.circunferencia.toFixed(2)}`
@@ -3567,7 +3789,10 @@ export default function IMCModule({
                     </td>
                     <td
                       data-key="frente"
-                      style={{ padding: '10px 12px', color: textSecondary }}
+                      style={{
+                        padding: '10px 12px',
+                        color: colors.textSecondary,
+                      }}
                     >
                       {emp.company}
                     </td>
@@ -3581,7 +3806,7 @@ export default function IMCModule({
               style={{
                 textAlign: 'center',
                 padding: '40px',
-                color: textSecondary,
+                color: colors.textSecondary,
               }}
             >
               <i
