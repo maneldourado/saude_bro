@@ -7,7 +7,7 @@ import { styles } from './styles';
 import { Employee, BloodPressureRecord, PreEmbarqueRecord } from './types';
 import Sidebar from './Sidebar';
 import DashboardModule from './DashboardModule';
-import IMCModule from './IMCModule';
+import IMCUI from './IMC-UI'; // ← Alterado: importa o novo IMC-UI
 import PreEmbarqueModule from './PreEmbarqueModule';
 import PressaoModule from './PressaoModule';
 import ColaboradoresModule from './ColaboradoresModule';
@@ -18,7 +18,7 @@ import VacinacaoModule from './VacinacaoModule';
 import AtestadosModule from './AtestadosModule';
 import ToxicologicoModule from './ToxicologicoModule';
 import ProntuarioModule from './ProntuarioModule';
-import EmergencyKitModule from './EmergencyKitModule'; // Importando o novo módulo
+import EmergencyKitModule from './EmergencyKitModule';
 import { SupabaseProvider, useSupabase } from './SupabaseContext';
 import { supabase } from './lib/supabase';
 import { useAuth } from './hook/useAuth';
@@ -432,7 +432,11 @@ function DashboardContent() {
     { id: 'premer', icon: 'fa-notes-medical', label: 'Pré-mergulho' },
     { id: 'imc', icon: 'fa-weight-scale', label: 'Controle de IMC' },
     { id: 'pressao', icon: 'fa-heartbeat', label: 'Pressão Arterial' },
-    { id: 'emergencia', icon: 'fa-first-aid', label: 'Controle de Medicamentos' }, // ID alterado para bater com o módulo
+    {
+      id: 'emergencia',
+      icon: 'fa-first-aid',
+      label: 'Controle de Medicamentos',
+    },
     { id: 'preembarque', icon: 'fa-briefcase', label: 'Pré-Embarque' },
     { id: 'ref', icon: 'fa-chalkboard', label: 'Controle de refeição' },
     { id: 'certificados', icon: 'fa-certificate', label: 'Certificados' },
@@ -442,7 +446,7 @@ function DashboardContent() {
     { id: 'prontuario', icon: 'fa-folder-open', label: 'Prontuário' },
   ];
 
-  // Nome do usuário para exibir (prioriza perfil.nome, depois user.email)
+  // Nome do usuário para exibir
   const nomeUsuario =
     perfil?.nome ||
     user?.user_metadata?.name ||
@@ -517,19 +521,19 @@ function DashboardContent() {
           </div>
         </div>
 
-     {activeModule === 'dashboard' && (
-  <DashboardModule
-    employees={employees}
-    bloodPressureRecords={bloodPressureRecords}
-    styles={styles}
-    onNavigate={setActiveModule}  // Isso deve funcionar
-    userNome={nomeUsuario}
-  />
-)}
-
-        {activeModule === 'imc' && (
-          <IMCModule
+        {activeModule === 'dashboard' && (
+          <DashboardModule
             employees={employees}
+            bloodPressureRecords={bloodPressureRecords}
+            styles={styles}
+            onNavigate={setActiveModule}
+            userNome={nomeUsuario}
+          />
+        )}
+
+        {/* ===== MÓDULO IMC (USANDO O NOVO IMC-UI) ===== */}
+        {activeModule === 'imc' && (
+          <IMCUI
             calculateBMI={calculateBMI}
             getBMIClassification={getBMIClassification}
             styles={styles}
@@ -618,32 +622,6 @@ function DashboardContent() {
             toxicologicoRecords={[]}
           />
         )}
-
-        {/* Removido o placeholder genérico para 'emergencia' pois agora ele tem módulo próprio */}
-        {activeModule !== 'dashboard' &&
-          activeModule !== 'funcionarios' &&
-          activeModule !== 'imc' &&
-          activeModule !== 'pressao' &&
-          activeModule !== 'preembarque' &&
-          activeModule !== 'ref' &&
-          activeModule !== 'premer' &&
-          activeModule !== 'certificados' &&
-          activeModule !== 'vacinacao' &&
-          activeModule !== 'atestados' &&
-          activeModule !== 'toxicologico' &&
-          activeModule !== 'prontuario' &&
-          activeModule !== 'emergencia' && (
-            <div style={styles.placeholderCard}>
-              <i
-                className="fas fa-tools"
-                style={{ fontSize: '48px', color: '#2c7da0' }}
-              ></i>
-              <p style={styles.placeholderText}>Módulo em desenvolvimento</p>
-              <p style={styles.placeholderSubtext}>
-                Em breve mais funcionalidades
-              </p>
-            </div>
-          )}
       </main>
     </div>
   );
