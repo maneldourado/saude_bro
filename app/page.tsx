@@ -7,18 +7,13 @@ import { styles } from './styles';
 import { Employee, BloodPressureRecord, PreEmbarqueRecord } from './types';
 import Sidebar from './Sidebar';
 import DashboardModule from './DashboardModule';
-import IMCUI from './IMC-UI'; // ← Alterado: importa o novo IMC-UI
+import IMCUI from './IMC-UI';
 import PreEmbarqueModule from './PreEmbarqueModule';
 import PressaoModule from './PressaoModule';
 import ColaboradoresModule from './ColaboradoresModule';
 import RefeicaoModule from './RefeicaoModule';
 import PreMERModule from './PreMERModule';
-import CertificadosModule from './CertificadosModule';
-import VacinacaoModule from './VacinacaoModule';
-import AtestadosModule from './AtestadosModule';
-import ToxicologicoModule from './ToxicologicoModule';
 import ProntuarioModule from './ProntuarioModule';
-import EmergencyKitModule from './EmergencyKitModule';
 import { SupabaseProvider, useSupabase } from './SupabaseContext';
 import { supabase } from './lib/supabase';
 import { useAuth } from './hook/useAuth';
@@ -431,18 +426,8 @@ function DashboardContent() {
     { id: 'funcionarios', icon: 'fa-users', label: 'Colaboradores' },
     { id: 'premer', icon: 'fa-notes-medical', label: 'Pré-mergulho' },
     { id: 'imc', icon: 'fa-weight-scale', label: 'Controle de IMC' },
-    { id: 'pressao', icon: 'fa-heartbeat', label: 'Pressão Arterial' },
-    {
-      id: 'emergencia',
-      icon: 'fa-first-aid',
-      label: 'Controle de Medicamentos',
-    },
     { id: 'preembarque', icon: 'fa-briefcase', label: 'Pré-Embarque' },
     { id: 'ref', icon: 'fa-chalkboard', label: 'Controle de refeição' },
-    { id: 'certificados', icon: 'fa-certificate', label: 'Certificados' },
-    { id: 'vacinacao', icon: 'fa-syringe', label: 'Vacinação' },
-    { id: 'atestados', icon: 'fa-file-medical', label: 'Atestados' },
-    { id: 'toxicologico', icon: 'fa-flask', label: 'Toxicológico' },
     { id: 'prontuario', icon: 'fa-folder-open', label: 'Prontuário' },
   ];
 
@@ -531,17 +516,12 @@ function DashboardContent() {
           />
         )}
 
-        {/* ===== MÓDULO IMC (USANDO O NOVO IMC-UI) ===== */}
         {activeModule === 'imc' && (
           <IMCUI
             calculateBMI={calculateBMI}
             getBMIClassification={getBMIClassification}
             styles={styles}
           />
-        )}
-
-        {activeModule === 'emergencia' && (
-          <EmergencyKitModule styles={styles} />
         )}
 
         {activeModule === 'preembarque' && (
@@ -566,27 +546,6 @@ function DashboardContent() {
           />
         )}
 
-        {activeModule === 'pressao' && (
-          <PressaoModule
-            bloodPressureRecords={bloodPressureRecords}
-            filteredPressureRecords={filteredPressureRecords}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            showPressureForm={showPressureForm}
-            setShowPressureForm={setShowPressureForm}
-            newPressureRecord={newPressureRecord}
-            setNewPressureRecord={setNewPressureRecord}
-            employees={employees}
-            employeeSearchTerm={employeeSearchTerm}
-            setEmployeeSearchTerm={setEmployeeSearchTerm}
-            showEmployeeDropdown={showEmployeeDropdown}
-            setShowEmployeeDropdown={setShowEmployeeDropdown}
-            addBloodPressureRecord={addBloodPressureRecord}
-            deletePressureRecord={deletePressureRecord}
-            styles={styles}
-          />
-        )}
-
         {activeModule === 'funcionarios' && (
           <ColaboradoresModule
             employees={employees}
@@ -602,16 +561,6 @@ function DashboardContent() {
 
         {activeModule === 'ref' && <RefeicaoModule styles={styles} />}
         {activeModule === 'premer' && <PreMERModule employees={employees} />}
-        {activeModule === 'certificados' && (
-          <CertificadosModule styles={styles} />
-        )}
-        {activeModule === 'vacinacao' && (
-          <VacinacaoModule employees={employees} styles={styles} />
-        )}
-        {activeModule === 'toxicologico' && (
-          <ToxicologicoModule employees={employees} styles={styles} />
-        )}
-        {activeModule === 'atestados' && <AtestadosModule styles={styles} />}
 
         {activeModule === 'prontuario' && (
           <ProntuarioModule
