@@ -18,6 +18,263 @@ import { SupabaseProvider, useSupabase } from './SupabaseContext';
 import { supabase } from './lib/supabase';
 import { useAuth } from './hook/useAuth';
 
+// ============================================================
+// COMPONENTE DE LOADING LINDÃO
+// ============================================================
+function LoadingScreen() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background:
+          'linear-gradient(135deg, #0B5E7E 0%, #0a4d66 30%, #083c50 60%, #062b3a 100%)',
+        zIndex: 9999,
+      }}
+    >
+      {/* Fundo com efeito de ondas */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: 'hidden',
+          opacity: 0.1,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            width: '200%',
+            height: '200%',
+            top: '-50%',
+            left: '-50%',
+            background: `
+              radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 50%, rgba(16, 185, 129, 0.2) 0%, transparent 60%),
+              radial-gradient(ellipse at 50% 100%, rgba(16, 185, 129, 0.15) 0%, transparent 50%)
+            `,
+            animation: 'wave 8s ease-in-out infinite',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            width: '200%',
+            height: '200%',
+            top: '-50%',
+            left: '-50%',
+            background: `
+              radial-gradient(ellipse at 70% 30%, rgba(16, 185, 129, 0.2) 0%, transparent 50%),
+              radial-gradient(ellipse at 30% 70%, rgba(16, 185, 129, 0.15) 0%, transparent 50%)
+            `,
+            animation: 'wave 12s ease-in-out infinite reverse',
+          }}
+        />
+      </div>
+
+      {/* Logo/Icone */}
+      <div
+        style={{
+          marginBottom: '32px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div
+          style={{
+            width: '100px',
+            height: '100px',
+            borderRadius: '50%',
+            background:
+              'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '2px solid rgba(16, 185, 129, 0.3)',
+            boxShadow:
+              '0 0 60px rgba(16, 185, 129, 0.15), inset 0 0 60px rgba(16, 185, 129, 0.05)',
+            position: 'relative',
+          }}
+        >
+          {/* Anel pulsante */}
+          <div
+            style={{
+              position: 'absolute',
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              border: '1px solid rgba(16, 185, 129, 0.15)',
+              animation: 'pulse-ring 2s ease-out infinite',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: '140px',
+              height: '140px',
+              borderRadius: '50%',
+              border: '1px solid rgba(16, 185, 129, 0.08)',
+              animation: 'pulse-ring 2.5s ease-out infinite 0.5s',
+            }}
+          />
+          <i
+            className="fas fa-heartbeat"
+            style={{
+              fontSize: '48px',
+              color: '#10b981',
+              animation: 'pulse-icon 1.5s ease-in-out infinite',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Título */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          textAlign: 'center',
+        }}
+      >
+        <h1
+          style={{
+            fontSize: '32px',
+            fontWeight: 800,
+            color: 'white',
+            margin: 0,
+            letterSpacing: '-0.5px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #a7f3d0 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Continental Health
+        </h1>
+        <p
+          style={{
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.6)',
+            margin: '8px 0 0 0',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            fontWeight: 300,
+          }}
+        >
+          Saúde Ocupacional
+        </p>
+      </div>
+
+      {/* Progress Bar */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          marginTop: '40px',
+          width: '240px',
+          height: '3px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '2px',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: '100%',
+            background: 'linear-gradient(90deg, #10b981, #34d399, #10b981)',
+            backgroundSize: '200% 100%',
+            borderRadius: '2px',
+            animation: 'loading-bar 1.5s ease-in-out infinite',
+          }}
+        />
+      </div>
+
+      {/* Loading Text */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          marginTop: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '13px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: 500,
+            letterSpacing: '1px',
+          }}
+        >
+          CARREGANDO
+        </span>
+        <span
+          style={{
+            display: 'inline-flex',
+            gap: '4px',
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              style={{
+                width: '4px',
+                height: '4px',
+                borderRadius: '50%',
+                background: '#10b981',
+                animation: `dot-bounce 1.4s ease-in-out infinite ${i * 0.2}s`,
+                opacity: 0.3,
+              }}
+            />
+          ))}
+        </span>
+      </div>
+
+      {/* Animações CSS */}
+      <style>{`
+        @keyframes wave {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(-5%, -5%) rotate(2deg); }
+          66% { transform: translate(5%, 5%) rotate(-2deg); }
+        }
+
+        @keyframes pulse-ring {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        @keyframes pulse-icon {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        @keyframes loading-bar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        @keyframes dot-bounce {
+          0%, 80%, 100% { transform: scale(0.8); opacity: 0.3; }
+          40% { transform: scale(1.2); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // Componente interno que usa o Supabase
 function DashboardContent() {
   const { employees, addEmployee, deleteEmployee, loading } = useSupabase();
@@ -442,18 +699,7 @@ function DashboardContent() {
 
   // Mostrar loading enquanto verifica autenticação
   if (authLoading || loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <div>Carregando...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Se não tiver usuário, não renderiza (redireciona)
