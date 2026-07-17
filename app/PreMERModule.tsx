@@ -51,6 +51,16 @@ interface QuestionDefinition {
   key: QuestionKey;
   text: string;
   labelPDF: string;
+  planoAcao: string;
+}
+
+interface PlanoAcaoItem {
+  parametro: string;
+  status: 'ok' | 'atencao' | 'critico';
+  mensagem: string;
+  acao: string;
+  prazo: string;
+  responsavel: string;
 }
 
 // ============================================================
@@ -58,10 +68,10 @@ interface QuestionDefinition {
 // ============================================================
 
 const DEFAULT_VITALS: VitalSigns = {
-  temperatura: '36.5',
-  frequencia: '78',
-  pressaoSistolica: '120',
-  pressaoDiastolica: '80',
+  temperatura: '',
+  frequencia: '',
+  pressaoSistolica: '',
+  pressaoDiastolica: '',
 };
 
 const DEFAULT_QUESTOES: Questionnaire = {
@@ -78,56 +88,79 @@ const DEFAULT_QUESTOES: Questionnaire = {
 
 const TEMPERATURA_MIN = 36.1;
 const TEMPERATURA_MAX = 36.9;
+const FREQUENCIA_MIN = 60;
+const FREQUENCIA_MAX = 100;
+const PRESSÃO_SISTOLICA_MIN = 90;
+const PRESSÃO_SISTOLICA_MAX = 140;
+const PRESSÃO_DIASTOLICA_MIN = 60;
+const PRESSÃO_DIASTOLICA_MAX = 90;
 
 const QUESTOES_DEFINITIONS: QuestionDefinition[] = [
   {
     key: 'q1',
     text: 'Refere alguma queixa cardiovascular (Dispnéia, dor precordial, cansaço, tontura, palpitação)? A pressão arterial está alterada?',
     labelPDF: 'Queixa cardiovascular',
+    planoAcao:
+      'Encaminhar ao cardiologista para avaliação completa. Realizar ECG e teste ergométrico. Suspender atividades de mergulho até liberação médica.',
   },
   {
     key: 'q2',
     text: 'Refere alguma queixa respiratória (Estado gripal, congestão nasal, rinite alérgica, dispnéia, tosse, cansaço, bronquite)?',
     labelPDF: 'Queixa respiratória',
+    planoAcao:
+      'Avaliação por pneumologista. Realizar espirometria e radiografia de tórax. Tratar sintomas antes de liberar para mergulho.',
   },
   {
     key: 'q3',
     text: 'Refere algum problema nas orelhas (Zumbido, Dor, prurido, secreção, tonteira, vertigens e dificuldade para equalizar ouvido médio)?',
     labelPDF: 'Problemas nas orelhas',
+    planoAcao:
+      'Encaminhar ao otorrinolaringologista. Realizar audiometria e avaliação da tuba auditiva. Orientar sobre técnicas de equalização.',
   },
   {
     key: 'q4',
     text: 'Apresenta alguma queixa digestiva (Azia, dor epigástrica em queimação, cólicas, diarreia, constipação intestinal)?',
     labelPDF: 'Queixa digestiva',
+    planoAcao:
+      'Avaliação com gastroenterologista. Orientar sobre alimentação adequada. Evitar refeições pesadas antes do mergulho.',
   },
   {
     key: 'q5',
     text: 'Apresenta alguma queixa urinária (Ardência urinária, secreção uretral, cólica renal)?',
     labelPDF: 'Queixa urinária',
+    planoAcao:
+      'Encaminhar ao urologista/néfrologista. Realizar exame de urina e urocultura. Avaliar função renal.',
   },
   {
     key: 'q6',
     text: 'Refere alguma queixa na qualidade do sono e descanso adequado?',
     labelPDF: 'Qualidade do sono',
+    planoAcao:
+      'Orientar sobre higiene do sono. Avaliar necessidade de polissonografia. Encaminhar ao neurologista se necessário.',
   },
   {
     key: 'q7',
     text: 'Apresenta algum problema de ordem emocional ou familiar que possa desaconselhar o mergulho?',
     labelPDF: 'Problema emocional/familiar',
+    planoAcao:
+      'Encaminhar ao psicólogo/psiquiatra. Avaliar impacto na segurança do mergulho. Suspender atividades até estabilização.',
   },
   {
     key: 'q8',
     text: 'Relata queixa de dores nas articulações ou alguma queixa que seja parecido com doença descompressiva?',
     labelPDF: 'Dores articulares',
+    planoAcao:
+      'Avaliação com ortopedista/reumatologista. Realizar exames de imagem. Verificar histórico de acidentes de mergulho.',
   },
   {
     key: 'q9',
     text: 'Relata alguma outra queixa de saúde não abordada acima?',
     labelPDF: 'Outras queixas',
+    planoAcao:
+      'Avaliação clínica geral. Investigar queixa específica. Encaminhar ao especialista conforme necessidade.',
   },
 ];
 
-// Mapeamento das questões para os nomes das colunas no banco
 const QUESTOES_DB_MAPPING: Record<QuestionKey, string> = {
   q1: 'cardiovascular',
   q2: 'respiratorio',
@@ -303,22 +336,161 @@ function useSignatureCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
 
 function calcularAptidao(
   questoes: Questionnaire,
-  temperatura: string
+  temperatura: string,
+  frequencia: string,
+  pressaoSistolica: string,
+  pressaoDiastolica: string
 ): AptidaoStatus {
-  const temQuestaoSim = Object.values(questoes).some(Boolean);
   const temp = parseFloat(temperatura);
+  const freq = parseFloat(frequencia);
+  const sist = parseFloat(pressaoSistolica);
+  const diast = parseFloat(pressaoDiastolica);
+
+  const temQuestaoSim = Object.values(questoes).some(Boolean);
+
+  const hasAllData =
+    temperatura !== '' &&
+    frequencia !== '' &&
+    pressaoSistolica !== '' &&
+    pressaoDiastolica !== '';
+
+  if (!hasAllData) return null;
+
   const temperaturaValida =
     !isNaN(temp) && temp >= TEMPERATURA_MIN && temp <= TEMPERATURA_MAX;
+  const frequenciaValida =
+    !isNaN(freq) && freq > FREQUENCIA_MIN && freq < FREQUENCIA_MAX;
+  const pressaoValida =
+    !isNaN(sist) &&
+    !isNaN(diast) &&
+    sist > PRESSÃO_SISTOLICA_MIN &&
+    sist < PRESSÃO_SISTOLICA_MAX &&
+    diast > PRESSÃO_DIASTOLICA_MIN &&
+    diast < PRESSÃO_DIASTOLICA_MAX;
 
-  if (temQuestaoSim || !temperaturaValida) {
+  if (
+    temQuestaoSim ||
+    !temperaturaValida ||
+    !frequenciaValida ||
+    !pressaoValida
+  ) {
     return 'inapto';
   }
   return 'apto';
 }
 
 function isTemperaturaValida(temperatura: string): boolean {
+  if (!temperatura) return false;
   const temp = parseFloat(temperatura);
   return !isNaN(temp) && temp >= TEMPERATURA_MIN && temp <= TEMPERATURA_MAX;
+}
+
+function isFrequenciaValida(frequencia: string): boolean {
+  if (!frequencia) return false;
+  const freq = parseFloat(frequencia);
+  return !isNaN(freq) && freq > FREQUENCIA_MIN && freq < FREQUENCIA_MAX;
+}
+
+function isPressaoValida(sistolica: string, diastolica: string): boolean {
+  if (!sistolica || !diastolica) return false;
+  const sist = parseFloat(sistolica);
+  const diast = parseFloat(diastolica);
+  return (
+    !isNaN(sist) &&
+    !isNaN(diast) &&
+    sist > PRESSÃO_SISTOLICA_MIN &&
+    sist < PRESSÃO_SISTOLICA_MAX &&
+    diast > PRESSÃO_DIASTOLICA_MIN &&
+    diast < PRESSÃO_DIASTOLICA_MAX
+  );
+}
+
+function gerarPlanoAcaoCompleto(
+  questoes: Questionnaire,
+  temperatura: string,
+  frequencia: string,
+  pressaoSistolica: string,
+  pressaoDiastolica: string
+): PlanoAcaoItem[] {
+  const plano: PlanoAcaoItem[] = [];
+  const temp = parseFloat(temperatura);
+  const freq = parseFloat(frequencia);
+  const sist = parseFloat(pressaoSistolica);
+  const diast = parseFloat(pressaoDiastolica);
+
+  if (temperatura && !isNaN(temp)) {
+    if (temp < TEMPERATURA_MIN || temp > TEMPERATURA_MAX) {
+      plano.push({
+        parametro: 'Temperatura Corporal',
+        status: temp < TEMPERATURA_MIN ? 'critico' : 'atencao',
+        mensagem: `Temperatura ${temperatura}°C - Fora do range ideal (${TEMPERATURA_MIN}-${TEMPERATURA_MAX}°C)`,
+        acao:
+          temp < TEMPERATURA_MIN
+            ? 'Aquecer o colaborador com cobertores térmicos. Oferecer bebidas quentes. Repetir medição após 30 minutos. Se persistir, encaminhar para avaliação médica.'
+            : 'Resfriar o colaborador com compressas frias. Oferecer água. Repetir medição após 30 minutos. Se persistir, encaminhar para avaliação médica.',
+        prazo: 'Imediato (até 1 hora)',
+        responsavel: 'Técnico de Enfermagem / EMED',
+      });
+    }
+  }
+
+  if (frequencia && !isNaN(freq)) {
+    if (freq <= FREQUENCIA_MIN || freq >= FREQUENCIA_MAX) {
+      plano.push({
+        parametro: 'Frequência Cardíaca',
+        status: 'critico',
+        mensagem: `Frequência ${frequencia} bpm - Fora do range ideal (${
+          FREQUENCIA_MIN + 1
+        }-${FREQUENCIA_MAX - 1} bpm)`,
+        acao:
+          freq <= FREQUENCIA_MIN
+            ? 'Repouso imediato. Oferecer líquidos. Avaliar sinais de hipotensão. Encaminhar ao médico se persistir.'
+            : 'Repouso imediato. Avaliar sinais de ansiedade ou estresse. Verificar pressão arterial. Encaminhar ao médico se persistir.',
+        prazo: 'Imediato (até 1 hora)',
+        responsavel: 'Técnico de Enfermagem / EMED',
+      });
+    }
+  }
+
+  if (pressaoSistolica && pressaoDiastolica && !isNaN(sist) && !isNaN(diast)) {
+    if (
+      sist <= PRESSÃO_SISTOLICA_MIN ||
+      sist >= PRESSÃO_SISTOLICA_MAX ||
+      diast <= PRESSÃO_DIASTOLICA_MIN ||
+      diast >= PRESSÃO_DIASTOLICA_MAX
+    ) {
+      plano.push({
+        parametro: 'Pressão Arterial',
+        status: 'critico',
+        mensagem: `Pressão ${pressaoSistolica}/${pressaoDiastolica} mmHg - Fora do range ideal (${
+          PRESSÃO_SISTOLICA_MIN + 1
+        }-${PRESSÃO_SISTOLICA_MAX - 1}x${PRESSÃO_DIASTOLICA_MIN + 1}-${
+          PRESSÃO_DIASTOLICA_MAX - 1
+        } mmHg)`,
+        acao:
+          sist >= PRESSÃO_SISTOLICA_MAX
+            ? 'Repouso imediato. Evitar esforços. Repetir medição após 15 minutos. Se persistir, encaminhar ao médico do trabalho para avaliação cardiovascular.'
+            : 'Repouso imediato. Oferecer líquidos. Repetir medição após 15 minutos. Avaliar necessidade de encaminhamento médico.',
+        prazo: 'Imediato (até 1 hora)',
+        responsavel: 'Técnico de Enfermagem / EMED',
+      });
+    }
+  }
+
+  QUESTOES_DEFINITIONS.forEach((q) => {
+    if (questoes[q.key]) {
+      plano.push({
+        parametro: q.labelPDF,
+        status: 'critico',
+        mensagem: `Queixa identificada: ${q.text}`,
+        acao: q.planoAcao,
+        prazo: '24-72 horas',
+        responsavel: 'Médico do Trabalho / Especialista',
+      });
+    }
+  });
+
+  return plano;
 }
 
 // ============================================================
@@ -368,11 +540,13 @@ function SignatureBox({
         }}
         onClick={clear}
       >
-        <i className="fas fa-eraser" /> Limpar Assinatura
+        <i className="fas fa-eraser" style={{ marginRight: '6px' }} />
+        Limpar Assinatura
       </button>
       {hasSignature && (
         <div style={{ fontSize: '12px', color: '#059669', marginTop: '4px' }}>
-          ✅ Assinatura registrada
+          <i className="fas fa-check-circle" style={{ marginRight: '6px' }} />
+          Assinatura registrada
         </div>
       )}
     </div>
@@ -388,7 +562,128 @@ function VitalInputCard({
   isValid,
   icon,
   showCheck = true,
+  placeholder = '0',
+  isPressao = false,
+  valueDiastolica = '',
+  onChangeDiastolica = () => {},
 }: any) {
+  if (isPressao) {
+    return (
+      <div
+        style={{
+          background: '#f8f5f2',
+          borderRadius: '16px',
+          padding: '20px',
+          textAlign: 'center',
+          border: '1px solid #f0ebe6',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '12px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            color: '#6b6b6b',
+            display: 'block',
+            marginBottom: '8px',
+          }}
+        >
+          <i
+            className={icon}
+            style={{ marginRight: '6px', fontSize: '14px' }}
+          />
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: '32px',
+            fontWeight: 700,
+            color: '#1a1a1a',
+            margin: '8px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+          }}
+        >
+          <input
+            type="number"
+            step="1"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              width: '70px',
+              textAlign: 'center',
+              fontSize: '28px',
+              border: 'none',
+              outline: 'none',
+              fontWeight: 700,
+              color: '#1a1a1a',
+              background: 'transparent',
+            }}
+            placeholder={placeholder}
+          />
+          <span style={{ fontSize: '18px', color: '#6b6b6b' }}>/</span>
+          <input
+            type="number"
+            step="1"
+            value={valueDiastolica}
+            onChange={(e) => onChangeDiastolica(e.target.value)}
+            style={{
+              width: '70px',
+              textAlign: 'center',
+              fontSize: '28px',
+              border: 'none',
+              outline: 'none',
+              fontWeight: 700,
+              color: '#1a1a1a',
+              background: 'transparent',
+            }}
+            placeholder={placeholder}
+          />
+          <span style={{ fontSize: '18px', color: '#6b6b6b' }}>mmHg</span>
+          {showCheck && value && valueDiastolica && (
+            <i
+              className="fas fa-check-circle"
+              style={{
+                color:
+                  isValid !== undefined && value && valueDiastolica
+                    ? isValid
+                      ? '#10b981'
+                      : '#ef4444'
+                    : '#6b6b6b',
+                fontSize: '24px',
+                marginLeft: '12px',
+                verticalAlign: 'middle',
+              }}
+            />
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: '12px',
+            color:
+              isValid !== undefined && value && valueDiastolica
+                ? isValid
+                  ? '#10b981'
+                  : '#dc2626'
+                : '#6b6b6b',
+            fontWeight: value && valueDiastolica && !isValid ? 600 : 400,
+          }}
+        >
+          {value && valueDiastolica
+            ? isValid !== undefined
+              ? isValid
+                ? '✅ Parâmetro normal'
+                : '⚠️ Fora do range ideal'
+              : `Parâmetro: ${paramRange}`
+            : `Preencha os valores - ${paramRange}`}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -410,7 +705,8 @@ function VitalInputCard({
           marginBottom: '8px',
         }}
       >
-        {icon} {label}
+        <i className={icon} style={{ marginRight: '6px', fontSize: '14px' }} />
+        {label}
       </div>
       <div
         style={{
@@ -435,18 +731,19 @@ function VitalInputCard({
             color: '#1a1a1a',
             background: 'transparent',
           }}
+          placeholder={placeholder}
         />
         <span style={{ fontSize: '18px', color: '#6b6b6b' }}>{unit}</span>
-        {showCheck && (
+        {showCheck && value && (
           <i
             className="fas fa-check-circle"
             style={{
               color:
-                isValid !== undefined
+                isValid !== undefined && value
                   ? isValid
                     ? '#10b981'
                     : '#ef4444'
-                  : '#10b981',
+                  : '#6b6b6b',
               fontSize: '24px',
               marginLeft: '12px',
               verticalAlign: 'middle',
@@ -458,18 +755,21 @@ function VitalInputCard({
         style={{
           fontSize: '12px',
           color:
-            isValid !== undefined
+            isValid !== undefined && value
               ? isValid
-                ? '#6b6b6b'
+                ? '#10b981'
                 : '#dc2626'
               : '#6b6b6b',
+          fontWeight: value && !isValid ? 600 : 400,
         }}
       >
-        {isValid !== undefined
-          ? isValid
-            ? '✅ Parâmetro normal'
-            : '⚠️ Fora do range ideal'
-          : `Parâmetro: ${paramRange}`}
+        {value
+          ? isValid !== undefined
+            ? isValid
+              ? '✅ Parâmetro normal'
+              : '⚠️ Fora do range ideal'
+            : `Parâmetro: ${paramRange}`
+          : `Preencha o valor - ${paramRange}`}
       </div>
     </div>
   );
@@ -489,7 +789,9 @@ function QuestionCard({
       <div style={{ fontWeight: 500, marginBottom: '12px', color: '#2d2d2d' }}>
         {question.text}
         {isChecked && (
-          <span style={{ color: '#dc2626', marginLeft: '8px' }}>⚠️</span>
+          <span style={{ color: '#dc2626', marginLeft: '8px' }}>
+            <i className="fas fa-exclamation-triangle" />
+          </span>
         )}
       </div>
       <div style={radioGroupStyle}>
@@ -498,7 +800,7 @@ function QuestionCard({
             type="radio"
             name={question.key}
             checked={isChecked === true}
-            onChange={() => onChange(question.key)}
+            onChange={() => onChange(question.key, true)}
           />{' '}
           Sim
         </label>
@@ -507,10 +809,347 @@ function QuestionCard({
             type="radio"
             name={question.key}
             checked={isChecked === false}
-            onChange={() => onChange(question.key)}
+            onChange={() => onChange(question.key, false)}
           />{' '}
           Não
         </label>
+      </div>
+    </div>
+  );
+}
+
+function PlanoAcaoPopup({
+  plano,
+  onClose,
+  onSave,
+  colaboradorNome,
+  loading,
+}: {
+  plano: PlanoAcaoItem[];
+  onClose: () => void;
+  onSave: () => void;
+  colaboradorNome: string;
+  loading: boolean;
+}) {
+  if (plano.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: '24px',
+          maxWidth: '800px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          padding: '32px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          animation: 'slideUp 0.3s ease-out',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            borderBottom: '2px solid #fee2e2',
+            paddingBottom: '16px',
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                fontSize: '24px',
+                fontWeight: 800,
+                color: '#dc2626',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <i className="fas fa-exclamation-triangle" />
+              PLANO DE AÇÃO OBRIGATÓRIO
+            </h2>
+            <p
+              style={{
+                margin: '4px 0 0 0',
+                color: '#6b7280',
+                fontSize: '14px',
+              }}
+            >
+              Colaborador: <strong>{colaboradorNome}</strong> - Avaliação INAPTO
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#f3f4f6',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              fontSize: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6b7280',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#fee2e2';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f3f4f6';
+              e.currentTarget.style.color = '#6b7280';
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <div
+            style={{
+              background: '#fef2f2',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              border: '1px solid #fecaca',
+              marginBottom: '16px',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '14px', color: '#991b1b' }}>
+              <i
+                className="fas fa-exclamation-circle"
+                style={{ marginRight: '8px' }}
+              />
+              <strong>ATENÇÃO:</strong> Os seguintes parâmetros foram
+              identificados como INAPTOS. Um plano de ação deve ser executado
+              antes de uma nova avaliação.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {plano.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                background: '#fffbeb',
+                borderRadius: '12px',
+                padding: '16px',
+                borderLeft: `4px solid ${
+                  item.status === 'critico' ? '#dc2626' : '#f59e0b'
+                }`,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'start',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '8px',
+                }}
+              >
+                <strong style={{ fontSize: '16px', color: '#1a1a1a' }}>
+                  {item.parametro}
+                </strong>
+                <span
+                  style={{
+                    padding: '2px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background:
+                      item.status === 'critico' ? '#fee2e2' : '#fef3c7',
+                    color: item.status === 'critico' ? '#991b1b' : '#92400e',
+                  }}
+                >
+                  {item.status === 'critico' ? '🔴 CRÍTICO' : '🟡 ATENÇÃO'}
+                </span>
+              </div>
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: '#4b5563',
+                  margin: '4px 0 8px 0',
+                }}
+              >
+                <i
+                  className="fas fa-clipboard-list"
+                  style={{ marginRight: '6px' }}
+                />
+                <strong>Diagnóstico:</strong> {item.mensagem}
+              </p>
+
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginTop: '8px',
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: '#065f46',
+                    margin: '0 0 4px 0',
+                  }}
+                >
+                  <i
+                    className="fas fa-check-circle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  <strong>Ação Recomendada:</strong> {item.acao}
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginTop: '8px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span>
+                    <i
+                      className="fas fa-clock"
+                      style={{ marginRight: '4px' }}
+                    />
+                    <strong>Prazo:</strong> {item.prazo}
+                  </span>
+                  <span>
+                    <i
+                      className="fas fa-user-md"
+                      style={{ marginRight: '4px' }}
+                    />
+                    <strong>Responsável:</strong> {item.responsavel}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '16px',
+            background: '#fef3c7',
+            borderRadius: '12px',
+            border: '1px solid #fcd34d',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: '13px',
+              color: '#92400e',
+              textAlign: 'center',
+            }}
+          >
+            <i className="fas fa-info-circle" style={{ marginRight: '8px' }} />
+            <strong>
+              O colaborador só será liberado após a resolução de todos os
+              parâmetros críticos.
+            </strong>
+            <br />
+            Após a execução do plano, realize uma nova avaliação.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '14px',
+              background: '#f3f4f6',
+              color: '#6b7280',
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#e5e7eb';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f3f4f6';
+            }}
+          >
+            <i className="fas fa-times" style={{ marginRight: '8px' }} />
+            Cancelar
+          </button>
+          <button
+            onClick={onSave}
+            disabled={loading}
+            style={{
+              flex: 2,
+              padding: '14px',
+              background: loading
+                ? '#d1d5db'
+                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            {loading ? (
+              <>
+                <i
+                  className="fas fa-spinner fa-spin"
+                  style={{ marginRight: '8px' }}
+                />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-save" style={{ marginRight: '8px' }} />
+                Salvar Avaliação com Plano de Ação
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -537,6 +1176,8 @@ export default function PreMERModule({
   const [profissionalSaude, setProfissionalSaude] =
     useState<ProfissionaisSaude>(null);
   const [aptidao, setAptidao] = useState<AptidaoStatus>(null);
+  const [planoAcao, setPlanoAcao] = useState<PlanoAcaoItem[]>([]);
+  const [showPlanoPopup, setShowPlanoPopup] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -553,8 +1194,15 @@ export default function PreMERModule({
   // ============================================================
 
   const aptidaoAtual = useMemo(
-    () => calcularAptidao(questoes, vitalSigns.temperatura),
-    [questoes, vitalSigns.temperatura]
+    () =>
+      calcularAptidao(
+        questoes,
+        vitalSigns.temperatura,
+        vitalSigns.frequencia,
+        vitalSigns.pressaoSistolica,
+        vitalSigns.pressaoDiastolica
+      ),
+    [questoes, vitalSigns]
   );
 
   const isApto = aptidaoAtual === 'apto';
@@ -566,12 +1214,37 @@ export default function PreMERModule({
     () => isTemperaturaValida(vitalSigns.temperatura),
     [vitalSigns.temperatura]
   );
+  const frequenciaValida = useMemo(
+    () => isFrequenciaValida(vitalSigns.frequencia),
+    [vitalSigns.frequencia]
+  );
+  const pressaoValida = useMemo(
+    () =>
+      isPressaoValida(
+        vitalSigns.pressaoSistolica,
+        vitalSigns.pressaoDiastolica
+      ),
+    [vitalSigns.pressaoSistolica, vitalSigns.pressaoDiastolica]
+  );
+
+  const planoAcaoAtual = useMemo(
+    () =>
+      gerarPlanoAcaoCompleto(
+        questoes,
+        vitalSigns.temperatura,
+        vitalSigns.frequencia,
+        vitalSigns.pressaoSistolica,
+        vitalSigns.pressaoDiastolica
+      ),
+    [questoes, vitalSigns]
+  );
 
   useEffect(() => {
     if (colaborador) {
       setAptidao(aptidaoAtual);
+      setPlanoAcao(planoAcaoAtual);
     }
-  }, [colaborador, aptidaoAtual]);
+  }, [colaborador, aptidaoAtual, planoAcaoAtual]);
 
   // ============================================================
   // HANDLERS
@@ -584,9 +1257,12 @@ export default function PreMERModule({
     []
   );
 
-  const handleQuestaoChange = useCallback((key: QuestionKey) => {
-    setQuestoes((prev) => ({ ...prev, [key]: !prev[key] }));
-  }, []);
+  const handleQuestaoChange = useCallback(
+    (key: QuestionKey, value: boolean) => {
+      setQuestoes((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
   const handleEmployeeSelect = useCallback(
     (employeeId: string) => {
@@ -598,6 +1274,9 @@ export default function PreMERModule({
         setFuncao('');
         setFrente('');
         setAptidao(null);
+        setPlanoAcao([]);
+        setShowPlanoPopup(false);
+        resetForm();
         return;
       }
 
@@ -615,6 +1294,8 @@ export default function PreMERModule({
         setFuncao(employee.cargo || '');
         setFrente(employee.departamento || '');
         setAptidao(null);
+        setPlanoAcao([]);
+        setShowPlanoPopup(false);
       } else {
         alert('Colaborador não encontrado!');
       }
@@ -628,319 +1309,692 @@ export default function PreMERModule({
     setNomeAvaliador('');
     setProfissionalSaude(null);
     setAptidao(null);
+    setPlanoAcao([]);
+    setShowPlanoPopup(false);
     avaliadorCanvas.clear();
     mergulhadorCanvas.clear();
   }, [avaliadorCanvas, mergulhadorCanvas]);
 
   // ============================================================
-  // GERAÇÃO DE PDF
+  // GERAR PDF E SALVAR NO SUPABASE STORAGE
   // ============================================================
 
-  const gerarPDF = useCallback(async () => {
+  const gerarPDF = useCallback(async (): Promise<{
+    url: string;
+    filename: string;
+  } | null> => {
     setGerandoPDF(true);
 
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      let y = margin;
+      const PW = pdf.internal.pageSize.getWidth();
+      const PH = pdf.internal.pageSize.getHeight();
+      const ML = 15;
+      const CW = PW - 2 * ML;
+      let y = 20;
 
-      const addWrappedText = (
-        text: string,
-        yPos: number,
-        maxWidth: number,
-        fontSize: number = 10
-      ): number => {
-        pdf.setFontSize(fontSize);
-        const lines = pdf.splitTextToSize(text, maxWidth);
-        pdf.text(lines, margin, yPos);
-        return yPos + lines.length * (fontSize * 0.5);
+      // ── Palette ──────────────────────────────────────────────
+      const NAVY = [15, 52, 86] as [number, number, number];
+      const TEAL = [16, 185, 129] as [number, number, number];
+      const RED = [220, 38, 38] as [number, number, number];
+      const GREEN = [5, 150, 105] as [number, number, number];
+      const GRAY1 = [245, 247, 250] as [number, number, number];
+      const GRAY2 = [229, 231, 235] as [number, number, number];
+      const DARK = [17, 24, 39] as [number, number, number];
+      const MID = [75, 85, 99] as [number, number, number];
+      const MUTED = [156, 163, 175] as [number, number, number];
+      const WHITE = [255, 255, 255] as [number, number, number];
+
+      const clean = (s: string) =>
+        s?.replace(/[^\x00-\x7F]/g, '').trim() || '—';
+
+      const addPageFooter = () => {
+        pdf.setFillColor(...NAVY);
+        pdf.rect(0, PH - 10, PW, 10, 'F');
+        pdf.setTextColor(...WHITE);
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          clean(
+            `Documento gerado em ${new Date().toLocaleString(
+              'pt-BR'
+            )} - Avaliacao Pre-MER - Valido por 30 dias`
+          ),
+          PW / 2,
+          PH - 4,
+          { align: 'center' }
+        );
+        pdf.setTextColor(...DARK);
       };
 
-      const checkPage = (neededHeight: number = 40) => {
-        if (y > pageHeight - neededHeight) {
+      const checkPage = (needed: number = 35) => {
+        if (y > PH - needed) {
           pdf.addPage();
-          y = margin;
+          y = 20;
+          addPageFooter();
         }
       };
 
-      // --- CABEÇALHO ---
-      pdf.setFontSize(22);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('AVALIAÇÃO PRÉ-MER', pageWidth / 2, y, { align: 'center' });
-      y += 10;
+      const sectionTitle = (
+        title: string,
+        color: [number, number, number] = NAVY,
+        bgColor: [number, number, number] = GRAY1
+      ) => {
+        checkPage(25);
+        pdf.setFillColor(...bgColor);
+        pdf.roundedRect(ML, y, CW, 9, 2, 2, 'F');
+        pdf.setFillColor(...color);
+        pdf.rect(ML, y, 3, 9, 'F');
+        pdf.setTextColor(...color);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text(title, ML + 7, y + 6);
+        pdf.setTextColor(...DARK);
+        y += 14;
+      };
 
-      pdf.setFontSize(12);
+      const field = (
+        label: string,
+        value: string,
+        x: number,
+        fieldY: number
+      ) => {
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...MUTED);
+        pdf.text(clean(label.toUpperCase()), x, fieldY);
+        pdf.setFontSize(9.5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...DARK);
+        pdf.text(clean(value || '—'), x, fieldY + 5);
+        pdf.setFont('helvetica', 'normal');
+      };
+
+      const pill = (text: string, x: number, pillY: number, ok: boolean) => {
+        const [r, g, b] = ok ? GREEN : RED;
+        const tw = pdf.getTextWidth(clean(text));
+        const pw2 = tw + 8;
+        pdf.setFillColor(r, g, b, 0.12);
+        pdf.roundedRect(x, pillY - 4, pw2, 6, 1, 1, 'F');
+        pdf.setTextColor(r, g, b);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.text(clean(text), x + 4, pillY);
+        pdf.setTextColor(...DARK);
+        pdf.setFont('helvetica', 'normal');
+      };
+
+      // ════════════════════════════════════════════════════════
+      // 1. HEADER
+      // ════════════════════════════════════════════════════════
+      pdf.setFillColor(...NAVY);
+      pdf.rect(0, 0, PW, 42, 'F');
+
+      pdf.setFillColor(...TEAL);
+      pdf.rect(0, 39, PW, 3, 'F');
+
+      pdf.setFillColor(255, 255, 255, 0.04);
+      pdf.circle(PW - 10, 10, 28, 'F');
+      pdf.setFillColor(255, 255, 255, 0.03);
+      pdf.circle(PW - 10, 10, 18, 'F');
+
+      pdf.setFillColor(...TEAL);
+      pdf.rect(ML, 8, 2.5, 24, 'F');
+
+      pdf.setTextColor(...WHITE);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(26);
+      pdf.text('PRE-MER', ML + 8, 24);
+
       pdf.setFont('helvetica', 'normal');
-      pdf.text(
-        'Protocolo de saúde ocupacional - Pré-mergulho',
-        pageWidth / 2,
-        y,
-        { align: 'center' }
-      );
-      y += 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(180, 210, 230);
+      pdf.text('AVALIACAO PRE-MERGULHO', ML + 8, 33);
 
       const dataAtual = new Date().toLocaleDateString('pt-BR');
-      pdf.setFontSize(10);
-      pdf.text(`Data: ${dataAtual}`, pageWidth - margin, y, { align: 'right' });
-      y += 10;
-
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- DADOS DO COLABORADOR ---
-      pdf.setFontSize(14);
+      const docNum = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      pdf.setTextColor(...WHITE);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('DADOS DO COLABORADOR', margin, y);
-      y += 8;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      const dadosColaborador = [
-        `Nome: ${colaborador}`,
-        `Código: ${colaboradorCodigo}`,
-        `Função: ${funcao}`,
-        `Frente de Serviço: ${frente}`,
-      ];
-      dadosColaborador.forEach((linha) => {
-        y = addWrappedText(linha, y, pageWidth - 2 * margin);
-      });
-      y += 4;
-
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- STATUS DA AVALIAÇÃO ---
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('STATUS DA AVALIAÇÃO', margin, y);
-      y += 8;
-
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(isApto ? 0 : 200, isApto ? 150 : 0, isApto ? 0 : 0);
-      pdf.text(isApto ? 'APTO' : 'INAPTO', margin, y);
-      y += 8;
-      pdf.setTextColor(0, 0, 0);
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      if (temQuestaoSim) {
-        pdf.setTextColor(200, 0, 0);
-        pdf.text('* Questão(ões) de saúde marcadas como "Sim"', margin, y);
-        y += 6;
-      }
-      if (!temperaturaValida) {
-        pdf.setTextColor(200, 0, 0);
-        pdf.text(
-          `* Temperatura fora do range ideal (36.1 - 36.9°C) - Atual: ${vitalSigns.temperatura}°C`,
-          margin,
-          y
-        );
-        y += 6;
-      }
-      if (isApto) {
-        pdf.setTextColor(0, 150, 0);
-        pdf.text('* Todos os parâmetros dentro do esperado', margin, y);
-        y += 6;
-      }
-      pdf.setTextColor(0, 0, 0);
-      y += 4;
-
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- SINAIS VITAIS ---
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('SINAIS VITAIS', margin, y);
-      y += 8;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      const sinaisV = [
-        `Temperatura Corporal: ${vitalSigns.temperatura}°C ${
-          temperaturaValida ? '✅ Normal' : '⚠️ Atenção'
-        }`,
-        `Frequência Cardíaca: ${vitalSigns.frequencia} bpm`,
-        `Pressão Arterial: ${vitalSigns.pressaoSistolica}/${vitalSigns.pressaoDiastolica} mmHg`,
-      ];
-      sinaisV.forEach((linha) => {
-        y = addWrappedText(linha, y, pageWidth - 2 * margin);
-      });
-      y += 4;
-
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- QUESTIONÁRIO DE SAÚDE ---
-      checkPage(80);
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('QUESTIONÁRIO DE SAÚDE', margin, y);
-      y += 8;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      QUESTOES_DEFINITIONS.forEach((q) => {
-        checkPage(20);
-        const resposta = questoes[q.key] ? 'Sim ⚠️' : 'Não ✅';
-        y = addWrappedText(
-          `${q.labelPDF}: ${resposta}`,
-          y,
-          pageWidth - 2 * margin,
-          10
-        );
-      });
-      y += 4;
-
-      checkPage(40);
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- ORIENTAÇÕES ---
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ORIENTAÇÕES E PARECER', margin, y);
-      y += 8;
-
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      const orientacoes = [
-        'Nota 1: A equipe de mergulho foi orientada em relação a alimentação saudável e em respeito',
-        'de 1:30 (uma hora e trinta minutos) de intervalo entre as refeições principais.',
-        'Nota 2: Recomendação de ingestão de ao menos 2L de água por dia, para melhor hidratação.',
-        'Nota 3: Orientar os funcionários sobre a não utilização de substâncias ilícitas e avisar',
-        'ao supervisor e EMED em caso de uso indevido.',
-      ];
-      orientacoes.forEach((linha) => {
-        checkPage(20);
-        y = addWrappedText(linha, y, pageWidth - 2 * margin, 9);
-      });
-      y += 4;
-
-      checkPage(40);
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // --- AVALIADOR ---
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('AVALIADOR', margin, y);
-      y += 8;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      y = addWrappedText(
-        `Nome: ${nomeAvaliador || 'Não informado'}`,
-        y,
-        pageWidth - 2 * margin
-      );
-      y = addWrappedText(
-        `Profissional de Saúde: ${profissionalSaude === 'sim' ? 'Sim' : 'Não'}`,
-        y,
-        pageWidth - 2 * margin
-      );
-      y += 4;
-
-      // --- ASSINATURAS ---
-      checkPage(80);
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ASSINATURAS', margin, y);
-      y += 8;
-
-      if (avaliadorCanvas.signatureData) {
-        try {
-          pdf.setFontSize(11);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text('Assinatura do Profissional de Saúde:', margin, y);
-          y += 6;
-
-          const imgWidth = 80;
-          const imgHeight = 35;
-          pdf.addImage(
-            avaliadorCanvas.signatureData,
-            'PNG',
-            margin,
-            y,
-            imgWidth,
-            imgHeight
-          );
-          y += imgHeight + 10;
-        } catch (e) {
-          console.error('Erro ao adicionar assinatura do avaliador:', e);
-          y += 20;
-        }
-      } else {
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'italic');
-        pdf.text(
-          'Assinatura do Profissional de Saúde: (não assinado)',
-          margin,
-          y
-        );
-        y += 8;
-      }
-
-      checkPage(60);
-      if (mergulhadorCanvas.signatureData) {
-        try {
-          pdf.setFontSize(11);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text('Assinatura do Mergulhador:', margin, y);
-          y += 6;
-
-          const imgWidth = 80;
-          const imgHeight = 35;
-          pdf.addImage(
-            mergulhadorCanvas.signatureData,
-            'PNG',
-            margin,
-            y,
-            imgWidth,
-            imgHeight
-          );
-          y += imgHeight + 10;
-        } catch (e) {
-          console.error('Erro ao adicionar assinatura do mergulhador:', e);
-          y += 20;
-        }
-      } else {
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'italic');
-        pdf.text('Assinatura do Mergulhador: (não assinado)', margin, y);
-        y += 8;
-      }
-
-      // --- RODAPÉ ---
       pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.setFont('helvetica', 'italic');
+      pdf.text('DATA', PW - ML - 28, 16, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.text(dataAtual, PW - ML - 28, 22, { align: 'right' });
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.text('N. DOCUMENTO', PW - ML - 28, 30, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.text(docNum, PW - ML - 28, 36, { align: 'right' });
+
+      pdf.setTextColor(...DARK);
+      y = 48;
+
+      // ════════════════════════════════════════════════════════
+      // 2. META INFO STRIP
+      // ════════════════════════════════════════════════════════
+      pdf.setFillColor(...GRAY1);
+      pdf.rect(ML, y, CW, 14, 'F');
+      pdf.setDrawColor(...GRAY2);
+      pdf.setLineWidth(0.3);
+      pdf.rect(ML, y, CW, 14, 'S');
+
+      field(
+        'Profissional de Saude / EMED / DMT',
+        nomeAvaliador || 'Nao informado',
+        ML + 5,
+        y + 5
+      );
+
+      if (aptidao !== null) {
+        const statusLabel = aptidao === 'apto' ? 'APTO' : 'INAPTO';
+        pill(statusLabel, PW - ML - 32, y + 8, aptidao === 'apto');
+      } else {
+        pdf.setFontSize(7);
+        pdf.setTextColor(...MUTED);
+        pdf.text('STATUS: AGUARDANDO DADOS', PW - ML - 5, y + 8, {
+          align: 'right',
+        });
+      }
+
+      y += 19;
+
+      // ════════════════════════════════════════════════════════
+      // 3. DADOS DO COLABORADOR
+      // ════════════════════════════════════════════════════════
+      sectionTitle('DADOS DO COLABORADOR');
+
+      const col1X = ML + 4;
+      const col2X = ML + CW / 2 + 4;
+      const rowH = 12;
+
+      pdf.setFillColor(...GRAY1);
+      pdf.roundedRect(ML, y - 2, CW, rowH * 2 + 6, 2, 2, 'F');
+      pdf.setDrawColor(...GRAY2);
+      pdf.setLineWidth(0.2);
+      pdf.roundedRect(ML, y - 2, CW, rowH * 2 + 6, 2, 2, 'S');
+
+      field('Nome Completo', colaborador, col1X, y + 3);
+      field('Codigo', colaboradorCodigo || 'N/I', col2X, y + 3);
+      y += rowH;
+      field('Funcao / Cargo', funcao || 'Nao definida', col1X, y + 3);
+      field('Frente de Servico', frente || 'Nao definida', col2X, y + 3);
+      y += rowH + 4;
+
+      // ════════════════════════════════════════════════════════
+      // 4. SINAIS VITAIS
+      // ════════════════════════════════════════════════════════
+      y += 4;
+      sectionTitle('SINAIS VITAIS');
+
+      const boxW = (CW - 8) / 3;
+      const boxH = 28;
+      const vitals = [
+        {
+          label: 'Temperatura',
+          value: vitalSigns.temperatura ? `${vitalSigns.temperatura} C` : 'N/I',
+          range: `${TEMPERATURA_MIN} - ${TEMPERATURA_MAX} C`,
+          ok: temperaturaValida,
+          hasData: !!vitalSigns.temperatura,
+        },
+        {
+          label: 'Frequencia Cardiaca',
+          value: vitalSigns.frequencia ? `${vitalSigns.frequencia} bpm` : 'N/I',
+          range: `${FREQUENCIA_MIN + 1} - ${FREQUENCIA_MAX - 1} bpm`,
+          ok: frequenciaValida,
+          hasData: !!vitalSigns.frequencia,
+        },
+        {
+          label: 'Pressao Arterial',
+          value:
+            vitalSigns.pressaoSistolica && vitalSigns.pressaoDiastolica
+              ? `${vitalSigns.pressaoSistolica}/${vitalSigns.pressaoDiastolica} mmHg`
+              : 'N/I',
+          range: '91-139 x 61-89 mmHg',
+          ok: pressaoValida,
+          hasData: !!(
+            vitalSigns.pressaoSistolica && vitalSigns.pressaoDiastolica
+          ),
+        },
+      ];
+
+      vitals.forEach((v, i) => {
+        const bx = ML + i * (boxW + 4);
+        const statusColor: [number, number, number] = v.hasData
+          ? v.ok
+            ? GREEN
+            : RED
+          : MUTED;
+
+        pdf.setFillColor(...WHITE);
+        pdf.roundedRect(bx, y, boxW, boxH, 2, 2, 'F');
+        pdf.setDrawColor(...statusColor);
+        pdf.setLineWidth(0.5);
+        pdf.roundedRect(bx, y, boxW, boxH, 2, 2, 'S');
+
+        pdf.setFillColor(...statusColor);
+        pdf.rect(bx, y, boxW, 2.5, 'F');
+        pdf.roundedRect(bx, y, boxW, 2.5, 2, 2, 'F');
+
+        pdf.setTextColor(...MUTED);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.5);
+        pdf.text(clean(v.label.toUpperCase()), bx + boxW / 2, y + 9, {
+          align: 'center',
+        });
+
+        pdf.setTextColor(...statusColor);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10.5);
+        pdf.text(clean(v.value), bx + boxW / 2, y + 17, { align: 'center' });
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.5);
+        const statusTxt = v.hasData
+          ? v.ok
+            ? 'NORMAL'
+            : 'ATENCAO'
+          : 'PENDENTE';
+        pdf.text(clean(statusTxt), bx + boxW / 2, y + 23, { align: 'center' });
+
+        pdf.setTextColor(...MUTED);
+        pdf.setFontSize(5.5);
+        pdf.text(clean(`Ref: ${v.range}`), bx + boxW / 2, y + 27.5, {
+          align: 'center',
+        });
+      });
+
+      pdf.setTextColor(...DARK);
+      y += boxH + 8;
+
+      // ════════════════════════════════════════════════════════
+      // 5. STATUS BANNER
+      // ════════════════════════════════════════════════════════
+      checkPage(22);
+      const apto = isApto;
+      const bannerColor: [number, number, number] = apto ? GREEN : RED;
+      const bannerBg: [number, number, number] = apto
+        ? [240, 253, 244]
+        : [254, 242, 242];
+
+      pdf.setFillColor(...bannerBg);
+      pdf.roundedRect(ML, y, CW, 18, 3, 3, 'F');
+      pdf.setDrawColor(...bannerColor);
+      pdf.setLineWidth(1);
+      pdf.roundedRect(ML, y, CW, 18, 3, 3, 'S');
+
+      pdf.setFillColor(...bannerColor);
+      pdf.rect(ML, y, 5, 18, 'F');
+      pdf.roundedRect(ML, y, 5, 18, 3, 3, 'F');
+
+      pdf.setTextColor(...bannerColor);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
       pdf.text(
-        `Documento gerado em ${new Date().toLocaleString(
-          'pt-BR'
-        )} - Avaliação Pré-MER`,
-        pageWidth / 2,
-        pageHeight - 10,
+        apto ? 'APTO PARA MERGULHO' : 'INAPTO PARA MERGULHO',
+        PW / 2,
+        y + 11,
         { align: 'center' }
       );
 
-      const nomeArquivo = `PRE-MER_${colaborador.replace(
-        /\s+/g,
-        '_'
-      )}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(nomeArquivo);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...MID);
+      pdf.text('RESULTADO DA AVALIACAO', PW / 2, y + 16, { align: 'center' });
+
+      pdf.setTextColor(...DARK);
+      y += 24;
+
+      // ════════════════════════════════════════════════════════
+      // 6. QUESTIONÁRIO DE SAÚDE
+      // ════════════════════════════════════════════════════════
+      checkPage(50);
+      sectionTitle('QUESTIONARIO DE SAUDE');
+
+      pdf.setFillColor(...NAVY);
+      pdf.rect(ML, y - 1, CW, 7, 'F');
+      pdf.setTextColor(...WHITE);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.text('PARAMETRO', ML + 4, y + 4);
+      pdf.text('RESPOSTA', PW - ML - 4, y + 4, { align: 'right' });
+      pdf.setTextColor(...DARK);
+      y += 8;
+
+      QUESTOES_DEFINITIONS.forEach((q, index) => {
+        checkPage(12);
+        const isChecked = questoes[q.key];
+        const rowBg: [number, number, number] = index % 2 === 0 ? WHITE : GRAY1;
+        const accentC: [number, number, number] = isChecked ? RED : TEAL;
+
+        pdf.setFillColor(...rowBg);
+        pdf.rect(ML, y - 1, CW, 8, 'F');
+
+        pdf.setFillColor(...accentC);
+        pdf.circle(ML + 3, y + 3, 1.2, 'F');
+
+        pdf.setTextColor(...DARK);
+        pdf.setFont('helvetica', isChecked ? 'bold' : 'normal');
+        pdf.setFontSize(8);
+        pdf.text(clean(q.labelPDF), ML + 8, y + 4);
+
+        const badge = isChecked ? 'SIM' : 'NAO';
+        const [br, bg2, bb] = isChecked ? RED : GREEN;
+        const bw = 14;
+        pdf.setFillColor(br, bg2, bb, 0.12);
+        pdf.roundedRect(PW - ML - bw - 2, y, bw, 6, 1, 1, 'F');
+        pdf.setTextColor(br, bg2, bb);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.text(badge, PW - ML - bw / 2 - 2, y + 4.2, { align: 'center' });
+
+        pdf.setDrawColor(...GRAY2);
+        pdf.setLineWidth(0.2);
+        pdf.line(ML, y + 7, PW - ML, y + 7);
+
+        pdf.setTextColor(...DARK);
+        y += 8;
+      });
+
+      y += 4;
+
+      // ════════════════════════════════════════════════════════
+      // 7. PLANO DE AÇÃO
+      // ════════════════════════════════════════════════════════
+      if (planoAcao.length > 0 && !isApto) {
+        checkPage(40);
+        sectionTitle('PLANO DE ACAO OBRIGATORIO', RED, [255, 245, 245]);
+
+        planoAcao.forEach((item, idx) => {
+          checkPage(36);
+
+          const cardH = 32;
+          pdf.setFillColor(255, 251, 245);
+          pdf.roundedRect(ML, y, CW, cardH, 2, 2, 'F');
+          pdf.setDrawColor(...GRAY2);
+          pdf.setLineWidth(0.2);
+          pdf.roundedRect(ML, y, CW, cardH, 2, 2, 'S');
+
+          const borderC: [number, number, number] =
+            item.status === 'critico' ? RED : [245, 158, 11];
+          pdf.setFillColor(...borderC);
+          pdf.rect(ML, y, 3, cardH, 'F');
+          pdf.roundedRect(ML, y, 3, cardH, 2, 2, 'F');
+
+          pdf.setFillColor(...borderC);
+          pdf.circle(ML + 10, y + 7, 4, 'F');
+          pdf.setTextColor(...WHITE);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(8);
+          pdf.text(String(idx + 1), ML + 10, y + 9, { align: 'center' });
+
+          pdf.setTextColor(...DARK);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text(clean(item.parametro), ML + 18, y + 8);
+
+          const statusTxt = item.status === 'critico' ? 'CRITICO' : 'ATENCAO';
+          pill(statusTxt, PW - ML - 26, y + 8, false);
+
+          pdf.setTextColor(...MID);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(7.5);
+          const diagLines = pdf.splitTextToSize(
+            clean(`Diagnostico: ${item.mensagem}`),
+            CW - 22
+          );
+          diagLines.slice(0, 2).forEach((line: string, li: number) => {
+            pdf.text(line, ML + 18, y + 14 + li * 4);
+          });
+
+          pdf.setTextColor(5, 100, 70);
+          pdf.setFontSize(7);
+          const aLines = pdf.splitTextToSize(
+            clean(`Acao: ${item.acao}`),
+            CW - 22
+          );
+          aLines.slice(0, 2).forEach((line: string, li: number) => {
+            pdf.text(line, ML + 18, y + 23 + li * 3.5);
+          });
+
+          pdf.setTextColor(...MUTED);
+          pdf.setFontSize(6.5);
+          pdf.text(clean(`Prazo: ${item.prazo}`), ML + 18, y + 29.5);
+          pdf.text(
+            clean(`Responsavel: ${item.responsavel}`),
+            ML + 80,
+            y + 29.5
+          );
+
+          pdf.setTextColor(...DARK);
+          y += cardH + 5;
+        });
+
+        checkPage(15);
+        pdf.setFillColor(255, 251, 235);
+        pdf.roundedRect(ML, y, CW, 11, 2, 2, 'F');
+        pdf.setDrawColor(253, 211, 77);
+        pdf.setLineWidth(0.5);
+        pdf.roundedRect(ML, y, CW, 11, 2, 2, 'S');
+        pdf.setTextColor(146, 64, 14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        pdf.text(
+          clean(
+            'ATENCAO: O colaborador so sera liberado apos a resolucao de todos os parametros criticos.'
+          ),
+          PW / 2,
+          y + 7,
+          { align: 'center' }
+        );
+        pdf.setTextColor(...DARK);
+        y += 16;
+      }
+
+      // ════════════════════════════════════════════════════════
+      // 8. ORIENTAÇÕES
+      // ════════════════════════════════════════════════════════
+      checkPage(35);
+      sectionTitle('ORIENTACOES');
+
+      const orientacoes = [
+        'Nota 1: A equipe de mergulho foi orientada em relacao a alimentacao saudavel e respeito de 1:30 de intervalo entre as refeicoes principais.',
+        'Nota 2: Recomendacao de ingestao de ao menos 2L de agua por dia, para melhor hidratacao.',
+        'Nota 3: Orientar os funcionarios sobre a nao utilizacao de substancias ilicitas e avisar ao supervisor e EMED em caso de uso indevido.',
+      ];
+
+      pdf.setFillColor(...GRAY1);
+      pdf.roundedRect(ML, y - 2, CW, orientacoes.length * 10 + 4, 2, 2, 'F');
+
+      orientacoes.forEach((text, i) => {
+        checkPage(12);
+        pdf.setFillColor(...TEAL);
+        pdf.circle(ML + 5, y + 3, 3, 'F');
+        pdf.setTextColor(...WHITE);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(6.5);
+        pdf.text(String(i + 1), ML + 5, y + 4.8, { align: 'center' });
+
+        pdf.setTextColor(...DARK);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        const lines = pdf.splitTextToSize(clean(text), CW - 16);
+        lines.forEach((line: string, li: number) => {
+          pdf.text(line, ML + 12, y + 4 + li * 4);
+        });
+        y += Math.max(10, lines.length * 4 + 2);
+      });
+
+      y += 6;
+
+      // ════════════════════════════════════════════════════════
+      // 9. CONTATOS DE EMERGÊNCIA
+      // ════════════════════════════════════════════════════════
+      checkPage(22);
+      sectionTitle('CONTATOS DE EMERGENCIA');
+
+      const contatos = [
+        {
+          label: 'Medico do Trabalho / Hiperbarico',
+          value: '+55 (21) 99972-2799',
+        },
+        {
+          label: 'Plantao de Saude da Continente',
+          value: '+55 (22) 99729-4339',
+        },
+      ];
+
+      pdf.setFillColor(...GRAY1);
+      pdf.roundedRect(ML, y - 2, CW, contatos.length * 10 + 4, 2, 2, 'F');
+
+      contatos.forEach((c) => {
+        pdf.setFillColor(...NAVY);
+        pdf.rect(ML, y - 1, 3, 8, 'F');
+        pdf.setTextColor(...MID);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        pdf.text(clean(c.label + ':'), ML + 6, y + 3);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...DARK);
+        pdf.setFontSize(9);
+        pdf.text(clean(c.value), ML + 6, y + 8);
+        y += 12;
+      });
+
+      y += 4;
+
+      // ════════════════════════════════════════════════════════
+      // 10. ASSINATURAS
+      // ════════════════════════════════════════════════════════
+      checkPage(60);
+      sectionTitle('ASSINATURAS');
+
+      const sigW = (CW - 10) / 2;
+      const sigH = 38;
+      const sigs = [
+        {
+          label: 'Mergulhador',
+          role: colaborador || 'Nao identificado',
+          img: mergulhadorCanvas.signatureData,
+        },
+        {
+          label: 'Profissional de Saude / EMED / DMT',
+          role: nomeAvaliador || 'Nao informado',
+          img: avaliadorCanvas.signatureData,
+        },
+      ];
+
+      sigs.forEach((sig, i) => {
+        const sx = ML + i * (sigW + 10);
+
+        pdf.setFillColor(...WHITE);
+        pdf.roundedRect(sx, y, sigW, sigH, 2, 2, 'F');
+        pdf.setDrawColor(...GRAY2);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(sx, y, sigW, sigH, 2, 2, 'S');
+
+        pdf.setFillColor(...NAVY);
+        pdf.roundedRect(sx, y, sigW, 7, 2, 2, 'F');
+        pdf.rect(sx, y + 4, sigW, 3, 'F');
+        pdf.setTextColor(...WHITE);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.text(clean(sig.label.toUpperCase()), sx + sigW / 2, y + 5, {
+          align: 'center',
+        });
+
+        if (sig.img) {
+          try {
+            pdf.addImage(sig.img, 'PNG', sx + 4, y + 9, sigW - 8, 22);
+          } catch (e) {
+            pdf.setTextColor(...MUTED);
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(7);
+            pdf.text('(imagem nao disponivel)', sx + sigW / 2, y + 21, {
+              align: 'center',
+            });
+          }
+        } else {
+          pdf.setDrawColor(...MUTED);
+          pdf.setLineDashPattern([2, 1], 0);
+          pdf.setLineWidth(0.3);
+          pdf.rect(sx + 6, y + 9, sigW - 12, 22, 'S');
+          pdf.setLineDashPattern([], 0);
+          pdf.setTextColor(...MUTED);
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(7);
+          pdf.text('(nao assinado)', sx + sigW / 2, y + 21, {
+            align: 'center',
+          });
+        }
+
+        pdf.setDrawColor(...GRAY2);
+        pdf.setLineWidth(0.4);
+        pdf.line(sx + 4, y + sigH - 7, sx + sigW - 4, y + sigH - 7);
+        pdf.setTextColor(...MID);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7);
+        pdf.text(clean(sig.role), sx + sigW / 2, y + sigH - 3, {
+          align: 'center',
+        });
+
+        pdf.setTextColor(...DARK);
+      });
+
+      y += sigH + 6;
+
+      // ════════════════════════════════════════════════════════
+      // FOOTER
+      // ════════════════════════════════════════════════════════
+      addPageFooter();
+
+      // ════════════════════════════════════════════════════════
+      // GERAR BLOB E FAZER UPLOAD
+      // ════════════════════════════════════════════════════════
+      const pdfBlob = pdf.output('blob');
+      const filename = `PRE-MER_${colaborador.replace(/\s+/g, '_')}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      const filePath = `colaboradores/${colaboradorId}/${filename}`;
+
+      // Upload para o Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('pre-mer-pdfs')
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Erro ao fazer upload do PDF:', uploadError);
+        alert('Erro ao salvar o PDF. Tente novamente.');
+        return null;
+      }
+
+      // Obter a URL pública
+      const { data: urlData } = supabase.storage
+        .from('pre-mer-pdfs')
+        .getPublicUrl(filePath);
+
+      const pdfUrl = urlData?.publicUrl || '';
+
+      console.log('✅ PDF salvo com sucesso:', pdfUrl);
+
+      // Também faz o download local
+      pdf.save(filename);
+
+      return { url: pdfUrl, filename };
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Erro ao gerar PDF. Tente novamente.');
+      return null;
     } finally {
       setGerandoPDF(false);
     }
   }, [
     colaborador,
+    colaboradorId,
     colaboradorCodigo,
     funcao,
     frente,
@@ -953,10 +2007,114 @@ export default function PreMERModule({
     isApto,
     temQuestaoSim,
     temperaturaValida,
+    frequenciaValida,
+    pressaoValida,
+    planoAcao,
   ]);
 
   // ============================================================
-  // SALVAR AVALIAÇÃO - CORRIGIDO (COM ACENTO)
+  // SALVAR AVALIAÇÃO COM PDF
+  // ============================================================
+
+  const salvarAvaliacao = useCallback(async () => {
+    const questoesRespondidas = QUESTOES_DEFINITIONS.reduce<
+      Record<string, boolean>
+    >((acc, q) => {
+      acc[QUESTOES_DB_MAPPING[q.key]] = questoes[q.key];
+      return acc;
+    }, {});
+
+    setLoading(true);
+    setSuccessMessage('');
+
+    try {
+      // 1. GERAR O PDF E FAZER UPLOAD
+      const pdfResult = await gerarPDF();
+
+      if (!pdfResult) {
+        alert('Erro ao gerar ou salvar o PDF. Verifique sua conexão.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. SALVAR OS DADOS NO BANCO COM A URL DO PDF
+      const dadosAvaliacao = {
+        colaborador_id: colaboradorId ? parseInt(colaboradorId, 10) : null,
+        colaborador_nome: colaborador,
+        colaborador_codigo: colaboradorCodigo,
+        funcao: funcao,
+        frente_servico: frente,
+        temperatura: vitalSigns.temperatura
+          ? parseFloat(vitalSigns.temperatura)
+          : null,
+        frequencia_cardíaca: vitalSigns.frequencia
+          ? parseInt(vitalSigns.frequencia, 10)
+          : null,
+        pressao_sistolica: vitalSigns.pressaoSistolica
+          ? parseInt(vitalSigns.pressaoSistolica, 10)
+          : null,
+        pressao_diastolica: vitalSigns.pressaoDiastolica
+          ? parseInt(vitalSigns.pressaoDiastolica, 10)
+          : null,
+        questoes: questoesRespondidas,
+        nome_avaliador: nomeAvaliador,
+        profissional_saude: profissionalSaude,
+        aptidao: aptidaoAtual,
+        assinatura_avaliador: avaliadorCanvas.signatureData,
+        assinatura_mergulhador: mergulhadorCanvas.signatureData,
+        plano_acao: planoAcao,
+        pdf_url: pdfResult.url,
+        pdf_filename: pdfResult.filename,
+      };
+
+      const { data, error } = await supabase
+        .from('pre_mer_avaliacoes')
+        .insert([dadosAvaliacao])
+        .select();
+
+      if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
+        alert(`Erro ao salvar avaliação: ${error.message}`);
+      } else {
+        console.log('✅ Dados salvos com sucesso:', data);
+        setSuccessMessage(
+          '✅ Avaliação Pré-MER salva com sucesso! PDF armazenado no prontuário.'
+        );
+        alert(
+          'Avaliação Pré-MER salva com sucesso! O PDF foi armazenado no prontuário do colaborador.'
+        );
+        resetForm();
+        setShowPlanoPopup(false);
+      }
+    } catch (err) {
+      console.error('❌ Erro completo:', err);
+      alert(
+        'Erro ao salvar avaliação. Verifique o console para mais detalhes.'
+      );
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    }
+  }, [
+    colaborador,
+    colaboradorId,
+    colaboradorCodigo,
+    funcao,
+    frente,
+    vitalSigns,
+    questoes,
+    nomeAvaliador,
+    profissionalSaude,
+    avaliadorCanvas.signatureData,
+    mergulhadorCanvas.signatureData,
+    aptidaoAtual,
+    planoAcao,
+    gerarPDF,
+    resetForm,
+  ]);
+
+  // ============================================================
+  // HANDLE SUBMIT
   // ============================================================
 
   const handleSubmit = useCallback(async () => {
@@ -981,79 +2139,21 @@ export default function PreMERModule({
       return;
     }
 
-    // Mapeia as questões para o formato do banco
-    const questoesRespondidas = QUESTOES_DEFINITIONS.reduce<
-      Record<string, boolean>
-    >((acc, q) => {
-      acc[QUESTOES_DB_MAPPING[q.key]] = questoes[q.key];
-      return acc;
-    }, {});
-
-    // Objeto com os nomes CORRETOS das colunas do Supabase
-    // ATENÇÃO: A coluna se chama "frequencia_cardíaca" COM ACENTO
-    const dadosAvaliacao = {
-      colaborador_id: colaboradorId ? parseInt(colaboradorId, 10) : null,
-      colaborador_nome: colaborador,
-      colaborador_codigo: colaboradorCodigo,
-      funcao: funcao,
-      frente_servico: frente,
-      temperatura: parseFloat(vitalSigns.temperatura),
-      frequencia_cardíaca: parseInt(vitalSigns.frequencia, 10), // ← Nome COM ACENTO (entre aspas)
-      pressao_sistolica: parseInt(vitalSigns.pressaoSistolica, 10),
-      pressao_diastolica: parseInt(vitalSigns.pressaoDiastolica, 10),
-      questoes: questoesRespondidas,
-      nome_avaliador: nomeAvaliador,
-      profissional_saude: profissionalSaude,
-      aptidao: aptidaoAtual,
-      assinatura_avaliador: avaliadorCanvas.signatureData,
-      assinatura_mergulhador: mergulhadorCanvas.signatureData,
-    };
-
-    console.log('📝 Dados a serem salvos:', dadosAvaliacao);
-
-    setLoading(true);
-    setSuccessMessage('');
-
-    try {
-      const { data, error } = await supabase
-        .from('pre_mer_avaliacoes')
-        .insert([dadosAvaliacao])
-        .select();
-
-      if (error) {
-        console.error('❌ Erro detalhado do Supabase:', error);
-        alert(`Erro ao salvar avaliação: ${error.message}`);
-      } else {
-        console.log('✅ Dados salvos com sucesso:', data);
-        setSuccessMessage('✅ Avaliação Pré-MER salva com sucesso!');
-        await gerarPDF();
-        alert('Avaliação Pré-MER salva com sucesso e PDF gerado!');
-        resetForm();
-      }
-    } catch (err) {
-      console.error('❌ Erro completo:', err);
-      alert(
-        'Erro ao salvar avaliação. Verifique o console para mais detalhes.'
-      );
-    } finally {
-      setLoading(false);
-      setTimeout(() => setSuccessMessage(''), 3000);
+    if (aptidaoAtual === 'inapto' && planoAcao.length > 0) {
+      setShowPlanoPopup(true);
+      return;
     }
+
+    await salvarAvaliacao();
   }, [
     colaborador,
-    colaboradorId,
-    colaboradorCodigo,
-    funcao,
-    frente,
-    vitalSigns,
-    questoes,
     nomeAvaliador,
     profissionalSaude,
     avaliadorCanvas.signatureData,
     mergulhadorCanvas.signatureData,
     aptidaoAtual,
-    gerarPDF,
-    resetForm,
+    planoAcao,
+    salvarAvaliacao,
   ]);
 
   // ============================================================
@@ -1279,11 +2379,21 @@ export default function PreMERModule({
         borderRadius: '20px',
         fontSize: '16px',
         fontWeight: 700,
-        background: isApto ? '#d1fae5' : '#fee2e2',
-        color: isApto ? '#065f46' : '#991b1b',
+        background:
+          aptidao === null
+            ? '#f3f4f6'
+            : aptidao === 'apto'
+            ? '#d1fae5'
+            : '#fee2e2',
+        color:
+          aptidao === null
+            ? '#6b7280'
+            : aptidao === 'apto'
+            ? '#065f46'
+            : '#991b1b',
       },
     }),
-    [isApto]
+    [isApto, aptidao]
   );
 
   // ============================================================
@@ -1292,6 +2402,16 @@ export default function PreMERModule({
 
   return (
     <div style={stylesObj.container}>
+      {showPlanoPopup && planoAcao.length > 0 && (
+        <PlanoAcaoPopup
+          plano={planoAcao}
+          onClose={() => setShowPlanoPopup(false)}
+          onSave={salvarAvaliacao}
+          colaboradorNome={colaborador}
+          loading={loading}
+        />
+      )}
+
       <div
         style={{
           display: 'flex',
@@ -1333,7 +2453,10 @@ export default function PreMERModule({
       </div>
 
       <div style={stylesObj.headerCard}>
-        <label style={stylesObj.label}>👨‍⚕️ Selecione o Colaborador</label>
+        <label style={stylesObj.label}>
+          <i className="fas fa-user-md" style={{ marginRight: '6px' }} />
+          Selecione o Colaborador
+        </label>
         <select
           style={stylesObj.select}
           value={selectedEmployeeId}
@@ -1394,7 +2517,7 @@ export default function PreMERModule({
               Selecione um colaborador para iniciar a avaliação
             </h3>
             <p style={{ color: '#6b6b6b' }}>
-              Apenas médicos têm acesso a este módulo.
+              Apenas profissionais de saúde têm acesso a este módulo.
             </p>
           </div>
         </div>
@@ -1426,13 +2549,42 @@ export default function PreMERModule({
                   className="fas fa-stethoscope"
                   style={{
                     marginRight: '8px',
-                    color: isApto ? '#10b981' : '#ef4444',
+                    color:
+                      aptidao === null
+                        ? '#6b6b6b'
+                        : aptidao === 'apto'
+                        ? '#10b981'
+                        : '#ef4444',
                   }}
                 />
                 Status da Avaliação
               </h3>
               <div style={stylesObj.statusBadge}>
-                {isApto ? '✅ APTO' : '❌ INAPTO'}
+                {aptidao === null ? (
+                  <>
+                    <i
+                      className="fas fa-clock"
+                      style={{ marginRight: '6px' }}
+                    />{' '}
+                    AGUARDANDO DADOS
+                  </>
+                ) : aptidao === 'apto' ? (
+                  <>
+                    <i
+                      className="fas fa-check-circle"
+                      style={{ marginRight: '6px' }}
+                    />{' '}
+                    APTO
+                  </>
+                ) : (
+                  <>
+                    <i
+                      className="fas fa-times-circle"
+                      style={{ marginRight: '6px' }}
+                    />{' '}
+                    INAPTO
+                  </>
+                )}
               </div>
             </div>
             <div
@@ -1440,17 +2592,65 @@ export default function PreMERModule({
             >
               {temQuestaoSim && (
                 <div style={{ color: '#dc2626', marginBottom: '4px' }}>
-                  ⚠️ Questão(ões) de saúde marcadas como "Sim"
+                  <i
+                    className="fas fa-exclamation-triangle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  Questão(ões) de saúde marcadas como "Sim"
                 </div>
               )}
-              {!temperaturaValida && (
+              {vitalSigns.temperatura && !temperaturaValida && (
                 <div style={{ color: '#dc2626', marginBottom: '4px' }}>
-                  ⚠️ Temperatura fora do range ideal (36.1 - 36.9°C)
+                  <i
+                    className="fas fa-exclamation-triangle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  Temperatura fora do range ideal (36.1 - 36.9°C)
                 </div>
               )}
-              {isApto && (
+              {vitalSigns.frequencia && !frequenciaValida && (
+                <div style={{ color: '#dc2626', marginBottom: '4px' }}>
+                  <i
+                    className="fas fa-exclamation-triangle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  Frequência cardíaca fora do range ideal (61 - 99 bpm)
+                </div>
+              )}
+              {vitalSigns.pressaoSistolica &&
+                vitalSigns.pressaoDiastolica &&
+                !pressaoValida && (
+                  <div style={{ color: '#dc2626', marginBottom: '4px' }}>
+                    <i
+                      className="fas fa-exclamation-triangle"
+                      style={{ marginRight: '6px' }}
+                    />
+                    Pressão arterial fora do range ideal (91-139x61-89 mmHg)
+                  </div>
+                )}
+              {aptidao === null && (
+                <div style={{ color: '#6b7280', marginBottom: '4px' }}>
+                  <i className="fas fa-clock" style={{ marginRight: '6px' }} />
+                  Preencha todos os dados para determinar a aptidão
+                </div>
+              )}
+              {aptidao === 'apto' && (
                 <div style={{ color: '#059669' }}>
-                  ✅ Todos os parâmetros dentro do esperado
+                  <i
+                    className="fas fa-check-circle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  Todos os parâmetros dentro do esperado
+                </div>
+              )}
+              {aptidao === 'inapto' && (
+                <div style={{ color: '#dc2626' }}>
+                  <i
+                    className="fas fa-times-circle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  {planoAcao.length} parâmetro(s) fora do esperado - Verifique o
+                  plano de ação
                 </div>
               )}
             </div>
@@ -1472,15 +2672,18 @@ export default function PreMERModule({
                 unit="°C"
                 paramRange="36.1 - 36.9°C"
                 isValid={temperaturaValida}
-                icon="🌡️"
+                icon="fas fa-thermometer-half"
+                placeholder="0.0"
               />
               <VitalInputCard
                 label="Frequência Cardíaca"
                 value={vitalSigns.frequencia}
                 onChange={(v: string) => handleVitalChange('frequencia', v)}
                 unit="bpm"
-                paramRange="60 - 100 bpm"
-                icon="💓"
+                paramRange="61 - 99 bpm"
+                isValid={frequenciaValida}
+                icon="fas fa-heart"
+                placeholder="0"
               />
               <VitalInputCard
                 label="Pressão Arterial"
@@ -1488,10 +2691,16 @@ export default function PreMERModule({
                 onChange={(v: string) =>
                   handleVitalChange('pressaoSistolica', v)
                 }
-                unit={` / ${vitalSigns.pressaoDiastolica}`}
-                paramRange="< 130x85 mmHg"
-                icon="🩸"
-                showCheck={false}
+                valueDiastolica={vitalSigns.pressaoDiastolica}
+                onChangeDiastolica={(v: string) =>
+                  handleVitalChange('pressaoDiastolica', v)
+                }
+                unit="mmHg"
+                paramRange="91-139 x 61-89 mmHg"
+                isValid={pressaoValida}
+                icon="fas fa-stethoscope"
+                isPressao={true}
+                placeholder="0"
               />
             </div>
           </div>
@@ -1532,17 +2741,28 @@ export default function PreMERModule({
             </h3>
             <div style={stylesObj.warningBox}>
               <p style={stylesObj.warningText}>
-                <strong>✅ Nota 1:</strong> A equipe de mergulho foi orientada
-                em relação a alimentação saudável e em respeito de 1:30 (uma
-                hora e trinta minutos) de intervalo entre as refeições
-                principais.
+                <i
+                  className="fas fa-check"
+                  style={{ marginRight: '6px', color: '#059669' }}
+                />
+                <strong>Nota 1:</strong> A equipe de mergulho foi orientada em
+                relação a alimentação saudável e em respeito de 1:30 (uma hora e
+                trinta minutos) de intervalo entre as refeições principais.
               </p>
               <p style={stylesObj.warningText}>
-                <strong>💧 Nota 2:</strong> Recomendação de ingestão de ao menos
-                2L de água por dia, para melhor hidratação.
+                <i
+                  className="fas fa-tint"
+                  style={{ marginRight: '6px', color: '#0ea5e9' }}
+                />
+                <strong>Nota 2:</strong> Recomendação de ingestão de ao menos 2L
+                de água por dia, para melhor hidratação.
               </p>
               <p style={{ ...stylesObj.warningText, marginBottom: 0 }}>
-                <strong>🚫 Nota 3:</strong> Orientar os funcionários sobre a não
+                <i
+                  className="fas fa-ban"
+                  style={{ marginRight: '6px', color: '#dc2626' }}
+                />
+                <strong>Nota 3:</strong> Orientar os funcionários sobre a não
                 utilização de substâncias ilícitas e avisar ao supervisor e EMED
                 em caso de uso indevido.
               </p>
@@ -1550,7 +2770,8 @@ export default function PreMERModule({
 
             <div style={{ marginBottom: '16px' }}>
               <label style={stylesObj.label}>
-                👨‍⚕️ Nome do avaliador (Profissional de saúde/ EMED/DMT)
+                <i className="fas fa-user-md" style={{ marginRight: '6px' }} />
+                Nome do avaliador (Profissional de saúde/ EMED/DMT)
               </label>
               <input
                 type="text"
@@ -1626,12 +2847,32 @@ export default function PreMERModule({
               <label style={stylesObj.label}>Aptidão do avaliador</label>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={stylesObj.aptidaoButton(aptidao === 'apto', true)}>
-                  {aptidao === 'apto' ? '✅ APTO' : 'APTO'}
+                  {aptidao === 'apto' ? (
+                    <>
+                      <i
+                        className="fas fa-check-circle"
+                        style={{ marginRight: '6px' }}
+                      />{' '}
+                      APTO
+                    </>
+                  ) : (
+                    'APTO'
+                  )}
                 </div>
                 <div
                   style={stylesObj.aptidaoButton(aptidao === 'inapto', false)}
                 >
-                  {aptidao === 'inapto' ? '❌ INAPTO' : 'INAPTO'}
+                  {aptidao === 'inapto' ? (
+                    <>
+                      <i
+                        className="fas fa-times-circle"
+                        style={{ marginRight: '6px' }}
+                      />{' '}
+                      INAPTO
+                    </>
+                  ) : (
+                    'INAPTO'
+                  )}
                 </div>
               </div>
               {aptidao === 'inapto' && (
@@ -1642,18 +2883,41 @@ export default function PreMERModule({
                     marginTop: '8px',
                   }}
                 >
-                  ⚠️ Avaliação INAPTO -{' '}
-                  {temQuestaoSim
-                    ? 'Questão de saúde marcada como SIM'
-                    : 'Temperatura fora do range'}
+                  <i
+                    className="fas fa-exclamation-triangle"
+                    style={{ marginRight: '6px' }}
+                  />
+                  Avaliação INAPTO - {planoAcao.length} parâmetro(s) fora do
+                  esperado
+                  <button
+                    onClick={() => setShowPlanoPopup(true)}
+                    style={{
+                      marginLeft: '12px',
+                      padding: '4px 16px',
+                      background: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <i
+                      className="fas fa-clipboard-list"
+                      style={{ marginRight: '4px' }}
+                    />
+                    Ver Plano de Ação
+                  </button>
                 </div>
               )}
             </div>
 
             <div style={stylesObj.infoBox}>
               <p style={stylesObj.infoText}>
+                <i className="fas fa-phone" style={{ marginRight: '6px' }} />
                 <strong>
-                  📞 Em caso de resposta afirmativa para as questões acima e/ou,
+                  Em caso de resposta afirmativa para as questões acima e/ou,
                 </strong>{' '}
                 os dados avaliados estejam fora dos parâmetros fisiológicos
                 estabelecidos, o EMED/DMT/ profissional de saúde, deverá
@@ -1668,12 +2932,12 @@ export default function PreMERModule({
             <button
               type="button"
               style={
-                loading || gerandoPDF
+                loading || gerandoPDF || aptidao === null
                   ? stylesObj.buttonDisabled
                   : stylesObj.button
               }
               onClick={handleSubmit}
-              disabled={loading || gerandoPDF}
+              disabled={loading || gerandoPDF || aptidao === null}
             >
               {loading ? (
                 <>
@@ -1690,6 +2954,14 @@ export default function PreMERModule({
                     style={{ marginRight: '8px' }}
                   />{' '}
                   Gerando PDF...
+                </>
+              ) : aptidao === null ? (
+                <>
+                  <i
+                    className="fas fa-exclamation-triangle"
+                    style={{ marginRight: '8px' }}
+                  />
+                  Preencha todos os dados para salvar
                 </>
               ) : (
                 <>
