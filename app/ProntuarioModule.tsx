@@ -61,7 +61,10 @@ export default function ProntuarioModule({
       .order('created_at', { ascending: false });
 
     if (!error && data) {
+      console.log('✅ Avaliações Pré-MER carregadas:', data.length);
       setPreMerAvaliacoes(data);
+    } else {
+      console.error('❌ Erro ao carregar Pré-MER:', error);
     }
   };
 
@@ -276,11 +279,28 @@ export default function ProntuarioModule({
 
   const getPreMERAvaliacoesDoColaborador = () => {
     if (!selectedEmployee) return [];
-    return preMerAvaliacoes.filter(
-      (record: any) =>
-        record.colaborador_id?.toString() === selectedEmployee.id?.toString() ||
-        record.colaborador_nome === selectedEmployee.name
-    );
+
+    const empId = selectedEmployee.id?.toString();
+    const empCodigo = selectedEmployee.codigo?.toString();
+    const empNome = selectedEmployee.name || selectedEmployee.nome;
+
+    console.log('🔍 Buscando Pré-MER para:', { empId, empCodigo, empNome });
+    console.log('📋 Total de avaliações:', preMerAvaliacoes.length);
+
+    const filtered = preMerAvaliacoes.filter((record: any) => {
+      const matchId = record.colaborador_id?.toString() === empId;
+      const matchCodigo = record.colaborador_codigo?.toString() === empCodigo;
+      const matchNome = record.colaborador_nome === empNome;
+
+      if (matchId || matchCodigo || matchNome) {
+        console.log('✅ Match encontrado:', record);
+      }
+
+      return matchId || matchCodigo || matchNome;
+    });
+
+    console.log('📊 Resultados filtrados:', filtered.length);
+    return filtered;
   };
 
   const getImcRecordsDoColaborador = () => {
@@ -387,6 +407,24 @@ export default function ProntuarioModule({
     });
 
     return todosEmbarques;
+  };
+
+  // ==================== FUNÇÃO PARA BAIXAR PDF ====================
+  const downloadPDF = async (pdfUrl: string, filename: string) => {
+    try {
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      alert('Erro ao baixar o PDF. Tente novamente.');
+    }
   };
 
   // ==================== ESTILOS ====================
@@ -1177,58 +1215,153 @@ export default function ProntuarioModule({
                     }}
                   ></i>
                   <p>Nenhuma avaliação Pré-MER encontrada</p>
+                  <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                    As avaliações Pré-MER são realizadas no módulo Pré-MER
+                  </p>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tableStyle}>
                     <thead>
                       <tr>
-                        <th style={thStyle}>
-                          <i className="fas fa-calendar-alt"></i> Data
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-user-md"></i> Avaliador
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-thermometer-half"></i>{' '}
-                          Temperatura
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-heart"></i> Pressão
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-heartbeat"></i> Frequência
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-check-circle"></i> Aptidão
-                        </th>
+                        <th style={thStyle}>DATA</th>
+                        <th style={thStyle}>AVALIADOR</th>
+                        <th style={thStyle}>TEMPERATURA</th>
+                        <th style={thStyle}>PRESSÃO</th>
+                        <th style={thStyle}>FREQUÊNCIA</th>
+                        <th style={thStyle}>APTIDÃO</th>
+                        <th style={thStyle}>AÇÕES</th>
                       </tr>
                     </thead>
                     <tbody>
                       {getPreMERAvaliacoesDoColaborador().map(
-                        (registro: any) => (
-                          <tr key={registro.id}>
-                            <td style={tdStyle}>
-                              {formatDate(registro.created_at)}
-                            </td>
-                            <td style={tdStyle}>{registro.nome_avaliador}</td>
-                            <td style={tdStyle}>{registro.temperatura}°C</td>
-                            <td style={tdStyle}>
-                              {registro.pressao_sistolica}/
-                              {registro.pressao_diastolica} mmHg
-                            </td>
-                            <td style={tdStyle}>
-                              {registro.frequencia_cardíaca} bpm
-                            </td>
-                            <td style={tdStyle}>
-                              <span style={badgeStyle(registro.aptidao)}>
-                                {registro.aptidao === 'apto'
-                                  ? '✅ APTO'
-                                  : '❌ INAPTO'}
-                              </span>
-                            </td>
-                          </tr>
-                        )
+                        (registro: any) => {
+                          const hasPdf =
+                            registro.pdf_url && registro.pdf_url !== '';
+                          return (
+                            <tr key={registro.id}>
+                              <td style={tdStyle}>
+                                <strong>
+                                  {formatDate(registro.created_at)}
+                                </strong>
+                                <br />
+                                <span
+                                  style={{ fontSize: '11px', color: '#999' }}
+                                >
+                                  {new Date(
+                                    registro.created_at
+                                  ).toLocaleTimeString('pt-BR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                <div
+                                  style={{
+                                    fontWeight: 600,
+                                    color: textPrimary,
+                                  }}
+                                >
+                                  {registro.nome_avaliador || 'N/I'}
+                                </div>
+                                <div
+                                  style={{ fontSize: '11px', color: '#999' }}
+                                >
+                                  {registro.profissional_saude === 'sim'
+                                    ? '👨‍⚕️ Prof. Saúde'
+                                    : '📋 Técnico'}
+                                </div>
+                              </td>
+                              <td style={tdStyle}>
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    color: textPrimary,
+                                  }}
+                                >
+                                  {registro.temperatura}°C
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    color: textPrimary,
+                                  }}
+                                >
+                                  {registro.pressao_sistolica}/
+                                  {registro.pressao_diastolica} mmHg
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    color: textPrimary,
+                                  }}
+                                >
+                                  {registro.frequencia_cardíaca} bpm
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                <span style={badgeStyle(registro.aptidao)}>
+                                  {registro.aptidao === 'apto'
+                                    ? '✅ APTO'
+                                    : '❌ INAPTO'}
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                {hasPdf ? (
+                                  <button
+                                    onClick={() =>
+                                      downloadPDF(
+                                        registro.pdf_url,
+                                        registro.pdf_filename ||
+                                          `pre-mer_${registro.id}.pdf`
+                                      )
+                                    }
+                                    style={{
+                                      padding: '6px 14px',
+                                      background: '#0B5E7E',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background =
+                                        '#094a66';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background =
+                                        '#0B5E7E';
+                                    }}
+                                  >
+                                    <i className="fas fa-file-pdf"></i> Baixar
+                                    PDF
+                                  </button>
+                                ) : (
+                                  <span
+                                    style={{ fontSize: '12px', color: '#999' }}
+                                  >
+                                    <i
+                                      className="fas fa-file-pdf"
+                                      style={{ color: '#dc2626' }}
+                                    ></i>{' '}
+                                    PDF não disponível
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        }
                       )}
                     </tbody>
                   </table>
