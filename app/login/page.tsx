@@ -241,6 +241,22 @@ const CheckIcon = () => (
   </svg>
 );
 
+// Novos ícones para substituir os emojis
+const AlertIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+const SuccessIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="9 12 11.5 14.5 15 10" />
+  </svg>
+);
+
 // ─── Ripple Button Component ───
 function RippleButton({
   children,
@@ -731,14 +747,14 @@ export default function LoginPage() {
         {/* Error / Success Messages */}
         {erro && (
           <div style={errorBoxStyle}>
-            <span style={{ fontSize: '18px' }}>⚠️</span>
+            <AlertIcon />
             <span>{erro}</span>
           </div>
         )}
 
         {sucesso && (
           <div style={successBoxStyle}>
-            <span style={{ fontSize: '18px' }}>✅</span>
+            <SuccessIcon />
             <span>Login realizado com sucesso! Redirecionando...</span>
           </div>
         )}
