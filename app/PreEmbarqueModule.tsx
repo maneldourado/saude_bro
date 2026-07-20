@@ -1,1535 +1,2253 @@
-// app/PreEmbarqueModule.tsx
+// app/AvaliacaoEmbarqueMergulhoModule.tsx
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from './lib/supabase';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
-interface PreEmbarqueRecord {
-  id: string;
-  codigo: string;
-  nome: string;
-  cargo: string;
-  dataExame: string;
-  mesReferencia: string;
-  peso: number;
-  altura: number;
-  circunferencia: number;
-  frenteServico: string;
-  status: string;
-  imc?: number;
+// ============================================================
+// ÍCONES SVG (versão simplificada)
+// ============================================================
+
+const IconUser = ({ size = 20, color = 'currentColor' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const IconAlertTriangle = ({ size = 20, color = 'currentColor' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+  </svg>
+);
+
+const IconCheck = ({ size = 20, color = 'currentColor' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+// ============================================================
+// CONSTANTES
+// ============================================================
+
+const COLORS = {
+  primary: '#10b981',
+  primaryDark: '#059669',
+  primaryGlow: 'rgba(16, 185, 129, 0.15)',
+  danger: '#dc2626',
+  dangerBg: '#fce4ec',
+  warning: '#d97706',
+  warningBg: '#fff3e0',
+  success: '#059669',
+  successBg: '#e8f5e9',
+  textPrimary: '#1a1a1a',
+  textSecondary: '#6b5f55',
+  border: 'rgba(0, 0, 0, 0.08)',
+  bgCard: '#ffffff',
+  bgGhost: 'rgba(0, 0, 0, 0.02)',
+};
+
+const TEMPERATURA_MIN = 36.1;
+const TEMPERATURA_MAX = 36.9;
+const FREQUENCIA_MIN = 60;
+const FREQUENCIA_MAX = 100;
+const PRESSÃO_SISTOLICA_MIN = 90;
+const PRESSÃO_SISTOLICA_MAX = 140;
+const PRESSÃO_DIASTOLICA_MIN = 60;
+const PRESSÃO_DIASTOLICA_MAX = 90;
+
+const QUESTOES = [
+  {
+    key: 'q1_cardiovascular',
+    label:
+      'Queixa cardiovascular (Dispnéia, dor precordial, cansaço, tontura, palpitação)',
+  },
+  {
+    key: 'q2_respiratorio',
+    label:
+      'Queixa respiratória (Estado gripal, congestão nasal, rinite alérgica, dispnéia, tosse, bronquite)',
+  },
+  {
+    key: 'q3_ouvidos',
+    label:
+      'Problema nas orelhas (Zumbido, dor, prurido, secreção, tonteira, vertigens, dificuldade para equalizar)',
+  },
+  {
+    key: 'q4_digestivo',
+    label:
+      'Queixa digestiva (Azia, dor epigástrica, cólicas, diarreia, constipação)',
+  },
+  {
+    key: 'q5_urinario',
+    label:
+      'Queixa urinária (Ardência urinária, secreção uretral, cólica renal)',
+  },
+  { key: 'q6_sono', label: 'Queixa na qualidade do sono e descanso adequado' },
+  {
+    key: 'q7_emocional',
+    label:
+      'Problema de ordem emocional ou familiar que possa desaconselhar o mergulho',
+  },
+  {
+    key: 'q8_articular',
+    label:
+      'Dores nas articulações ou queixa parecida com doença descompressiva',
+  },
+  { key: 'q9_outras', label: 'Outra queixa de saúde não abordada acima' },
+];
+
+// ============================================================
+// FUNÇÕES DE VALIDAÇÃO E CÁLCULO
+// ============================================================
+
+function calcularIMC(peso: number, altura: number): number {
+  if (!peso || !altura) return 0;
+  let alt = altura;
+  if (alt > 3) alt = alt / 100;
+  return peso / (alt * alt);
 }
 
-interface PreEmbarqueModuleProps {
-  preEmbarqueRecords?: PreEmbarqueRecord[];
-  setPreEmbarqueRecords?: (value: any) => void;
-  showPreEmbarqueForm?: boolean;
-  setShowPreEmbarqueForm?: (value: boolean) => void;
-  multipleEmployees?: boolean;
-  setMultipleEmployees?: (value: boolean) => void;
-  preEmbarqueList?: any[];
-  setPreEmbarqueList?: (value: any) => void;
-  newPreEmbarque?: any;
-  setNewPreEmbarque?: (value: any) => void;
-  addPreEmbarqueRecord?: () => void;
-  confirmAllPreEmbarque?: () => void;
-  removeFromTempList?: (id: string) => void;
-  deletePreEmbarqueRecord?: (id: string) => void;
-  calculateBMI?: (weight: number, height: number) => number;
-  getPreEmbarqueStatus?: (bmi: number) => string;
-  styles?: any;
-  employees?: any[];
+function validarTemperatura(valor: number | null): boolean {
+  if (!valor) return false;
+  return valor >= TEMPERATURA_MIN && valor <= TEMPERATURA_MAX;
 }
 
-// Cores consistentes
-const accentColor = '#10b981';
-const accentGlow = 'rgba(16, 185, 129, 0.15)';
-const bgCard = '#ffffff';
-const cardBorder = 'rgba(0, 0, 0, 0.08)';
-const textPrimary = '#1a1a1a';
-const textSecondary = '#6b5f55';
+function validarFrequencia(valor: number | null): boolean {
+  if (!valor) return false;
+  return valor > FREQUENCIA_MIN && valor < FREQUENCIA_MAX;
+}
 
-export default function PreEmbarqueModule({
-  preEmbarqueRecords: externalRecords = [],
-  setPreEmbarqueRecords: externalSetRecords,
-  showPreEmbarqueForm: externalShowForm = false,
-  setShowPreEmbarqueForm: externalSetShowForm,
-  multipleEmployees: externalMultiple = false,
-  setMultipleEmployees: externalSetMultiple,
-  preEmbarqueList: externalList = [],
-  setPreEmbarqueList: externalSetList,
-  deletePreEmbarqueRecord: externalDelete,
-  styles: externalStyles = {},
-  employees = [],
-}: PreEmbarqueModuleProps) {
-  const [internalRecords, setInternalRecords] = useState<PreEmbarqueRecord[]>(
-    []
+function validarPressao(sist: number | null, diast: number | null): boolean {
+  if (!sist || !diast) return false;
+  return (
+    sist > PRESSÃO_SISTOLICA_MIN &&
+    sist < PRESSÃO_SISTOLICA_MAX &&
+    diast > PRESSÃO_DIASTOLICA_MIN &&
+    diast < PRESSÃO_DIASTOLICA_MAX
   );
-  const [filtrados, setFiltrados] = useState<PreEmbarqueRecord[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'lista' | 'form'>(
-    'dashboard'
-  );
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(externalShowForm);
-  const [multipleMode, setMultipleMode] = useState(externalMultiple);
-  const [tempList, setTempList] = useState<any[]>(externalList);
-  const [loaded, setLoaded] = useState(false);
+}
 
-  const [formData, setFormData] = useState({
-    codigo: '',
-    nome: '',
-    cargo: '',
-    dataExame: new Date().toISOString().split('T')[0],
-    frenteServico: '',
-    peso: '',
-    altura: '',
-    circunferencia: '',
+function calcularAptidaoMergulho(
+  questoes: Record<string, boolean>,
+  temperatura: number | null,
+  frequencia: number | null,
+  pressaoSist: number | null,
+  pressaoDiast: number | null
+): 'apto' | 'inapto' | null {
+  const temQuestaoSim = Object.values(questoes).some(Boolean);
+  const tempOk = validarTemperatura(temperatura);
+  const freqOk = validarFrequencia(frequencia);
+  const pressOk = validarPressao(pressaoSist, pressaoDiast);
+
+  const dadosCompletos =
+    temperatura !== null &&
+    frequencia !== null &&
+    pressaoSist !== null &&
+    pressaoDiast !== null;
+
+  if (!dadosCompletos) return null;
+
+  if (temQuestaoSim || !tempOk || !freqOk || !pressOk) {
+    return 'inapto';
+  }
+  return 'apto';
+}
+
+function calcularAptidaoEmbarque(
+  circunferencia: number | null,
+  imc: number | null
+): 'apto' | 'inapto' | null {
+  if (circunferencia === null || imc === null) return null;
+
+  if (circunferencia >= 102 || imc >= 35) {
+    return 'inapto';
+  }
+  return 'apto';
+}
+
+function gerarPlanoAcao(
+  questoes: Record<string, boolean>,
+  temperatura: number | null,
+  frequencia: number | null,
+  pressaoSist: number | null,
+  pressaoDiast: number | null,
+  circunferencia: number | null,
+  imc: number | null
+): any[] {
+  const plano: any[] = [];
+
+  if (temperatura !== null && !validarTemperatura(temperatura)) {
+    plano.push({
+      parametro: 'Temperatura Corporal',
+      status: 'critico',
+      mensagem: `Temperatura ${temperatura}°C - Fora do range (${TEMPERATURA_MIN}-${TEMPERATURA_MAX}°C)`,
+      acao: 'Repetir medição. Se persistir, encaminhar para avaliação médica.',
+      prazo: 'Imediato',
+      responsavel: 'Técnico de Enfermagem / EMED',
+    });
+  }
+
+  if (frequencia !== null && !validarFrequencia(frequencia)) {
+    plano.push({
+      parametro: 'Frequência Cardíaca',
+      status: 'critico',
+      mensagem: `Frequência ${frequencia} bpm - Fora do range (${
+        FREQUENCIA_MIN + 1
+      }-${FREQUENCIA_MAX - 1} bpm)`,
+      acao: 'Repouso imediato. Verificar pressão. Encaminhar ao médico se persistir.',
+      prazo: 'Imediato',
+      responsavel: 'Técnico de Enfermagem / EMED',
+    });
+  }
+
+  if (
+    pressaoSist !== null &&
+    pressaoDiast !== null &&
+    !validarPressao(pressaoSist, pressaoDiast)
+  ) {
+    plano.push({
+      parametro: 'Pressão Arterial',
+      status: 'critico',
+      mensagem: `Pressão ${pressaoSist}/${pressaoDiast} mmHg - Fora do range (${
+        PRESSÃO_SISTOLICA_MIN + 1
+      }-${PRESSÃO_SISTOLICA_MAX - 1}x${PRESSÃO_DIASTOLICA_MIN + 1}-${
+        PRESSÃO_DIASTOLICA_MAX - 1
+      } mmHg)`,
+      acao: 'Repouso imediato. Repetir medição após 15 minutos. Encaminhar ao médico do trabalho.',
+      prazo: 'Imediato (até 1 hora)',
+      responsavel: 'Técnico de Enfermagem / EMED',
+    });
+  }
+
+  if (circunferencia !== null && circunferencia >= 102) {
+    plano.push({
+      parametro: 'Circunferência Abdominal',
+      status: 'atencao',
+      mensagem: `Circunferência ${circunferencia} cm - ≥ 102 cm (risco cardiovascular)`,
+      acao: 'Encaminhar para avaliação nutricional e acompanhamento médico. Orientar sobre alimentação e exercícios.',
+      prazo: '15 dias',
+      responsavel: 'Nutricionista / Médico do Trabalho',
+    });
+  }
+
+  if (imc !== null && imc >= 35) {
+    plano.push({
+      parametro: 'IMC elevado',
+      status: 'critico',
+      mensagem: `IMC ${imc.toFixed(1)} - ≥ 35 (obesidade grau II ou III)`,
+      acao: 'Encaminhar para endocrinologista. Avaliação cardiovascular completa. Plano de emagrecimento supervisionado.',
+      prazo: '30 dias',
+      responsavel: 'Médico do Trabalho / Endocrinologista',
+    });
+  }
+
+  QUESTOES.forEach((q) => {
+    if (questoes[q.key]) {
+      plano.push({
+        parametro: q.label,
+        status: 'critico',
+        mensagem: `Queixa identificada: ${q.label}`,
+        acao: `Encaminhar para avaliação especializada.`,
+        prazo: '24-72 horas',
+        responsavel: 'Médico do Trabalho / Especialista',
+      });
+    }
   });
 
-  // Funções
-  const calcularIMC = (peso: number, altura: number): number => {
-    if (!peso || !altura) return 0;
-    let alt = altura;
-    if (alt > 3) alt = alt / 100;
-    return peso / (alt * alt);
-  };
+  return plano;
+}
 
-  const getStatusPorIMC = (imc: number): string => {
-    if (imc === 0) return 'Pendente';
-    if (imc < 18.5) return 'Abaixo do peso';
-    if (imc < 25) return 'Normal';
-    if (imc < 30) return 'Sobrepeso';
-    if (imc < 35) return 'Obesidade grau I';
-    if (imc < 40) return 'Obesidade grau II';
-    return 'Obesidade grau III';
-  };
+// ============================================================
+// HOOK DE ASSINATURA
+// ============================================================
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'Normal':
-        return '#059669';
-      case 'Sobrepeso':
-        return '#d97706';
-      case 'Obesidade grau I':
-        return '#f97316';
-      case 'Obesidade grau II':
-        return '#dc2626';
-      case 'Obesidade grau III':
-        return '#b91c1c';
-      default:
-        return '#6b7280';
+function useSignatureCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
+  const [signatureData, setSignatureData] = useState<string>('');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const isInitializedRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || isInitializedRef.current) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = (rect.width || 400) * dpr;
+    canvas.height = (rect.height || 150) * dpr;
+    canvas.style.width = `${rect.width || 400}px`;
+    canvas.style.height = `${rect.height || 150}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctxRef.current = ctx;
+      isInitializedRef.current = true;
+
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     }
-  };
+  }, [canvasRef]);
 
-  const getStatusBg = (status: string): string => {
-    switch (status) {
-      case 'Normal':
-        return '#e8f5e9';
-      case 'Sobrepeso':
-        return '#fff3e0';
-      case 'Obesidade grau I':
-        return '#ffedd5';
-      case 'Obesidade grau II':
-        return '#fce4ec';
-      case 'Obesidade grau III':
-        return '#fecaca';
-      default:
-        return '#f3f4f6';
-    }
-  };
+  const getCoordinates = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>
+    ) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
 
-  const getStatusIcon = (status: string): string => {
-    switch (status) {
-      case 'Normal':
-        return 'fa-check-circle';
-      case 'Sobrepeso':
-        return 'fa-exclamation-triangle';
-      case 'Obesidade grau I':
-        return 'fa-exclamation-circle';
-      case 'Obesidade grau II':
-        return 'fa-times-circle';
-      case 'Obesidade grau III':
-        return 'fa-skull-crossbones';
-      default:
-        return 'fa-circle';
-    }
-  };
+      const rect = canvas.getBoundingClientRect();
+      let clientX: number, clientY: number;
 
-  const formatDate = (date: string) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
-
-  // Carregar registros - UMA VEZ SÓ
-  const carregarRegistros = async () => {
-    // Se já carregou ou tem dados externos, não carrega de novo
-    if (loaded || externalRecords.length > 0) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: supabaseError } = await supabase
-        .from('pre_embarque')
-        .select('*')
-        .order('dataExame', { ascending: false });
-
-      if (supabaseError) {
-        console.error('Erro ao carregar:', supabaseError);
-        setError('Erro ao carregar registros.');
-        setLoading(false);
-        setLoaded(true);
-        return;
+      if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
       }
 
-      const comImc = (data || []).map((r: any) => {
-        const imc = calcularIMC(r.peso, r.altura);
-        return { ...r, imc, status: getStatusPorIMC(imc) };
-      });
+      const dpr = window.devicePixelRatio || 1;
+      return {
+        x: (clientX - rect.left) * (canvas.width / rect.width / dpr),
+        y: (clientY - rect.top) * (canvas.height / rect.height / dpr),
+      };
+    },
+    [canvasRef]
+  );
 
-      setInternalRecords(comImc);
-      setFiltrados(comImc);
-      if (externalSetRecords) externalSetRecords(comImc);
-      setLoaded(true);
-    } catch (error) {
-      console.error('Erro:', error);
-      setError('Erro ao carregar registros.');
+  const startDrawing = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>
+    ) => {
+      e.preventDefault();
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      if (!isInitializedRef.current) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = (rect.width || 400) * dpr;
+        canvas.height = (rect.height || 150) * dpr;
+        canvas.style.width = `${rect.width || 400}px`;
+        canvas.style.height = `${rect.height || 150}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.scale(dpr, dpr);
+          ctx.strokeStyle = '#1a1a1a';
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctxRef.current = ctx;
+          isInitializedRef.current = true;
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        }
+      }
+
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+
+      setIsDrawing(true);
+      const { x, y } = getCoordinates(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    },
+    [canvasRef, getCoordinates]
+  );
+
+  const draw = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>
+    ) => {
+      e.preventDefault();
+      if (!isDrawing) return;
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+
+      const { x, y } = getCoordinates(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    },
+    [isDrawing, getCoordinates]
+  );
+
+  const endDrawing = useCallback(() => {
+    setIsDrawing(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        setSignatureData(dataUrl);
+      } catch (error) {
+        console.error('Erro ao salvar assinatura:', error);
+      }
+    }
+  }, [canvasRef]);
+
+  const clear = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        setSignatureData('');
+        isInitializedRef.current = false;
+      }
+    }
+  }, [canvasRef]);
+
+  return { signatureData, startDrawing, draw, endDrawing, clear };
+}
+
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+
+interface AvaliacaoEmbarqueMergulhoModuleProps {
+  styles?: any;
+  onSave?: () => void; // Callback para notificar o prontuário
+}
+
+export default function AvaliacaoEmbarqueMergulhoModule({
+  styles = {},
+  onSave,
+}: AvaliacaoEmbarqueMergulhoModuleProps) {
+  // ── ESTADOS ──
+  const [colaboradores, setColaboradores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showPlanoPopup, setShowPlanoPopup] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // ── FORMULÁRIO ──
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    colaborador_id: '',
+    colaborador_nome: '',
+    colaborador_codigo: '',
+    funcao: '',
+    idade: '',
+    frente_servico: '',
+    data_avaliacao: new Date().toISOString().split('T')[0],
+    vencimento_aso: '',
+    temperatura: '',
+    frequencia_cardiaca: '',
+    pressao_sistolica: '',
+    pressao_diastolica: '',
+    circunferencia_abdominal: '',
+    peso: '',
+    altura: '',
+    q1_cardiovascular: false,
+    q2_respiratorio: false,
+    q3_ouvidos: false,
+    q4_digestivo: false,
+    q5_urinario: false,
+    q6_sono: false,
+    q7_emocional: false,
+    q8_articular: false,
+    q9_outras: false,
+    profissional_saude: null as 'sim' | 'nao' | null,
+    nome_avaliador: '',
+  });
+
+  const canvasRefAvaliador = useRef<HTMLCanvasElement>(null);
+  const canvasRefMergulhador = useRef<HTMLCanvasElement>(null);
+
+  const avaliadorCanvas = useSignatureCanvas(canvasRefAvaliador);
+  const mergulhadorCanvas = useSignatureCanvas(canvasRefMergulhador);
+
+  // ── CARREGAR COLABORADORES ──
+  useEffect(() => {
+    carregarColaboradores();
+  }, []);
+
+  const carregarColaboradores = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('colaboradores')
+        .select('*')
+        .order('nome', { ascending: true });
+
+      if (error) throw error;
+      setColaboradores(data || []);
+    } catch (err: any) {
+      setError('Erro ao carregar colaboradores: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Carregar APENAS quando o componente montar ou quando externalRecords mudar explicitamente
-  useEffect(() => {
-    if (externalRecords.length > 0) {
-      const comImc = externalRecords.map((r: any) => ({
-        ...r,
-        imc: calcularIMC(r.peso, r.altura),
-        status: getStatusPorIMC(calcularIMC(r.peso, r.altura)),
+  // ── CÁLCULOS DERIVADOS ──
+  const imc = useMemo(() => {
+    const peso = parseFloat(formData.peso);
+    const altura = parseFloat(formData.altura);
+    if (!peso || !altura) return null;
+    return calcularIMC(peso, altura);
+  }, [formData.peso, formData.altura]);
+
+  const questoes = useMemo(() => {
+    const q: Record<string, boolean> = {};
+    QUESTOES.forEach((qItem) => {
+      q[qItem.key] = formData[qItem.key as keyof typeof formData] as boolean;
+    });
+    return q;
+  }, [formData]);
+
+  const aptidaoMergulho = useMemo(() => {
+    return calcularAptidaoMergulho(
+      questoes,
+      parseFloat(formData.temperatura) || null,
+      parseFloat(formData.frequencia_cardiaca) || null,
+      parseFloat(formData.pressao_sistolica) || null,
+      parseFloat(formData.pressao_diastolica) || null
+    );
+  }, [
+    questoes,
+    formData.temperatura,
+    formData.frequencia_cardiaca,
+    formData.pressao_sistolica,
+    formData.pressao_diastolica,
+  ]);
+
+  const aptidaoEmbarque = useMemo(() => {
+    const circ = parseFloat(formData.circunferencia_abdominal) || null;
+    return calcularAptidaoEmbarque(circ, imc);
+  }, [formData.circunferencia_abdominal, imc]);
+
+  const planoAcao = useMemo(() => {
+    return gerarPlanoAcao(
+      questoes,
+      parseFloat(formData.temperatura) || null,
+      parseFloat(formData.frequencia_cardiaca) || null,
+      parseFloat(formData.pressao_sistolica) || null,
+      parseFloat(formData.pressao_diastolica) || null,
+      parseFloat(formData.circunferencia_abdominal) || null,
+      imc
+    );
+  }, [
+    questoes,
+    formData.temperatura,
+    formData.frequencia_cardiaca,
+    formData.pressao_sistolica,
+    formData.pressao_diastolica,
+    formData.circunferencia_abdominal,
+    imc,
+  ]);
+
+  // ── HANDLERS ──
+  const handleEmployeeSelect = (employeeId: string) => {
+    if (!employeeId) {
+      setSelectedEmployee(null);
+      setFormData((prev) => ({
+        ...prev,
+        colaborador_id: '',
+        colaborador_nome: '',
+        colaborador_codigo: '',
+        funcao: '',
+        peso: '',
+        altura: '',
       }));
-      setInternalRecords(comImc);
-      setFiltrados(comImc);
-      setLoading(false);
-      setLoaded(true);
-    } else if (!loaded) {
-      carregarRegistros();
-    }
-  }, [externalRecords.length]); // Só executa quando o tamanho muda
-
-  // Filtrar
-  useEffect(() => {
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      setFiltrados(
-        internalRecords.filter(
-          (r) =>
-            r.nome.toLowerCase().includes(lower) ||
-            r.codigo.includes(lower) ||
-            r.frenteServico.toLowerCase().includes(lower)
-        )
-      );
-    } else {
-      setFiltrados(internalRecords);
-    }
-  }, [searchTerm, internalRecords]);
-
-  // Salvar
-  const salvarRegistroUnico = async () => {
-    if (
-      !formData.codigo ||
-      !formData.nome ||
-      !formData.peso ||
-      !formData.altura
-    ) {
-      setError('Preencha código, nome, peso e altura.');
       return;
     }
 
+    const emp = colaboradores.find((e) => e.id?.toString() === employeeId);
+    if (emp) {
+      setSelectedEmployee(emp);
+
+      // Calcular idade
+      let idade = '';
+      if (emp.data_nascimento) {
+        const nasc = new Date(emp.data_nascimento);
+        const hoje = new Date();
+        let id = hoje.getFullYear() - nasc.getFullYear();
+        const mes = hoje.getMonth() - nasc.getMonth();
+        if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) {
+          id--;
+        }
+        idade = id.toString();
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        colaborador_id: emp.id?.toString() || '',
+        colaborador_nome: emp.nome || '',
+        colaborador_codigo: emp.codigo?.toString() || '',
+        funcao: emp.cargo || '',
+        idade: idade,
+        peso: emp.peso?.toString() || '',
+        altura: emp.altura?.toString() || '',
+      }));
+    }
+  };
+
+  const handleQuestaoChange = (key: string, value: boolean) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      colaborador_id: '',
+      colaborador_nome: '',
+      colaborador_codigo: '',
+      funcao: '',
+      idade: '',
+      frente_servico: '',
+      data_avaliacao: new Date().toISOString().split('T')[0],
+      vencimento_aso: '',
+      temperatura: '',
+      frequencia_cardiaca: '',
+      pressao_sistolica: '',
+      pressao_diastolica: '',
+      circunferencia_abdominal: '',
+      peso: '',
+      altura: '',
+      q1_cardiovascular: false,
+      q2_respiratorio: false,
+      q3_ouvidos: false,
+      q4_digestivo: false,
+      q5_urinario: false,
+      q6_sono: false,
+      q7_emocional: false,
+      q8_articular: false,
+      q9_outras: false,
+      profissional_saude: null,
+      nome_avaliador: '',
+    });
+    avaliadorCanvas.clear();
+    mergulhadorCanvas.clear();
+    setSelectedEmployee(null);
+    setShowForm(false);
+  };
+
+  // ── FUNÇÃO PARA SALVAR NO IMC ──
+  const salvarNoIMC = async () => {
+    // Pega os dados do formulário
+    const codigo = formData.colaborador_codigo;
+    const peso = parseFloat(formData.peso);
+    const altura = parseFloat(formData.altura);
+    const circ = parseFloat(formData.circunferencia_abdominal) || 0;
+    const dataStr = formData.data_avaliacao;
+    const empresa = formData.frente_servico || '-';
+
+    if (!codigo || !peso || !altura) {
+      console.warn('Dados insuficientes para salvar no IMC');
+      return;
+    }
+
+    const data = new Date(dataStr + 'T00:00:00');
+    if (isNaN(data.getTime())) {
+      console.warn('Data inválida para salvar no IMC');
+      return;
+    }
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = data.getMonth() + 1;
+    const ano = data.getFullYear();
+    const mesesNomes = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+    const mesNome = mesesNomes[data.getMonth()];
+
+    const record = {
+      codigo,
+      data_raw: data.toISOString(),
+      data_str: `${dia}/${String(mes).padStart(2, '0')}/${ano}`,
+      ano,
+      mes: data.getMonth(),
+      mes_nome: mesNome,
+      peso,
+      altura,
+      circunferencia: circ,
+      empresa,
+    };
+
+    try {
+      const { error: insertError } = await supabase
+        .from('imc_records')
+        .insert([record]);
+      if (insertError) {
+        console.error('Erro ao salvar no IMC:', insertError);
+        // Não interrompe o fluxo, apenas loga
+      } else {
+        console.log('✅ Registro IMC salvo com sucesso:', record);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar no IMC:', err);
+    }
+  };
+
+  // ── SALVAR ──
+  const salvarAvaliacao = async () => {
+    if (!formData.colaborador_nome) {
+      setError('Selecione um colaborador');
+      return;
+    }
+    if (!formData.nome_avaliador) {
+      setError('Preencha o nome do avaliador');
+      return;
+    }
+    if (formData.profissional_saude !== 'sim') {
+      setError('Apenas profissionais de saúde podem realizar esta avaliação');
+      return;
+    }
+    if (!avaliadorCanvas.signatureData) {
+      setError('O profissional de saúde deve assinar');
+      return;
+    }
+    if (!mergulhadorCanvas.signatureData) {
+      setError('O colaborador deve assinar');
+      return;
+    }
+
+    if (aptidaoMergulho === 'inapto' || aptidaoEmbarque === 'inapto') {
+      setShowPlanoPopup(true);
+      return;
+    }
+
+    await salvarNoBanco();
+  };
+
+  const salvarNoBanco = async () => {
     setSaving(true);
     setError(null);
     try {
       const payload = {
-        codigo: formData.codigo,
-        nome: formData.nome,
-        cargo: formData.cargo,
-        dataExame: formData.dataExame,
-        frenteServico: formData.frenteServico,
-        peso: parseFloat(formData.peso),
-        altura: parseFloat(formData.altura),
-        circunferencia: parseFloat(formData.circunferencia) || 0,
+        colaborador_id: parseInt(formData.colaborador_id) || null,
+        colaborador_nome: formData.colaborador_nome,
+        colaborador_codigo: formData.colaborador_codigo,
+        funcao: formData.funcao,
+        idade: parseInt(formData.idade) || null,
+        frente_servico: formData.frente_servico,
+        data_avaliacao: formData.data_avaliacao,
+        vencimento_aso: formData.vencimento_aso || null,
+        temperatura: parseFloat(formData.temperatura) || null,
+        frequencia_cardiaca: parseInt(formData.frequencia_cardiaca) || null,
+        pressao_sistolica: parseInt(formData.pressao_sistolica) || null,
+        pressao_diastolica: parseInt(formData.pressao_diastolica) || null,
+        circunferencia_abdominal:
+          parseFloat(formData.circunferencia_abdominal) || null,
+        peso: parseFloat(formData.peso) || null,
+        altura: parseFloat(formData.altura) || null,
+        imc: imc,
+        q1_cardiovascular: formData.q1_cardiovascular,
+        q2_respiratorio: formData.q2_respiratorio,
+        q3_ouvidos: formData.q3_ouvidos,
+        q4_digestivo: formData.q4_digestivo,
+        q5_urinario: formData.q5_urinario,
+        q6_sono: formData.q6_sono,
+        q7_emocional: formData.q7_emocional,
+        q8_articular: formData.q8_articular,
+        q9_outras: formData.q9_outras,
+        profissional_saude: formData.profissional_saude,
+        nome_avaliador: formData.nome_avaliador,
+        assinatura_avaliador: avaliadorCanvas.signatureData,
+        assinatura_mergulhador: mergulhadorCanvas.signatureData,
+        aptidao_mergulho: aptidaoMergulho,
+        aptidao_embarque: aptidaoEmbarque,
+        plano_acao: planoAcao,
       };
 
+      // 1. Salvar avaliação
       const { data, error: insertError } = await supabase
-        .from('pre_embarque')
+        .from('avaliacoes_embarque_mergulho')
         .insert([payload])
         .select();
+
       if (insertError) throw insertError;
 
-      if (data) {
-        const imc = calcularIMC(payload.peso, payload.altura);
-        const novo = { ...data[0], imc, status: getStatusPorIMC(imc) };
-        const novosRegistros = [novo, ...internalRecords];
-        setInternalRecords(novosRegistros);
-        setFiltrados(novosRegistros);
-        if (externalSetRecords) externalSetRecords(novosRegistros);
-      }
+      // 2. Salvar no IMC (usa o código do colaborador)
+      await salvarNoIMC();
 
-      setSuccessMessage('Registro salvo com sucesso!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setSuccessMessage(
+        'Avaliação salva com sucesso! Registro adicionado ao IMC.'
+      );
+      setTimeout(() => setSuccessMessage(null), 4000);
 
-      setFormData({
-        codigo: '',
-        nome: '',
-        cargo: '',
-        dataExame: new Date().toISOString().split('T')[0],
-        frenteServico: '',
-        peso: '',
-        altura: '',
-        circunferencia: '',
-      });
-      setShowForm(false);
-      if (externalSetShowForm) externalSetShowForm(false);
-    } catch (error: any) {
-      setError('Erro ao salvar: ' + error.message);
+      if (onSave) onSave();
+
+      resetForm();
+      setShowPlanoPopup(false);
+    } catch (err: any) {
+      console.error('Erro ao salvar:', err);
+      setError('Erro ao salvar: ' + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const confirmarMultiplos = async () => {
-    if (tempList.length === 0) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const registrosParaInserir = tempList.map((item) => ({
-        codigo: item.codigo,
-        nome: item.nome,
-        cargo: item.cargo,
-        dataExame: formData.dataExame,
-        frenteServico: formData.frenteServico,
-        peso: parseFloat(formData.peso),
-        altura: parseFloat(formData.altura),
-        circunferencia: parseFloat(formData.circunferencia) || 0,
-      }));
-
-      const { data, error: insertError } = await supabase
-        .from('pre_embarque')
-        .insert(registrosParaInserir)
-        .select();
-      if (insertError) throw insertError;
-
-      const novosRegistros = data.map((r: any) => {
-        const imc = calcularIMC(r.peso, r.altura);
-        return { ...r, imc, status: getStatusPorIMC(imc) };
-      });
-
-      const allRecords = [...novosRegistros, ...internalRecords];
-      setInternalRecords(allRecords);
-      setFiltrados(allRecords);
-      if (externalSetRecords) externalSetRecords(allRecords);
-
-      setSuccessMessage('Todos os registros foram salvos!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-
-      setTempList([]);
-      if (externalSetList) externalSetList([]);
-      setShowForm(false);
-      if (externalSetShowForm) externalSetShowForm(false);
-    } catch (error: any) {
-      setError('Erro: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const excluirRegistro = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
-    try {
-      const { error: deleteError } = await supabase
-        .from('pre_embarque')
-        .delete()
-        .eq('id', id);
-      if (deleteError) throw deleteError;
-
-      const novos = internalRecords.filter((r) => r.id !== id);
-      setInternalRecords(novos);
-      setFiltrados(novos);
-      if (externalSetRecords) externalSetRecords(novos);
-      if (externalDelete) externalDelete(id);
-
-      setSuccessMessage('Registro excluído!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (error: any) {
-      setError('Erro: ' + error.message);
-    }
-  };
-
-  const exportarExcel = () => {
-    if (filtrados.length === 0) {
-      setError('Não há registros para exportar.');
-      return;
-    }
-    const dados = filtrados.map((r) => ({
-      Código: r.codigo,
-      Nome: r.nome,
-      Cargo: r.cargo,
-      Data: r.dataExame,
-      'Frente Serviço': r.frenteServico,
-      Peso: r.peso,
-      Altura: r.altura,
-      IMC: r.imc?.toFixed(1) || '-',
-      Status: r.status,
-    }));
-    const ws = XLSX.utils.json_to_sheet(dados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'PreEmbarque');
-    XLSX.writeFile(
-      wb,
-      `pre_embarque_${new Date().toISOString().split('T')[0]}.xlsx`
+  // ── FILTRAR COLABORADORES ──
+  const colaboradoresFiltrados = useMemo(() => {
+    if (!searchTerm) return colaboradores;
+    const term = searchTerm.toLowerCase();
+    return colaboradores.filter(
+      (c) =>
+        c.nome.toLowerCase().includes(term) ||
+        c.codigo.toLowerCase().includes(term) ||
+        (c.cargo && c.cargo.toLowerCase().includes(term))
     );
-    setSuccessMessage('Excel exportado!');
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
+  }, [colaboradores, searchTerm]);
 
-  const exportarPDF = () => {
-    if (filtrados.length === 0) {
-      setError('Não há registros para exportar.');
-      return;
-    }
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(16);
-    doc.setTextColor(16, 185, 129);
-    doc.text('Relatório de Pré-Embarque', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
-    doc.text(`Total: ${filtrados.length} registros`, 14, 32);
-
-    autoTable(doc, {
-      head: [
-        [
-          'Código',
-          'Nome',
-          'Cargo',
-          'Data',
-          'Frente',
-          'Peso',
-          'Altura',
-          'IMC',
-          'Status',
-        ],
-      ],
-      body: filtrados.map((r) => [
-        r.codigo,
-        r.nome,
-        r.cargo,
-        r.dataExame,
-        r.frenteServico,
-        r.peso,
-        r.altura,
-        r.imc?.toFixed(1) || '-',
-        r.status,
-      ]),
-      startY: 40,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [16, 185, 129], textColor: 255 },
-      alternateRowStyles: { fillColor: [240, 240, 240] },
-    });
-    doc.save(`pre_embarque_${new Date().toISOString().split('T')[0]}.pdf`);
-    setSuccessMessage('PDF exportado!');
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
-
-  const stats = useMemo(() => {
-    const total = internalRecords.length;
-    const normal = internalRecords.filter((r) => r.status === 'Normal').length;
-    const sobrepeso = internalRecords.filter(
-      (r) => r.status === 'Sobrepeso'
-    ).length;
-    const obesidade = internalRecords.filter((r) =>
-      r.status.includes('Obesidade')
-    ).length;
-    const imcMedio = total
-      ? (internalRecords.reduce((s, r) => s + (r.imc || 0), 0) / total).toFixed(
-          1
-        )
-      : 0;
-    return { total, normal, sobrepeso, obesidade, imcMedio };
-  }, [internalRecords]);
-
-  // ==================== ESTILOS ====================
-  const containerStyle: React.CSSProperties = {
-    padding: '24px',
-    background: 'transparent',
-    minHeight: '100vh',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    flexWrap: 'wrap',
-    gap: '16px',
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: '24px',
-    fontWeight: 800,
-    color: textPrimary,
-    margin: 0,
-    letterSpacing: '-0.5px',
-  };
-
-  const subtitleStyle: React.CSSProperties = {
-    color: textSecondary,
-    fontSize: '14px',
-    margin: '4px 0 0 0',
-    fontWeight: 500,
-  };
-
-  const buttonPrimaryStyle: React.CSSProperties = {
-    background: `linear-gradient(135deg, ${accentColor} 0%, #059669 100%)`,
-    color: 'white',
-    padding: '12px 24px',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontSize: '14px',
-    fontWeight: 600,
-    border: 'none',
-    boxShadow: `0 4px 15px ${accentGlow}`,
-    transition: 'all 0.3s ease',
-  };
-
-  const statsGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  };
-
-  const statCardStyle: React.CSSProperties = {
-    background: bgCard,
-    borderRadius: '16px',
-    padding: '20px',
-    border: `1px solid ${cardBorder}`,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    gap: '16px',
-    alignItems: 'flex-start',
-  };
-
-  const statNumberStyle: React.CSSProperties = {
-    fontSize: '28px',
-    fontWeight: 800,
-    color: textPrimary,
-  };
-
-  const tabsStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '4px',
-    marginBottom: '24px',
-    borderBottom: `2px solid ${cardBorder}`,
-    flexWrap: 'wrap',
-    paddingBottom: '0',
-  };
-
-  const tabButtonStyle = (active: boolean): React.CSSProperties => ({
-    padding: '10px 20px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: active ? 700 : 600,
-    color: active ? accentColor : textSecondary,
-    borderBottom: active ? `3px solid ${accentColor}` : '3px solid transparent',
-    marginBottom: '-2px',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  });
-
-  const searchBarStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  };
-
-  const searchInputStyle: React.CSSProperties = {
-    padding: '10px 16px',
-    borderRadius: '12px',
-    border: `1px solid ${cardBorder}`,
-    fontSize: '14px',
-    flex: 1,
-    minWidth: '200px',
-    outline: 'none',
-    transition: 'all 0.3s ease',
-    color: textPrimary,
-    background: 'rgba(0, 0, 0, 0.02)',
-  };
-
-  const tableWrapperStyle: React.CSSProperties = {
-    overflowX: 'auto',
-    background: bgCard,
-    borderRadius: '16px',
-    border: `1px solid ${cardBorder}`,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  };
-
-  const tableStyle: React.CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    minWidth: '900px',
-  };
-
-  const thStyle: React.CSSProperties = {
-    textAlign: 'left',
-    padding: '14px 16px',
-    background: 'rgba(0, 0, 0, 0.02)',
-    borderBottom: `2px solid ${cardBorder}`,
-    fontWeight: 700,
-    fontSize: '12px',
-    color: textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    borderBottom: `1px solid ${cardBorder}`,
-    fontSize: '13px',
-    color: textSecondary,
-  };
-
-  const formCardStyle: React.CSSProperties = {
-    background: bgCard,
-    borderRadius: '16px',
-    padding: '24px',
-    marginBottom: '24px',
-    border: `1px solid ${cardBorder}`,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  };
-
-  const formGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  };
-
-  const formGroupStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  };
-
-  const formLabelStyle: React.CSSProperties = {
-    fontSize: '12px',
-    fontWeight: 700,
-    color: textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  };
-
-  const formInputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: '10px',
-    border: `1px solid ${cardBorder}`,
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.3s ease',
-    color: textPrimary,
-    background: 'rgba(0, 0, 0, 0.02)',
-  };
-
-  const formButtonsStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '12px',
-    justifyContent: 'flex-end',
-    marginTop: '20px',
-    paddingTop: '16px',
-    borderTop: `1px solid ${cardBorder}`,
-  };
-
-  const cancelBtnStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    borderRadius: '10px',
-    border: `1px solid ${cardBorder}`,
-    background: 'transparent',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 600,
-    color: textSecondary,
-    transition: 'all 0.2s ease',
-  };
-
-  const saveBtnStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    borderRadius: '10px',
-    border: 'none',
-    background: `linear-gradient(135deg, ${accentColor} 0%, #059669 100%)`,
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 700,
-    boxShadow: `0 4px 15px ${accentGlow}`,
-    transition: 'all 0.3s ease',
-  };
-
-  const exportBtnStyle = (color: string): React.CSSProperties => ({
-    padding: '10px 16px',
-    borderRadius: '10px',
-    border: `1px solid ${color}`,
-    background: 'transparent',
-    color: color,
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: 600,
-    transition: 'all 0.2s ease',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-  });
-
-  const emptyStateStyle: React.CSSProperties = {
-    textAlign: 'center',
-    padding: '60px 20px',
-    color: textSecondary,
-  };
-
-  const StatCard = ({ icon, value, label, bgColor, color }: any) => (
+  // ── RENDER ──
+  return (
     <div
-      style={statCardStyle}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-        e.currentTarget.style.transform = 'translateY(0)';
+      style={{
+        padding: '24px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        fontFamily: '"Inter", -apple-system, sans-serif',
+        ...styles,
       }}
     >
+      {/* HEADER */}
       <div
         style={{
-          background: bgColor,
-          borderRadius: '12px',
-          padding: '12px',
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '24px',
-          minWidth: '56px',
-          minHeight: '56px',
-          color: color,
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '16px',
         }}
       >
-        <i className={`fas ${icon}`}></i>
-      </div>
-      <div>
-        <div style={statNumberStyle}>{value}</div>
-        <div
-          style={{ fontSize: '12px', color: textSecondary, fontWeight: 600 }}
-        >
-          {label}
+        <div>
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              color: COLORS.textPrimary,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <span
+              style={{
+                background: COLORS.primary,
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '12px',
+                fontSize: '14px',
+              }}
+            >
+              AV
+            </span>
+            Avaliação Embarque e Mergulho
+          </h1>
+          <p style={{ color: COLORS.textSecondary, margin: '4px 0 0' }}>
+            Avaliação médica para embarque e atividades de mergulho
+          </p>
         </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          style={{
+            padding: '12px 24px',
+            borderRadius: '12px',
+            border: 'none',
+            background: showForm
+              ? COLORS.danger
+              : `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: showForm ? 'none' : `0 4px 15px ${COLORS.primaryGlow}`,
+          }}
+        >
+          {showForm ? 'Fechar' : 'Nova Avaliação'}
+        </button>
       </div>
-    </div>
-  );
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <i
-          className="fas fa-spinner fa-spin"
-          style={{ fontSize: '40px', color: accentColor }}
-        ></i>
-        <p style={{ marginTop: '16px', color: textSecondary }}>
-          Carregando registros...
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div style={containerStyle}>
+      {/* MENSAGENS */}
       {error && (
         <div
           style={{
-            background: '#fce4ec',
-            color: '#dc2626',
+            background: COLORS.dangerBg,
+            color: COLORS.danger,
             padding: '12px 16px',
             borderRadius: '12px',
             marginBottom: '16px',
-            fontSize: '14px',
-            border: '1px solid #f5c6cb',
+            border: `1px solid #f5c6cb`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          <i
-            className="fas fa-exclamation-circle"
-            style={{ marginRight: '8px' }}
-          ></i>
+          <IconAlertTriangle size={18} color={COLORS.danger} />
           {error}
         </div>
       )}
       {successMessage && (
         <div
           style={{
-            background: '#e8f5e9',
-            color: '#059669',
+            background: COLORS.successBg,
+            color: COLORS.success,
             padding: '12px 16px',
             borderRadius: '12px',
             marginBottom: '16px',
-            fontSize: '14px',
-            border: '1px solid #c3e6cb',
+            border: `1px solid #c3e6cb`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
+          <IconCheck size={18} color={COLORS.success} />
           {successMessage}
         </div>
       )}
 
-      <div style={headerStyle}>
-        <div>
-          <h1 style={titleStyle}>
-            <i
-              className="fas fa-ship"
-              style={{ marginRight: '12px', color: accentColor }}
-            ></i>
-            Pré-Embarque
-          </h1>
-          <p style={subtitleStyle}>
-            <i
-              className="fas fa-notes-medical"
-              style={{ marginRight: '6px' }}
-            ></i>
-            Registro de exames admissionais e periódicos
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            style={buttonPrimaryStyle}
-            onClick={() => {
-              setShowForm(!showForm);
-              if (externalSetShowForm) externalSetShowForm(!showForm);
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = `0 6px 20px ${accentGlow}`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = `0 4px 15px ${accentGlow}`;
-            }}
-          >
-            <i className="fas fa-plus-circle"></i>
-            Novo Registro
-          </button>
-        </div>
-      </div>
-
-      <div style={statsGridStyle}>
-        <StatCard
-          icon="fa-file-medical"
-          value={stats.total}
-          label="TOTAL DE REGISTROS"
-          bgColor="#e6f3f9"
-          color="#2c7da0"
-        />
-        <StatCard
-          icon="fa-check-circle"
-          value={stats.normal}
-          label="IMC NORMAL"
-          bgColor="#e8f5e9"
-          color="#059669"
-        />
-        <StatCard
-          icon="fa-exclamation-triangle"
-          value={stats.sobrepeso}
-          label="SOBREPESO"
-          bgColor="#fff3e0"
-          color="#d97706"
-        />
-        <StatCard
-          icon="fa-times-circle"
-          value={stats.obesidade}
-          label="OBESIDADE"
-          bgColor="#fce4ec"
-          color="#dc2626"
-        />
-      </div>
-
-      <div style={tabsStyle}>
-        <button
-          style={tabButtonStyle(activeTab === 'dashboard')}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          <i className="fas fa-chart-pie"></i> Dashboard
-        </button>
-        <button
-          style={tabButtonStyle(activeTab === 'lista')}
-          onClick={() => setActiveTab('lista')}
-        >
-          <i className="fas fa-table"></i> Lista de Registros
-        </button>
-        <button
-          style={tabButtonStyle(activeTab === 'form')}
-          onClick={() => setActiveTab('form')}
-        >
-          <i className="fas fa-plus-circle"></i> Novo Registro
-        </button>
-      </div>
-
-      {activeTab === 'lista' && (
-        <>
-          <div style={searchBarStyle}>
-            <input
-              type="text"
-              placeholder="🔍 Buscar por nome, código ou frente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={searchInputStyle}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = accentColor;
-                e.currentTarget.style.background = '#ffffff';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = cardBorder;
-                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.02)';
-              }}
-            />
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button onClick={exportarExcel} style={exportBtnStyle('#059669')}>
-                <i className="fas fa-file-excel"></i> Excel
-              </button>
-              <button onClick={exportarPDF} style={exportBtnStyle('#dc2626')}>
-                <i className="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </div>
-
-          <div style={tableWrapperStyle}>
-            {filtrados.length === 0 ? (
-              <div style={emptyStateStyle}>
-                <i
-                  className="fas fa-inbox"
-                  style={{
-                    fontSize: '48px',
-                    marginBottom: '16px',
-                    opacity: 0.3,
-                  }}
-                ></i>
-                <p>Nenhum registro encontrado</p>
-                <button
-                  style={{ ...buttonPrimaryStyle, marginTop: '16px' }}
-                  onClick={() => setActiveTab('form')}
-                >
-                  <i className="fas fa-plus-circle"></i> Adicionar primeiro
-                  registro
-                </button>
-              </div>
-            ) : (
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>
-                      <i className="fas fa-id-badge"></i> Código
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-user"></i> Nome
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-briefcase"></i> Cargo
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-calendar-alt"></i> Data
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-weight"></i> Peso
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-ruler-vertical"></i> Altura
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-chart-line"></i> IMC
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-tag"></i> Status
-                    </th>
-                    <th style={thStyle}>
-                      <i className="fas fa-cog"></i> Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrados.map((record) => {
-                    const statusColor = getStatusColor(record.status);
-                    const statusBg = getStatusBg(record.status);
-                    const statusIcon = getStatusIcon(record.status);
-                    return (
-                      <tr key={record.id}>
-                        <td style={tdStyle}>{record.codigo}</td>
-                        <td style={tdStyle}>
-                          <strong style={{ color: textPrimary }}>
-                            {record.nome}
-                          </strong>
-                        </td>
-                        <td style={tdStyle}>{record.cargo || '-'}</td>
-                        <td style={tdStyle}>{formatDate(record.dataExame)}</td>
-                        <td style={tdStyle}>{record.peso} kg</td>
-                        <td style={tdStyle}>{record.altura} m</td>
-                        <td style={tdStyle}>
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              color: record.imc > 25 ? '#dc2626' : accentColor,
-                            }}
-                          >
-                            {record.imc?.toFixed(1) || '-'}
-                          </span>
-                        </td>
-                        <td style={tdStyle}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '4px 12px',
-                              borderRadius: '20px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              background: statusBg,
-                              color: statusColor,
-                            }}
-                          >
-                            <i className={`fas ${statusIcon}`}></i>
-                            {record.status}
-                          </span>
-                        </td>
-                        <td style={tdStyle}>
-                          <button
-                            onClick={() => excluirRegistro(record.id)}
-                            style={{
-                              background: 'rgba(220, 38, 38, 0.08)',
-                              color: '#dc2626',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            <i className="fas fa-trash-alt"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      )}
-
-      {(showForm || activeTab === 'form') && (
-        <div style={formCardStyle}>
-          <h3
-            style={{
-              fontSize: '18px',
-              fontWeight: 700,
-              color: textPrimary,
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <i
-              className="fas fa-file-medical"
-              style={{ color: accentColor }}
-            ></i>
-            Novo Exame Pré-Embarque
-          </h3>
-
-          <div
-            style={{
-              marginBottom: '20px',
-              padding: '16px',
-              background: 'rgba(0, 0, 0, 0.02)',
-              borderRadius: '12px',
-              border: `1px solid ${cardBorder}`,
-            }}
-          >
-            <label style={formLabelStyle}>
-              <i
-                className="fas fa-users-cog"
-                style={{ marginRight: '6px' }}
-              ></i>
-              Modo de Cadastro
-            </label>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <button
-                onClick={() => {
-                  setMultipleMode(false);
-                  if (externalSetMultiple) externalSetMultiple(false);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: !multipleMode
-                    ? `2px solid ${accentColor}`
-                    : `1px solid ${cardBorder}`,
-                  background: !multipleMode
-                    ? `rgba(16, 185, 129, 0.08)`
-                    : 'transparent',
-                  color: !multipleMode ? accentColor : textSecondary,
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                <i className="fas fa-user"></i> Único
-              </button>
-              <button
-                onClick={() => {
-                  setMultipleMode(true);
-                  if (externalSetMultiple) externalSetMultiple(true);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: multipleMode
-                    ? `2px solid ${accentColor}`
-                    : `1px solid ${cardBorder}`,
-                  background: multipleMode
-                    ? `rgba(16, 185, 129, 0.08)`
-                    : 'transparent',
-                  color: multipleMode ? accentColor : textSecondary,
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                <i className="fas fa-users"></i> Múltiplos
-              </button>
-            </div>
-          </div>
-
-          <div style={formGridStyle}>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-id-badge"></i> Código *
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: 12345"
-                value={formData.codigo}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigo: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-user"></i> Nome Completo *
-              </label>
-              <input
-                type="text"
-                placeholder="Digite o nome completo"
-                value={formData.nome}
-                onChange={(e) =>
-                  setFormData({ ...formData, nome: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-briefcase"></i> Cargo
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Mergulhador"
-                value={formData.cargo}
-                onChange={(e) =>
-                  setFormData({ ...formData, cargo: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-calendar-alt"></i> Data do Exame *
-              </label>
-              <input
-                type="date"
-                value={formData.dataExame}
-                onChange={(e) =>
-                  setFormData({ ...formData, dataExame: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-weight"></i> Peso (kg) *
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                placeholder="Ex: 75"
-                value={formData.peso}
-                onChange={(e) =>
-                  setFormData({ ...formData, peso: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-ruler-vertical"></i> Altura (m) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Ex: 1.75"
-                value={formData.altura}
-                onChange={(e) =>
-                  setFormData({ ...formData, altura: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-arrows-alt-h"></i> Circunferência (cm)
-              </label>
-              <input
-                type="number"
-                placeholder="Ex: 85"
-                value={formData.circunferencia}
-                onChange={(e) =>
-                  setFormData({ ...formData, circunferencia: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label style={formLabelStyle}>
-                <i className="fas fa-building"></i> Frente de Serviço
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Offshore"
-                value={formData.frenteServico}
-                onChange={(e) =>
-                  setFormData({ ...formData, frenteServico: e.target.value })
-                }
-                style={formInputStyle}
-              />
-            </div>
-          </div>
-
-          <div style={formButtonsStyle}>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                if (externalSetShowForm) externalSetShowForm(false);
-              }}
-              style={cancelBtnStyle}
-            >
-              <i className="fas fa-times"></i> Cancelar
-            </button>
-            <button
-              onClick={multipleMode ? confirmarMultiplos : salvarRegistroUnico}
-              disabled={saving}
-              style={{
-                ...saveBtnStyle,
-                opacity: saving ? 0.7 : 1,
-                cursor: saving ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {saving ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i> Salvando...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-save"></i> Salvar
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'dashboard' && (
+      {/* FORMULÁRIO */}
+      {showForm && (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
-            gap: '24px',
+            background: COLORS.bgCard,
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '24px',
+            border: `1px solid ${COLORS.border}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          }}
+        >
+          {/* SELECIONAR COLABORADOR */}
+          <div style={{ marginBottom: '24px' }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                color: COLORS.textSecondary,
+                display: 'block',
+                marginBottom: '8px',
+              }}
+            >
+              Colaborador
+            </label>
+
+            <input
+              type="text"
+              placeholder="Buscar colaborador por nome, código ou cargo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '14px',
+                background: COLORS.bgGhost,
+                outline: 'none',
+                marginBottom: '8px',
+              }}
+            />
+
+            <select
+              value={formData.colaborador_id}
+              onChange={(e) => handleEmployeeSelect(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '15px',
+                color: COLORS.textPrimary,
+                background: COLORS.bgGhost,
+                outline: 'none',
+              }}
+            >
+              <option value="">-- Selecione um colaborador --</option>
+              {colaboradoresFiltrados.map((emp) => (
+                <option key={emp.id} value={emp.id.toString()}>
+                  {emp.codigo} - {emp.nome} {emp.cargo ? `(${emp.cargo})` : ''}
+                </option>
+              ))}
+            </select>
+
+            {formData.colaborador_nome && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  padding: '16px',
+                  background: COLORS.primaryGlow,
+                  borderRadius: '12px',
+                  border: `1px solid ${COLORS.primary}40`,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: COLORS.textPrimary,
+                  }}
+                >
+                  {formData.colaborador_nome}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    fontSize: '13px',
+                    color: COLORS.textSecondary,
+                    marginTop: '4px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span>
+                    <strong>Código:</strong>{' '}
+                    {formData.colaborador_codigo || '—'}
+                  </span>
+                  <span>
+                    <strong>Função:</strong> {formData.funcao || '—'}
+                  </span>
+                  {formData.idade && (
+                    <span>
+                      <strong>Idade:</strong> {formData.idade} anos
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {formData.colaborador_nome && (
+            <>
+              {/* DADOS GERAIS */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Data da Avaliação
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.data_avaliacao}
+                    onChange={(e) =>
+                      handleFieldChange('data_avaliacao', e.target.value)
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Vencimento ASO
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.vencimento_aso}
+                    onChange={(e) =>
+                      handleFieldChange('vencimento_aso', e.target.value)
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Frente de Serviço
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.frente_servico}
+                    onChange={(e) =>
+                      handleFieldChange('frente_servico', e.target.value)
+                    }
+                    placeholder="Ex: Offshore Bacia de Campos"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* SINAIS VITAIS */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px',
+                  padding: '16px',
+                  background: COLORS.bgGhost,
+                  borderRadius: '12px',
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Temperatura (°C)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.temperatura}
+                    onChange={(e) =>
+                      handleFieldChange('temperatura', e.target.value)
+                    }
+                    placeholder="36.5"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${
+                        validarTemperatura(
+                          parseFloat(formData.temperatura) || null
+                        )
+                          ? COLORS.primary
+                          : COLORS.border
+                      }`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: '10px', color: COLORS.textSecondary }}
+                  >
+                    {TEMPERATURA_MIN} - {TEMPERATURA_MAX}°C
+                  </span>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Frequência (bpm)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.frequencia_cardiaca}
+                    onChange={(e) =>
+                      handleFieldChange('frequencia_cardiaca', e.target.value)
+                    }
+                    placeholder="72"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${
+                        validarFrequencia(
+                          parseInt(formData.frequencia_cardiaca) || null
+                        )
+                          ? COLORS.primary
+                          : COLORS.border
+                      }`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: '10px', color: COLORS.textSecondary }}
+                  >
+                    {FREQUENCIA_MIN + 1} - {FREQUENCIA_MAX - 1} bpm
+                  </span>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Pressão (mmHg)
+                  </label>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '4px',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <input
+                      type="number"
+                      value={formData.pressao_sistolica}
+                      onChange={(e) =>
+                        handleFieldChange('pressao_sistolica', e.target.value)
+                      }
+                      placeholder="120"
+                      style={{
+                        width: '50%',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: `1px solid ${
+                          validarPressao(
+                            parseInt(formData.pressao_sistolica) || null,
+                            parseInt(formData.pressao_diastolica) || null
+                          )
+                            ? COLORS.primary
+                            : COLORS.border
+                        }`,
+                        fontSize: '14px',
+                        background: COLORS.bgGhost,
+                        outline: 'none',
+                      }}
+                    />
+                    <span
+                      style={{ fontSize: '18px', color: COLORS.textSecondary }}
+                    >
+                      /
+                    </span>
+                    <input
+                      type="number"
+                      value={formData.pressao_diastolica}
+                      onChange={(e) =>
+                        handleFieldChange('pressao_diastolica', e.target.value)
+                      }
+                      placeholder="80"
+                      style={{
+                        width: '50%',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: `1px solid ${
+                          validarPressao(
+                            parseInt(formData.pressao_sistolica) || null,
+                            parseInt(formData.pressao_diastolica) || null
+                          )
+                            ? COLORS.primary
+                            : COLORS.border
+                        }`,
+                        fontSize: '14px',
+                        background: COLORS.bgGhost,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{ fontSize: '10px', color: COLORS.textSecondary }}
+                  >
+                    {PRESSÃO_SISTOLICA_MIN + 1}-{PRESSÃO_SISTOLICA_MAX - 1}x
+                    {PRESSÃO_DIASTOLICA_MIN + 1}-{PRESSÃO_DIASTOLICA_MAX - 1}
+                  </span>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Circ. Abdominal (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.circunferencia_abdominal}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        'circunferencia_abdominal',
+                        e.target.value
+                      )
+                    }
+                    placeholder="85"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${
+                        (parseFloat(formData.circunferencia_abdominal) || 0) <
+                        102
+                          ? COLORS.primary
+                          : COLORS.danger
+                      }`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: '10px', color: COLORS.textSecondary }}
+                  >
+                    {parseFloat(formData.circunferencia_abdominal) >= 102
+                      ? '⚠️ ≥ 102 cm'
+                      : 'Normal < 102 cm'}
+                  </span>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Peso (kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.peso}
+                    onChange={(e) => handleFieldChange('peso', e.target.value)}
+                    placeholder="75"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Altura (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.altura}
+                    onChange={(e) =>
+                      handleFieldChange('altura', e.target.value)
+                    }
+                    placeholder="175"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                {imc !== null && (
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: COLORS.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'block',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      IMC
+                    </label>
+                    <div
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        background:
+                          imc >= 35
+                            ? COLORS.dangerBg
+                            : imc >= 30
+                            ? COLORS.warningBg
+                            : COLORS.successBg,
+                        color:
+                          imc >= 35
+                            ? COLORS.danger
+                            : imc >= 30
+                            ? COLORS.warning
+                            : COLORS.success,
+                        fontWeight: 700,
+                        fontSize: '18px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {imc.toFixed(1)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* QUESTIONÁRIO */}
+              <div style={{ marginBottom: '24px' }}>
+                <h4
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: COLORS.textPrimary,
+                    margin: '0 0 16px 0',
+                  }}
+                >
+                  Questionário de Saúde
+                </h4>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  {QUESTOES.map((q) => {
+                    const isChecked = formData[
+                      q.key as keyof typeof formData
+                    ] as boolean;
+                    return (
+                      <div
+                        key={q.key}
+                        style={{
+                          background: isChecked
+                            ? COLORS.dangerBg
+                            : COLORS.bgGhost,
+                          borderRadius: '12px',
+                          padding: '16px',
+                          borderLeft: `4px solid ${
+                            isChecked ? COLORS.danger : COLORS.primary
+                          }`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 500,
+                            marginBottom: '8px',
+                            fontSize: '14px',
+                          }}
+                        >
+                          {q.label}
+                        </div>
+                        <div style={{ display: 'flex', gap: '24px' }}>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name={q.key}
+                              checked={isChecked === true}
+                              onChange={() => handleQuestaoChange(q.key, true)}
+                            />{' '}
+                            Sim
+                          </label>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name={q.key}
+                              checked={isChecked === false}
+                              onChange={() => handleQuestaoChange(q.key, false)}
+                            />{' '}
+                            Não
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* AVALIADOR */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px',
+                  padding: '16px',
+                  background: COLORS.bgGhost,
+                  borderRadius: '12px',
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Avaliador
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nome_avaliador}
+                    onChange={(e) =>
+                      handleFieldChange('nome_avaliador', e.target.value)
+                    }
+                    placeholder="Nome do profissional"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${COLORS.border}`,
+                      fontSize: '14px',
+                      background: COLORS.bgGhost,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Profissional de Saúde?
+                  </label>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="profissional_saude"
+                        checked={formData.profissional_saude === 'sim'}
+                        onChange={() =>
+                          handleFieldChange('profissional_saude', 'sim')
+                        }
+                      />{' '}
+                      Sim
+                    </label>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="profissional_saude"
+                        checked={formData.profissional_saude === 'nao'}
+                        onChange={() =>
+                          handleFieldChange('profissional_saude', 'nao')
+                        }
+                      />{' '}
+                      Não
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* ASSINATURAS */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '24px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Assinatura do Avaliador
+                  </label>
+                  <canvas
+                    ref={canvasRefAvaliador}
+                    style={{
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: '12px',
+                      background: 'white',
+                      cursor: 'crosshair',
+                      width: '100%',
+                      height: '120px',
+                      touchAction: 'none',
+                      display: 'block',
+                    }}
+                    onMouseDown={avaliadorCanvas.startDrawing}
+                    onMouseMove={avaliadorCanvas.draw}
+                    onMouseUp={avaliadorCanvas.endDrawing}
+                    onMouseLeave={avaliadorCanvas.endDrawing}
+                    onTouchStart={avaliadorCanvas.startDrawing}
+                    onTouchMove={avaliadorCanvas.draw}
+                    onTouchEnd={avaliadorCanvas.endDrawing}
+                  />
+                  <button
+                    onClick={avaliadorCanvas.clear}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: COLORS.danger,
+                      marginTop: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Limpar
+                  </button>
+                  {avaliadorCanvas.signatureData && (
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: COLORS.success,
+                        marginLeft: '12px',
+                      }}
+                    >
+                      Assinado
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Assinatura do Colaborador
+                  </label>
+                  <canvas
+                    ref={canvasRefMergulhador}
+                    style={{
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: '12px',
+                      background: 'white',
+                      cursor: 'crosshair',
+                      width: '100%',
+                      height: '120px',
+                      touchAction: 'none',
+                      display: 'block',
+                    }}
+                    onMouseDown={mergulhadorCanvas.startDrawing}
+                    onMouseMove={mergulhadorCanvas.draw}
+                    onMouseUp={mergulhadorCanvas.endDrawing}
+                    onMouseLeave={mergulhadorCanvas.endDrawing}
+                    onTouchStart={mergulhadorCanvas.startDrawing}
+                    onTouchMove={mergulhadorCanvas.draw}
+                    onTouchEnd={mergulhadorCanvas.endDrawing}
+                  />
+                  <button
+                    onClick={mergulhadorCanvas.clear}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: COLORS.danger,
+                      marginTop: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Limpar
+                  </button>
+                  {mergulhadorCanvas.signatureData && (
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: COLORS.success,
+                        marginLeft: '12px',
+                      }}
+                    >
+                      Assinado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* RESULTADO */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background:
+                      aptidaoMergulho === 'apto'
+                        ? COLORS.successBg
+                        : aptidaoMergulho === 'inapto'
+                        ? COLORS.dangerBg
+                        : COLORS.bgGhost,
+                    border: `1px solid ${
+                      aptidaoMergulho === 'apto'
+                        ? COLORS.primary
+                        : aptidaoMergulho === 'inapto'
+                        ? COLORS.danger
+                        : COLORS.border
+                    }`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Aptidão para Mergulho
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color:
+                        aptidaoMergulho === 'apto'
+                          ? COLORS.success
+                          : aptidaoMergulho === 'inapto'
+                          ? COLORS.danger
+                          : COLORS.textSecondary,
+                    }}
+                  >
+                    {aptidaoMergulho === 'apto'
+                      ? 'APTO'
+                      : aptidaoMergulho === 'inapto'
+                      ? 'INAPTO'
+                      : 'Pendente'}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background:
+                      aptidaoEmbarque === 'apto'
+                        ? COLORS.successBg
+                        : aptidaoEmbarque === 'inapto'
+                        ? COLORS.dangerBg
+                        : COLORS.bgGhost,
+                    border: `1px solid ${
+                      aptidaoEmbarque === 'apto'
+                        ? COLORS.primary
+                        : aptidaoEmbarque === 'inapto'
+                        ? COLORS.danger
+                        : COLORS.border
+                    }`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: COLORS.textSecondary,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Aptidão para Embarque
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color:
+                        aptidaoEmbarque === 'apto'
+                          ? COLORS.success
+                          : aptidaoEmbarque === 'inapto'
+                          ? COLORS.danger
+                          : COLORS.textSecondary,
+                    }}
+                  >
+                    {aptidaoEmbarque === 'apto'
+                      ? 'APTO'
+                      : aptidaoEmbarque === 'inapto'
+                      ? 'INAPTO'
+                      : 'Pendente'}
+                  </div>
+                </div>
+              </div>
+
+              {/* PLANO DE AÇÃO */}
+              {planoAcao.length > 0 && (
+                <div
+                  style={{
+                    background: COLORS.warningBg,
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: `1px solid ${COLORS.warning}`,
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: COLORS.warning,
+                      marginBottom: '8px',
+                    }}
+                  >
+                    Plano de Ação - {planoAcao.length} item(ns) pendente(s)
+                  </div>
+                  <button
+                    onClick={() => setShowPlanoPopup(true)}
+                    style={{
+                      padding: '8px 20px',
+                      background: COLORS.danger,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '13px',
+                    }}
+                  >
+                    Ver Plano de Ação
+                  </button>
+                </div>
+              )}
+
+              {/* BOTÕES */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  justifyContent: 'flex-end',
+                  paddingTop: '16px',
+                  borderTop: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <button
+                  onClick={resetForm}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    border: `1px solid ${COLORS.border}`,
+                    background: 'transparent',
+                    color: COLORS.textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarAvaliacao}
+                  disabled={saving}
+                  style={{
+                    padding: '12px 32px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: saving
+                      ? COLORS.border
+                      : `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
+                    color: saving ? COLORS.textSecondary : 'white',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    boxShadow: `0 4px 15px ${COLORS.primaryGlow}`,
+                    opacity: saving ? 0.7 : 1,
+                  }}
+                >
+                  {saving ? 'Salvando...' : 'Salvar no Prontuário'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* POPUP PLANO DE AÇÃO */}
+      {showPlanoPopup && planoAcao.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
           }}
         >
           <div
             style={{
-              background: bgCard,
-              borderRadius: '16px',
-              padding: '24px',
-              border: `1px solid ${cardBorder}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              background: 'white',
+              borderRadius: '24px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              padding: '32px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             }}
           >
-            <h3
+            <div
               style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: textPrimary,
-                marginBottom: '20px',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px',
+                marginBottom: '20px',
+                borderBottom: `2px solid ${COLORS.dangerBg}`,
+                paddingBottom: '16px',
               }}
             >
-              <i
-                className="fas fa-chart-bar"
-                style={{ color: accentColor }}
-              ></i>
-              Distribuição por IMC
-            </h3>
-            {internalRecords.length === 0 ? (
-              <div style={emptyStateStyle}>
-                <i
-                  className="fas fa-chart-pie"
+              <h2
+                style={{
+                  fontSize: '22px',
+                  fontWeight: 800,
+                  color: COLORS.danger,
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <IconAlertTriangle size={24} color={COLORS.danger} />
+                Plano de Ação
+              </h2>
+              <button
+                onClick={() => setShowPlanoPopup(false)}
+                style={{
+                  background: COLORS.bgGhost,
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ color: COLORS.textSecondary }}>
+                <strong>Colaborador:</strong> {formData.colaborador_nome}
+              </p>
+            </div>
+
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              {planoAcao.map((item, index) => (
+                <div
+                  key={index}
                   style={{
-                    fontSize: '32px',
-                    opacity: 0.3,
-                    marginBottom: '12px',
+                    background:
+                      item.status === 'critico'
+                        ? COLORS.dangerBg
+                        : COLORS.warningBg,
+                    borderRadius: '12px',
+                    padding: '16px',
+                    borderLeft: `4px solid ${
+                      item.status === 'critico' ? COLORS.danger : COLORS.warning
+                    }`,
                   }}
-                ></i>
-                <p>Nenhum dado disponível</p>
-                <button
-                  style={{
-                    ...buttonPrimaryStyle,
-                    marginTop: '12px',
-                    fontSize: '12px',
-                    padding: '8px 16px',
-                  }}
-                  onClick={() => setActiveTab('form')}
                 >
-                  <i className="fas fa-plus-circle"></i> Adicionar registro
-                </button>
-              </div>
-            ) : (
-              [
-                'Normal',
-                'Sobrepeso',
-                'Obesidade grau I',
-                'Obesidade grau II',
-                'Obesidade grau III',
-              ].map((cat) => {
-                const count = internalRecords.filter(
-                  (r) => r.status === cat
-                ).length;
-                const percent =
-                  stats.total > 0 ? (count / stats.total) * 100 : 0;
-                if (count === 0) return null;
-                return (
-                  <div key={cat} style={{ marginBottom: '16px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <strong>{item.parametro}</strong>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color:
+                          item.status === 'critico'
+                            ? COLORS.danger
+                            : COLORS.warning,
+                      }}
+                    >
+                      {item.status === 'critico' ? 'CRÍTICO' : 'ATENÇÃO'}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: COLORS.textSecondary,
+                      margin: '4px 0',
+                    }}
+                  >
+                    {item.mensagem}
+                  </p>
+                  <div
+                    style={{
+                      background: 'white',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      marginTop: '8px',
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: '0 0 4px 0',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Ação: {item.acao}
+                    </p>
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        marginBottom: '4px',
+                        gap: '16px',
+                        fontSize: '12px',
+                        color: COLORS.textSecondary,
                       }}
                     >
-                      <span style={{ fontSize: '13px', color: textSecondary }}>
-                        <i
-                          className={`fas ${getStatusIcon(cat)}`}
-                          style={{
-                            color: getStatusColor(cat),
-                            marginRight: '6px',
-                          }}
-                        ></i>
-                        {cat}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          color: textPrimary,
-                        }}
-                      >
-                        {count} ({percent.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        background: '#f0ebe6',
-                        borderRadius: '8px',
-                        height: '8px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${percent}%`,
-                          height: '100%',
-                          background: getStatusColor(cat),
-                          borderRadius: '8px',
-                          transition: 'width 0.6s ease',
-                        }}
-                      ></div>
+                      <span>Prazo: {item.prazo}</span>
+                      <span>Responsável: {item.responsavel}</span>
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
 
-          <div
-            style={{
-              background: bgCard,
-              borderRadius: '16px',
-              padding: '24px',
-              border: `1px solid ${cardBorder}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            }}
-          >
-            <h3
+            <div
               style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: textPrimary,
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                marginTop: '20px',
+                padding: '16px',
+                background: COLORS.warningBg,
+                borderRadius: '12px',
+                border: `1px solid ${COLORS.warning}`,
               }}
             >
-              <i
-                className="fas fa-info-circle"
-                style={{ color: accentColor }}
-              ></i>
-              Resumo
-            </h3>
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <div
+              <p
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'rgba(0,0,0,0.02)',
-                  borderRadius: '8px',
+                  margin: 0,
+                  fontSize: '13px',
+                  textAlign: 'center',
+                  color: '#92400e',
                 }}
               >
-                <span style={{ color: textSecondary }}>
-                  <i
-                    className="fas fa-calendar-alt"
-                    style={{ color: accentColor, marginRight: '6px' }}
-                  ></i>{' '}
-                  Total de Registros
-                </span>
-                <span style={{ fontWeight: 700, color: textPrimary }}>
-                  {stats.total}
-                </span>
-              </div>
-              <div
+                O colaborador só será liberado após a resolução de todos os
+                itens críticos.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button
+                onClick={() => setShowPlanoPopup(false)}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'rgba(0,0,0,0.02)',
-                  borderRadius: '8px',
+                  flex: 1,
+                  padding: '14px',
+                  background: COLORS.bgGhost,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: COLORS.textSecondary,
                 }}
               >
-                <span style={{ color: textSecondary }}>
-                  <i
-                    className="fas fa-chart-line"
-                    style={{ color: accentColor, marginRight: '6px' }}
-                  ></i>{' '}
-                  IMC Médio
-                </span>
-                <span style={{ fontWeight: 700, color: textPrimary }}>
-                  {stats.imcMedio || '0'}
-                </span>
-              </div>
-              <div
+                Voltar
+              </button>
+              <button
+                onClick={salvarNoBanco}
+                disabled={saving}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'rgba(0,0,0,0.02)',
-                  borderRadius: '8px',
+                  flex: 2,
+                  padding: '14px',
+                  background: saving ? COLORS.border : COLORS.danger,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  opacity: saving ? 0.7 : 1,
                 }}
               >
-                <span style={{ color: textSecondary }}>
-                  <i
-                    className="fas fa-check-circle"
-                    style={{ color: '#059669', marginRight: '6px' }}
-                  ></i>{' '}
-                  Colaboradores Normais
-                </span>
-                <span style={{ fontWeight: 700, color: '#059669' }}>
-                  {stats.normal}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'rgba(0,0,0,0.02)',
-                  borderRadius: '8px',
-                }}
-              >
-                <span style={{ color: textSecondary }}>
-                  <i
-                    className="fas fa-exclamation-triangle"
-                    style={{ color: '#d97706', marginRight: '6px' }}
-                  ></i>{' '}
-                  Com Sobrepeso
-                </span>
-                <span style={{ fontWeight: 700, color: '#d97706' }}>
-                  {stats.sobrepeso}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: 'rgba(0,0,0,0.02)',
-                  borderRadius: '8px',
-                }}
-              >
-                <span style={{ color: textSecondary }}>
-                  <i
-                    className="fas fa-times-circle"
-                    style={{ color: '#dc2626', marginRight: '6px' }}
-                  ></i>{' '}
-                  Com Obesidade
-                </span>
-                <span style={{ fontWeight: 700, color: '#dc2626' }}>
-                  {stats.obesidade}
-                </span>
-              </div>
+                {saving ? 'Salvando...' : 'Salvar com Plano de Ação'}
+              </button>
             </div>
           </div>
         </div>
