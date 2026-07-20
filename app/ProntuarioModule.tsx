@@ -10,6 +10,7 @@ interface ProntuarioModuleProps {
   preEmbarqueRecords?: any[];
   bloodPressureRecords?: any[];
   vacinasRecords?: any[];
+  refreshKey?: number;
 }
 
 export default function ProntuarioModule({
@@ -18,6 +19,7 @@ export default function ProntuarioModule({
   preEmbarqueRecords = [],
   bloodPressureRecords = [],
   vacinasRecords = [],
+  refreshKey = 0,
 }: ProntuarioModuleProps) {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,12 +31,13 @@ export default function ProntuarioModule({
   const [vacinasRecordsSupabase, setVacinasRecordsSupabase] = useState<any[]>(
     []
   );
+  const [avaliacoesEmbarqueMergulho, setAvaliacoesEmbarqueMergulho] = useState<
+    any[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
-  // Mapa de dados IMC mais recentes por colaborador
   const [latestImcMap, setLatestImcMap] = useState<Map<string, any>>(new Map());
 
-  // Usar as cores do styles.ts
   const accentColor = '#10b981';
   const accentGlow = 'rgba(16, 185, 129, 0.15)';
   const bgCard = '#ffffff';
@@ -61,10 +64,7 @@ export default function ProntuarioModule({
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      console.log('✅ Avaliações Pré-MER carregadas:', data.length);
       setPreMerAvaliacoes(data);
-    } else {
-      console.error('❌ Erro ao carregar Pré-MER:', error);
     }
   };
 
@@ -98,7 +98,6 @@ export default function ProntuarioModule({
 
       setImcRecords(allData);
 
-      // Criar mapa com o IMC mais recente de cada colaborador
       const map = new Map<string, any>();
       allData.forEach((record) => {
         const key =
@@ -128,6 +127,19 @@ export default function ProntuarioModule({
     }
   };
 
+  const carregarAvaliacoesEmbarqueMergulho = async () => {
+    const { data, error } = await supabase
+      .from('avaliacoes_embarque_mergulho')
+      .select('*')
+      .order('data_avaliacao', { ascending: false });
+
+    if (!error && data) {
+      setAvaliacoesEmbarqueMergulho(data);
+    } else {
+      console.error('Erro ao carregar avaliações:', error);
+    }
+  };
+
   useEffect(() => {
     const loadAllData = async () => {
       setLoading(true);
@@ -136,11 +148,12 @@ export default function ProntuarioModule({
         carregarPreMerAvaliacoes(),
         carregarTodosImcRecords(),
         carregarVacinasRecords(),
+        carregarAvaliacoesEmbarqueMergulho(),
       ]);
       setLoading(false);
     };
     loadAllData();
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     const storedEmbarques = localStorage.getItem('prontuario_embarques');
@@ -244,19 +257,68 @@ export default function ProntuarioModule({
       );
   }, [employees, searchTerm, latestImcMap]);
 
-  // Colaborador selecionado com IMC
   const selectedWithImc = useMemo(() => {
     if (!selectedEmployee) return null;
     return getEmployeeWithImc(selectedEmployee);
   }, [selectedEmployee, latestImcMap]);
 
+  // ===== UNIFICADO: PRÉ-EMBARQUE + AVALIAÇÕES EMBARQUE/MERGULHO =====
   const getPreEmbarqueDoColaborador = () => {
     if (!selectedEmployee) return [];
-    return preEmbarqueRecords.filter(
-      (record: any) =>
-        record.nome === selectedEmployee.name ||
-        record.codigo === selectedEmployee.codigo
-    );
+
+    const empId = selectedEmployee.id?.toString();
+    const empCodigo = selectedEmployee.codigo?.toString();
+    const empNome = selectedEmployee.name || selectedEmployee.nome;
+
+    // Registros da tabela pre_embarque (antiga)
+    const registrosPreEmbarque = preEmbarqueRecords
+      .filter(
+        (record: any) => record.nome === empNome || record.codigo === empCodigo
+      )
+      .map((r: any) => ({
+        ...r,
+        tipo: 'Pré-Embarque',
+        aptidaoMergulho: null,
+        aptidaoEmbarque: r.status || 'Pendente',
+        planoAcao: [],
+        pdf_url: null,
+      }));
+
+    // Registros da tabela avaliacoes_embarque_mergulho (nova)
+    const registrosAvaliacao = avaliacoesEmbarqueMergulho
+      .filter(
+        (record: any) =>
+          record.colaborador_id?.toString() === empId ||
+          record.colaborador_codigo?.toString() === empCodigo ||
+          record.colaborador_nome === empNome
+      )
+      .map((r: any) => ({
+        id: r.id,
+        dataExame: r.data_avaliacao,
+        frenteServico: r.frente_servico,
+        cargo: r.funcao,
+        peso: r.peso,
+        altura: r.altura,
+        status: r.aptidao_embarque === 'apto' ? 'Apto' : 'Inapto',
+        tipo: 'Avaliação Embarque/Mergulho',
+        aptidaoMergulho: r.aptidao_mergulho,
+        aptidaoEmbarque: r.aptidao_embarque,
+        planoAcao: r.plano_acao || [],
+        pdf_url: r.pdf_url,
+        nome_avaliador: r.nome_avaliador,
+        profissional_saude: r.profissional_saude,
+        created_at: r.created_at,
+      }));
+
+    // Unificar e ordenar por data (mais recente primeiro)
+    const todos = [...registrosPreEmbarque, ...registrosAvaliacao];
+    todos.sort((a, b) => {
+      const dateA = a.dataExame ? new Date(a.dataExame).getTime() : 0;
+      const dateB = b.dataExame ? new Date(b.dataExame).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return todos;
   };
 
   const getPressaoDoColaborador = () => {
@@ -284,23 +346,12 @@ export default function ProntuarioModule({
     const empCodigo = selectedEmployee.codigo?.toString();
     const empNome = selectedEmployee.name || selectedEmployee.nome;
 
-    console.log('🔍 Buscando Pré-MER para:', { empId, empCodigo, empNome });
-    console.log('📋 Total de avaliações:', preMerAvaliacoes.length);
-
-    const filtered = preMerAvaliacoes.filter((record: any) => {
+    return preMerAvaliacoes.filter((record: any) => {
       const matchId = record.colaborador_id?.toString() === empId;
       const matchCodigo = record.colaborador_codigo?.toString() === empCodigo;
       const matchNome = record.colaborador_nome === empNome;
-
-      if (matchId || matchCodigo || matchNome) {
-        console.log('✅ Match encontrado:', record);
-      }
-
       return matchId || matchCodigo || matchNome;
     });
-
-    console.log('📊 Resultados filtrados:', filtered.length);
-    return filtered;
   };
 
   const getImcRecordsDoColaborador = () => {
@@ -436,6 +487,7 @@ export default function ProntuarioModule({
       type === 'ativo' ||
       type === 'negativo' ||
       type === 'Normal' ||
+      type === 'Apto' ||
       type === 'apto'
     ) {
       bg = '#e8f5e9';
@@ -445,6 +497,7 @@ export default function ProntuarioModule({
       type === 'vencido' ||
       type === 'positivo' ||
       type === 'Sobrepeso' ||
+      type === 'Inapto' ||
       type === 'inapto'
     ) {
       bg = '#fce4ec';
@@ -452,7 +505,8 @@ export default function ProntuarioModule({
     } else if (
       type === 'pendente' ||
       type === 'proximo_vencer' ||
-      type === 'Abaixo do peso'
+      type === 'Abaixo do peso' ||
+      type === 'Pendente'
     ) {
       bg = '#fff3e0';
       color = '#d97706';
@@ -664,6 +718,7 @@ export default function ProntuarioModule({
     { id: 'toxicologico', icon: 'fas fa-flask', label: 'Toxicológico' },
     { id: 'imc', icon: 'fas fa-chart-line', label: 'Histórico IMC' },
     { id: 'embarques', icon: 'fas fa-anchor', label: 'Embarques' },
+    // NÃO TEM MAIS TAB "Avaliações" - os dados vão dentro de Pré-Embarque
   ];
 
   if (loading) {
@@ -1370,73 +1425,171 @@ export default function ProntuarioModule({
             </div>
           )}
 
-          {/* TAB: PRÉ-EMBARQUE */}
+          {/* TAB: PRÉ-EMBARQUE (UNIFICADO) */}
           {activeTab === 'preEmbarque' && (
             <div>
-              {getPreEmbarqueDoColaborador().length === 0 ? (
-                <div style={emptyStateStyle}>
-                  <i
-                    className="fas fa-ship"
-                    style={{
-                      fontSize: '48px',
-                      marginBottom: '16px',
-                      color: cardBorder,
-                    }}
-                  ></i>
-                  <p>Nenhum registro de pré-embarque encontrado</p>
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={tableStyle}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>
-                          <i className="fas fa-calendar-alt"></i> Data do Exame
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-map-marker-alt"></i> Frente de
-                          Serviço
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-weight"></i> Peso
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-ruler-vertical"></i> Altura
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-chart-line"></i> IMC
-                        </th>
-                        <th style={thStyle}>
-                          <i className="fas fa-info-circle"></i> Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getPreEmbarqueDoColaborador().map((registro: any) => {
-                        const imc = calcularIMC(registro.peso, registro.altura);
-                        return (
-                          <tr key={registro.id}>
-                            <td style={tdStyle}>
-                              {formatDate(registro.dataExame)}
-                            </td>
-                            <td style={tdStyle}>
-                              {registro.frenteServico || '-'}
-                            </td>
-                            <td style={tdStyle}>{registro.peso} kg</td>
-                            <td style={tdStyle}>{registro.altura} m</td>
-                            <td style={tdStyle}>{imc.toFixed(1)}</td>
-                            <td style={tdStyle}>
-                              <span style={badgeStyle(registro.status)}>
-                                {registro.status || 'Pendente'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {(() => {
+                const registros = getPreEmbarqueDoColaborador();
+                return registros.length === 0 ? (
+                  <div style={emptyStateStyle}>
+                    <i
+                      className="fas fa-ship"
+                      style={{
+                        fontSize: '48px',
+                        marginBottom: '16px',
+                        color: cardBorder,
+                      }}
+                    ></i>
+                    <p>
+                      Nenhum registro de pré-embarque ou avaliação encontrado
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <th style={thStyle}>Data</th>
+                          <th style={thStyle}>Frente</th>
+                          <th style={thStyle}>Peso</th>
+                          <th style={thStyle}>Altura</th>
+                          <th style={thStyle}>IMC</th>
+                          <th style={thStyle}>Mergulho</th>
+                          <th style={thStyle}>Embarque</th>
+                          <th style={thStyle}>Pendências</th>
+                          <th style={thStyle}>Tipo</th>
+                          <th style={thStyle}>PDF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {registros.map((registro: any) => {
+                          const imc = calcularIMC(
+                            registro.peso,
+                            registro.altura
+                          );
+                          const temPlano =
+                            registro.planoAcao && registro.planoAcao.length > 0;
+                          const isAvaliacao =
+                            registro.tipo === 'Avaliação Embarque/Mergulho';
+                          return (
+                            <tr key={registro.id}>
+                              <td style={tdStyle}>
+                                {formatDate(registro.dataExame)}
+                              </td>
+                              <td style={tdStyle}>
+                                {registro.frenteServico || '-'}
+                              </td>
+                              <td style={tdStyle}>{registro.peso || '-'} kg</td>
+                              <td style={tdStyle}>
+                                {registro.altura || '-'} m
+                              </td>
+                              <td style={tdStyle}>
+                                {imc ? imc.toFixed(1) : '-'}
+                              </td>
+                              <td style={tdStyle}>
+                                {isAvaliacao ? (
+                                  <span
+                                    style={badgeStyle(registro.aptidaoMergulho)}
+                                  >
+                                    {registro.aptidaoMergulho === 'apto'
+                                      ? '✅ APTO'
+                                      : registro.aptidaoMergulho === 'inapto'
+                                      ? '❌ INAPTO'
+                                      : '⏳ Pendente'}
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{ color: '#999', fontSize: '12px' }}
+                                  >
+                                    —
+                                  </span>
+                                )}
+                              </td>
+                              <td style={tdStyle}>
+                                {isAvaliacao ? (
+                                  <span
+                                    style={badgeStyle(registro.aptidaoEmbarque)}
+                                  >
+                                    {registro.aptidaoEmbarque === 'apto'
+                                      ? '✅ APTO'
+                                      : registro.aptidaoEmbarque === 'inapto'
+                                      ? '❌ INAPTO'
+                                      : '⏳ Pendente'}
+                                  </span>
+                                ) : (
+                                  <span style={badgeStyle(registro.status)}>
+                                    {registro.status || 'Pendente'}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={tdStyle}>
+                                {temPlano ? (
+                                  <span
+                                    style={{
+                                      color: '#dc2626',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    ⚠️ {registro.planoAcao.length}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#059669' }}>✅</span>
+                                )}
+                              </td>
+                              <td style={tdStyle}>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '2px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '10px',
+                                    fontWeight: 600,
+                                    background: isAvaliacao
+                                      ? 'rgba(16, 185, 129, 0.1)'
+                                      : 'rgba(59, 130, 246, 0.1)',
+                                    color: isAvaliacao ? '#059669' : '#2563eb',
+                                  }}
+                                >
+                                  {isAvaliacao
+                                    ? '🚢 Mergulho'
+                                    : '📋 Pré-Embarque'}
+                                </span>
+                              </td>
+                              <td style={tdStyle}>
+                                {isAvaliacao && registro.pdf_url ? (
+                                  <button
+                                    onClick={() =>
+                                      window.open(registro.pdf_url, '_blank')
+                                    }
+                                    style={{
+                                      padding: '4px 10px',
+                                      background: '#0B5E7E',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    <i className="fas fa-file-pdf"></i> PDF
+                                  </button>
+                                ) : (
+                                  <span
+                                    style={{ fontSize: '11px', color: '#999' }}
+                                  >
+                                    —
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
