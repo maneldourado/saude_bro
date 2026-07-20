@@ -11,12 +11,13 @@ import IMCUI from './IMC-UI';
 import PreEmbarqueModule from './PreEmbarqueModule';
 import PressaoModule from './PressaoModule';
 import ColaboradoresModule from './ColaboradoresModule';
-import RefeicaoModule from './RefeicaoModule';
+import RefeicaoModule from './RefeicaoModule'; // <-- NOME CORRETO
 import PreMERModule from './PreMERModule';
 import ProntuarioModule from './ProntuarioModule';
 import { SupabaseProvider, useSupabase } from './SupabaseContext';
 import { supabase } from './lib/supabase';
 import { useAuth } from './hook/useAuth';
+import { useModulosPermitidos } from './hook/useModulosPermitidos';
 
 // ============================================================
 // COMPONENTE DE LOADING LINDÃO
@@ -106,7 +107,6 @@ function LoadingScreen() {
             position: 'relative',
           }}
         >
-          {/* Anel pulsante */}
           <div
             style={{
               position: 'absolute',
@@ -138,7 +138,6 @@ function LoadingScreen() {
         </div>
       </div>
 
-      {/* Título */}
       <div
         style={{
           position: 'relative',
@@ -175,7 +174,6 @@ function LoadingScreen() {
         </p>
       </div>
 
-      {/* Progress Bar */}
       <div
         style={{
           position: 'relative',
@@ -200,7 +198,6 @@ function LoadingScreen() {
         />
       </div>
 
-      {/* Loading Text */}
       <div
         style={{
           position: 'relative',
@@ -243,7 +240,6 @@ function LoadingScreen() {
         </span>
       </div>
 
-      {/* Animações CSS */}
       <style>{`
         @keyframes wave {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -343,7 +339,48 @@ function DashboardContent() {
     bloodPressureDiastolic: '',
   });
 
-  // Verificar autenticação
+  // ============================================================
+  // PERMISSÕES VIA AUTH
+  // ============================================================
+  const userEmail = user?.email || user?.user_metadata?.email || null;
+  const { temModulo, loading: permissoesLoading } =
+    useModulosPermitidos(userEmail);
+
+  // DEFINIR OS ITENS DO MENU COM BASE NAS PERMISSÕES
+  const todosMenuItems = [
+    { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
+    { id: 'funcionarios', icon: 'fa-users', label: 'Colaboradores' },
+    { id: 'premer', icon: 'fa-notes-medical', label: 'Pré-mergulho' },
+    { id: 'imc', icon: 'fa-weight-scale', label: 'Controle de IMC' },
+    { id: 'preembarque', icon: 'fa-briefcase', label: 'Pré-Embarque' },
+    { id: 'refeicao', icon: 'fa-chalkboard', label: 'Controle de refeição' },
+    { id: 'prontuario', icon: 'fa-folder-open', label: 'Prontuário' },
+  ];
+
+  // FILTRAR OS ITENS QUE O USUÁRIO PODE VER
+  const menuItems = todosMenuItems.filter((item) => temModulo(item.id));
+
+  // Se não tiver permissão para nenhum módulo, mostrar pelo menos o dashboard
+  const finalMenuItems =
+    menuItems.length > 0
+      ? menuItems
+      : [{ id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' }];
+
+  // SE O MÓDULO ATIVO NÃO ESTIVER PERMITIDO, REDIRECIONAR PARA O PRIMEIRO PERMITIDO
+  useEffect(() => {
+    if (!permissoesLoading && finalMenuItems.length > 0) {
+      const moduloPermitido = finalMenuItems.some(
+        (item) => item.id === activeModule
+      );
+      if (!moduloPermitido) {
+        setActiveModule(finalMenuItems[0].id);
+      }
+    }
+  }, [permissoesLoading, finalMenuItems, activeModule]);
+
+  // ============================================================
+  // VERIFICAR AUTENTICAÇÃO
+  // ============================================================
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -676,17 +713,17 @@ function DashboardContent() {
     loadBloodPressureRecords();
   }, [employees]);
 
-  // ==================== MENU ====================
+  // ==================== RENDER ====================
 
-  const menuItems = [
-    { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
-    { id: 'funcionarios', icon: 'fa-users', label: 'Colaboradores' },
-    { id: 'premer', icon: 'fa-notes-medical', label: 'Pré-mergulho' },
-    { id: 'imc', icon: 'fa-weight-scale', label: 'Controle de IMC' },
-    { id: 'preembarque', icon: 'fa-briefcase', label: 'Pré-Embarque' },
-    { id: 'ref', icon: 'fa-chalkboard', label: 'Controle de refeição' },
-    { id: 'prontuario', icon: 'fa-folder-open', label: 'Prontuário' },
-  ];
+  // Mostrar loading enquanto verifica autenticação ou permissões
+  if (authLoading || loading || permissoesLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Se não tiver usuário, não renderiza (redireciona)
+  if (!user) {
+    return null;
+  }
 
   // Nome do usuário para exibir
   const nomeUsuario =
@@ -697,24 +734,12 @@ function DashboardContent() {
   const cargoUsuario = perfil?.cargo || 'Colaborador';
   const primeiraLetra = nomeUsuario.charAt(0).toUpperCase();
 
-  // Mostrar loading enquanto verifica autenticação
-  if (authLoading || loading) {
-    return <LoadingScreen />;
-  }
-
-  // Se não tiver usuário, não renderiza (redireciona)
-  if (!user) {
-    return null;
-  }
-
-  // ==================== RENDER ====================
-
   return (
     <div style={styles.appContainer}>
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
-        menuItems={menuItems}
+        menuItems={finalMenuItems}
         activeModule={activeModule}
         setActiveModule={setActiveModule}
         styles={styles}
@@ -731,7 +756,7 @@ function DashboardContent() {
         <div style={styles.topBar}>
           <div>
             <h2 style={styles.pageTitle}>
-              {menuItems.find((m) => m.id === activeModule)?.label ||
+              {finalMenuItems.find((m) => m.id === activeModule)?.label ||
                 'Dashboard'}
             </h2>
             <p style={styles.pageSubtitle}>CONTINENTAL HEALTH DASHBOARD</p>
@@ -805,7 +830,10 @@ function DashboardContent() {
           />
         )}
 
-        {activeModule === 'ref' && <RefeicaoModule styles={styles} />}
+        {activeModule === 'refeicao' && (
+          <RefeicaoModule styles={styles} user={user} />
+        )}
+
         {activeModule === 'premer' && <PreMERModule employees={employees} />}
 
         {activeModule === 'prontuario' && (
