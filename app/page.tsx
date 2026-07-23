@@ -713,6 +713,8 @@ function DashboardContent() {
           minHeight: '100vh',
           background: '#f5f0eb',
           width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         {/* TOP BAR */}
