@@ -675,7 +675,7 @@ function DashboardContent() {
   }
 
   // ── MODO NORMAL ──
-  const sidebarWidth = sidebarCollapsed ? 80 : 260;
+  const sidebarWidth = sidebarCollapsed ? 72 : 240;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f0eb' }}>
@@ -685,7 +685,6 @@ function DashboardContent() {
         menuItems={finalMenuItems}
         activeModule={activeModule}
         setActiveModule={setActiveModule}
-        styles={styles}
         user={user}
         perfil={perfil}
         onLogout={async () => {
@@ -694,7 +693,6 @@ function DashboardContent() {
         }}
       />
 
-      {/* CONTEÚDO PRINCIPAL */}
       <main
         style={{
           flex: 1,
@@ -703,7 +701,6 @@ function DashboardContent() {
           transition: 'margin-left 0.3s ease',
           minHeight: '100vh',
           background: '#f5f0eb',
-          width: `calc(100% - ${sidebarWidth}px)`,
         }}
       >
         {/* TOP BAR */}
