@@ -59,6 +59,7 @@ function LoadingScreen() {
         zIndex: 9999,
       }}
     >
+      {/* ... resto do loading (mantenha o mesmo código de antes) ... */}
       <div
         style={{
           position: 'absolute',
@@ -298,22 +299,16 @@ function DashboardContent() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // ── PRÉ-EMBARQUE ──
-  const [preEmbarqueRecords, setPreEmbarqueRecords] = useState<
-    PreEmbarqueRecord[]
-  >([]);
+  const [preEmbarqueRecords, setPreEmbarqueRecords] = useState<PreEmbarqueRecord[]>([]);
   const [showPreEmbarqueForm, setShowPreEmbarqueForm] = useState(false);
   const [multipleEmployees, setMultipleEmployees] = useState(false);
-  const [preEmbarqueList, setPreEmbarqueList] = useState<PreEmbarqueRecord[]>(
-    []
-  );
+  const [preEmbarqueList, setPreEmbarqueList] = useState<PreEmbarqueRecord[]>([]);
   const [newPreEmbarque, setNewPreEmbarque] = useState({
     codigo: '',
     nome: '',
     cargo: '',
     dataExame: new Date().toISOString().split('T')[0],
-    mesReferencia: new Date()
-      .toLocaleDateString('pt-BR', { month: 'long' })
-      .toUpperCase(),
+    mesReferencia: new Date().toLocaleDateString('pt-BR', { month: 'long' }).toUpperCase(),
     peso: '',
     altura: '',
     circunferencia: '',
@@ -321,9 +316,7 @@ function DashboardContent() {
   });
 
   // ── PRESSÃO ARTERIAL ──
-  const [bloodPressureRecords, setBloodPressureRecords] = useState<
-    BloodPressureRecord[]
-  >([]);
+  const [bloodPressureRecords, setBloodPressureRecords] = useState<BloodPressureRecord[]>([]);
   const [showPressureForm, setShowPressureForm] = useState(false);
   const [newPressureRecord, setNewPressureRecord] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -356,8 +349,7 @@ function DashboardContent() {
   // PERMISSÕES
   // ============================================================
   const userEmail = user?.email || user?.user_metadata?.email || null;
-  const { temModulo, loading: permissoesLoading } =
-    useModulosPermitidos(userEmail);
+  const { temModulo, loading: permissoesLoading } = useModulosPermitidos(userEmail);
 
   const todosMenuItems = [
     { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
@@ -370,18 +362,12 @@ function DashboardContent() {
   ];
 
   const menuItems = todosMenuItems.filter((item) => temModulo(item.id));
-  const finalMenuItems =
-    menuItems.length > 0
-      ? menuItems
-      : [{ id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' }];
-  const isRestricted =
-    finalMenuItems.length === 1 && finalMenuItems[0].id === 'refeicao';
+  const finalMenuItems = menuItems.length > 0 ? menuItems : [{ id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' }];
+  const isRestricted = finalMenuItems.length === 1 && finalMenuItems[0].id === 'refeicao';
 
   useEffect(() => {
     if (!permissoesLoading && finalMenuItems.length > 0) {
-      const moduloPermitido = finalMenuItems.some(
-        (item) => item.id === activeModule
-      );
+      const moduloPermitido = finalMenuItems.some((item) => item.id === activeModule);
       if (!moduloPermitido) {
         setActiveModule(finalMenuItems[0].id);
       }
@@ -397,10 +383,7 @@ function DashboardContent() {
   // ============================================================
   // FUNÇÕES AUXILIARES
   // ============================================================
-  const calculateBMI = (
-    weight: number | string,
-    height: number | string
-  ): number => {
+  const calculateBMI = (weight: number | string, height: number | string): number => {
     const peso = typeof weight === 'string' ? parseFloat(weight) : weight;
     let altura = typeof height === 'string' ? parseFloat(height) : height;
     if (!peso || !altura || peso <= 0 || altura <= 0) return 0;
@@ -433,10 +416,7 @@ function DashboardContent() {
   // FUNÇÕES PRÉ-EMBARQUE
   // ============================================================
   const loadPreEmbarqueRecords = async () => {
-    const { data, error } = await supabase
-      .from('pre_embarque')
-      .select('*')
-      .order('data_exame', { ascending: false });
+    const { data, error } = await supabase.from('pre_embarque').select('*').order('data_exame', { ascending: false });
     if (!error && data) {
       const formatted = data.map((record: any) => ({
         id: record.id.toString(),
@@ -497,9 +477,7 @@ function DashboardContent() {
         nome: '',
         cargo: '',
         dataExame: new Date().toISOString().split('T')[0],
-        mesReferencia: new Date()
-          .toLocaleDateString('pt-BR', { month: 'long' })
-          .toUpperCase(),
+        mesReferencia: new Date().toLocaleDateString('pt-BR', { month: 'long' }).toUpperCase(),
         peso: '',
         altura: '',
         circunferencia: '',
@@ -548,10 +526,7 @@ function DashboardContent() {
 
   const deletePreEmbarqueRecord = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este registro?')) {
-      const { error } = await supabase
-        .from('pre_embarque')
-        .delete()
-        .eq('id', parseInt(id));
+      const { error } = await supabase.from('pre_embarque').delete().eq('id', parseInt(id));
       if (error) {
         alert('Erro ao excluir: ' + error.message);
       } else {
@@ -565,10 +540,7 @@ function DashboardContent() {
   // FUNÇÕES PRESSÃO ARTERIAL
   // ============================================================
   const loadBloodPressureRecords = async () => {
-    const { data, error } = await supabase
-      .from('pressao_arterial')
-      .select('*')
-      .order('data', { ascending: false });
+    const { data, error } = await supabase.from('pressao_arterial').select('*').order('data', { ascending: false });
     if (!error && data) {
       const formatted = data.map((record: any) => ({
         id: record.id.toString(),
@@ -586,17 +558,11 @@ function DashboardContent() {
   };
 
   const addBloodPressureRecord = async () => {
-    if (
-      !newPressureRecord.employeeId ||
-      !newPressureRecord.systolic ||
-      !newPressureRecord.diastolic
-    ) {
+    if (!newPressureRecord.employeeId || !newPressureRecord.systolic || !newPressureRecord.diastolic) {
       alert('Preencha todos os campos obrigatórios');
       return;
     }
-    const employee = employees.find(
-      (e) => e.id === newPressureRecord.employeeId
-    );
+    const employee = employees.find((e) => e.id === newPressureRecord.employeeId);
     if (!employee) {
       alert('Colaborador não encontrado');
       return;
@@ -635,10 +601,7 @@ function DashboardContent() {
 
   const deletePressureRecord = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta medição?')) {
-      const { error } = await supabase
-        .from('pressao_arterial')
-        .delete()
-        .eq('id', parseInt(id));
+      const { error } = await supabase.from('pressao_arterial').delete().eq('id', parseInt(id));
       if (error) {
         alert('Erro ao excluir: ' + error.message);
       } else {
@@ -710,25 +673,15 @@ function DashboardContent() {
     return <LoadingScreen />;
   }
 
-  const nomeUsuario =
-    perfil?.nome ||
-    user?.user_metadata?.name ||
-    user?.email?.split('@')[0] ||
-    'Usuário';
+  const nomeUsuario = perfil?.nome || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
   const cargoUsuario = perfil?.cargo || 'Colaborador';
   const primeiraLetra = nomeUsuario.charAt(0).toUpperCase();
 
   // ── MODO RESTRITO ──
   if (isRestricted) {
     return (
-      <div style={styles.appContainer}>
-        <main
-          style={{
-            ...styles.mainContent,
-            marginLeft: 0,
-            padding: isMobile ? '12px' : '24px',
-          }}
-        >
+      <div style={{ ...styles.appContainer, padding: isMobile ? '12px' : '24px' }}>
+        <main style={{ ...styles.mainContent, marginLeft: 0, padding: 0 }}>
           <RefeicaoModule
             styles={styles}
             user={user}
@@ -750,7 +703,7 @@ function DashboardContent() {
 
   return (
     <div style={styles.appContainer}>
-      {/* SIDEBAR - COMPORTAMENTO RESPONSIVO */}
+      {/* SIDEBAR - DESKTOP */}
       {!isMobile && (
         <Sidebar
           collapsed={sidebarCollapsed}
@@ -768,7 +721,7 @@ function DashboardContent() {
         />
       )}
 
-      {/* MOBILE: OVERLAY PARA FECHAR O MENU */}
+      {/* MOBILE: OVERLAY */}
       {isMobile && isMobileMenuOpen && (
         <div
           style={{
@@ -777,17 +730,16 @@ function DashboardContent() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            backgroundColor: 'rgba(0,0,0,0.5)',
             zIndex: 999,
-            transition: 'opacity 0.3s ease',
-            opacity: isMobileMenuOpen ? 1 : 0,
+            animation: 'fadeIn 0.3s ease',
           }}
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* MOBILE: SIDEBAR EM OVERLAY */}
-      {isMobile && isMobileMenuOpen && (
+      {isMobile && (
         <div
           style={{
             position: 'fixed',
@@ -797,9 +749,10 @@ function DashboardContent() {
             width: '280px',
             zIndex: 1000,
             transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.3s ease',
-            boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
-            overflow: 'auto',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
+            overflowY: 'auto',
+            background: '#ffffff',
           }}
         >
           <Sidebar
@@ -827,38 +780,45 @@ function DashboardContent() {
         style={{
           ...styles.mainContent,
           marginLeft: isMobile ? 0 : sidebarWidth,
-          padding: isMobile ? '12px' : '24px',
+          padding: isMobile ? '16px' : '24px',
           transition: 'margin-left 0.3s ease',
           width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
+          minHeight: '100vh',
+          background: '#f4f5f7',
         }}
       >
-        {/* TOP BAR COM BOTÃO HAMBÚRGUER */}
+        {/* TOP BAR */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '20px',
+            marginBottom: '24px',
             flexWrap: 'wrap',
             gap: '12px',
+            background: '#ffffff',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            border: '1px solid #e4e6eb',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* BOTÃO HAMBÚRGUER (APENAS MOBILE) */}
             {isMobile && (
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '24px',
+                  fontSize: '22px',
                   cursor: 'pointer',
                   color: '#1a1a1a',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  transition: 'background 0.2s',
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f0f0')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 aria-label="Abrir menu"
               >
                 <i className="fas fa-bars"></i>
@@ -866,100 +826,154 @@ function DashboardContent() {
             )}
 
             <div>
-              <h2 style={styles.pageTitle}>
-                {finalMenuItems.find((m) => m.id === activeModule)?.label ||
-                  'Dashboard'}
+              <h2
+                style={{
+                  fontSize: isMobile ? '18px' : '22px',
+                  fontWeight: 800,
+                  color: '#1a1a1a',
+                  margin: 0,
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                {finalMenuItems.find((m) => m.id === activeModule)?.label || 'Dashboard'}
               </h2>
-              <p style={styles.pageSubtitle}>CONTINENTAL HEALTH DASHBOARD</p>
+              <p
+                style={{
+                  fontSize: isMobile ? '11px' : '13px',
+                  color: '#6c757d',
+                  margin: '2px 0 0 0',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                }}
+              >
+                CONTINENTAL HEALTH
+              </p>
             </div>
           </div>
 
-          <div style={styles.userInfo}>
-            <i className="fas fa-bell" style={styles.bellIcon}></i>
-            <div style={styles.userAvatar}>
-              <span>{primeiraLetra}</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <i
+              className="fas fa-bell"
+              style={{
+                fontSize: '18px',
+                color: '#6c757d',
+                cursor: 'pointer',
+              }}
+            />
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: 'white',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
+              }}
+            >
+              {primeiraLetra}
             </div>
-            <div style={{ marginLeft: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>
+            <div style={{ display: isMobile ? 'none' : 'block' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
                 {nomeUsuario}
               </div>
-              <div style={{ fontSize: '11px', color: '#6c757d' }}>
-                {cargoUsuario}
-              </div>
+              <div style={{ fontSize: '11px', color: '#6c757d' }}>{cargoUsuario}</div>
             </div>
           </div>
         </div>
 
-        {/* MÓDULOS */}
-        {activeModule === 'dashboard' && (
-          <DashboardModule
-            employees={employees}
-            bloodPressureRecords={bloodPressureRecords}
-            styles={styles}
-            onNavigate={setActiveModule}
-            userNome={nomeUsuario}
-          />
-        )}
+        {/* MÓDULOS COM PADDING UNIFORME */}
+        <div style={{ padding: isMobile ? '0' : '0' }}>
+          {activeModule === 'dashboard' && (
+            <DashboardModule
+              employees={employees}
+              bloodPressureRecords={bloodPressureRecords}
+              styles={styles}
+              onNavigate={setActiveModule}
+              userNome={nomeUsuario}
+            />
+          )}
 
-        {activeModule === 'imc' && (
-          <IMCUI
-            calculateBMI={calculateBMI}
-            getBMIClassification={getBMIClassification}
-            styles={styles}
-          />
-        )}
+          {activeModule === 'imc' && (
+            <div style={{ overflowX: 'auto' }}>
+              <IMCUI
+                calculateBMI={calculateBMI}
+                getBMIClassification={getBMIClassification}
+                styles={styles}
+              />
+            </div>
+          )}
 
-        {activeModule === 'preembarque' && (
-          <PreEmbarqueModule
-            preEmbarqueRecords={preEmbarqueRecords}
-            setPreEmbarqueRecords={setPreEmbarqueRecords}
-            showPreEmbarqueForm={showPreEmbarqueForm}
-            setShowPreEmbarqueForm={setShowPreEmbarqueForm}
-            multipleEmployees={multipleEmployees}
-            setMultipleEmployees={setMultipleEmployees}
-            preEmbarqueList={preEmbarqueList}
-            setPreEmbarqueList={setPreEmbarqueList}
-            newPreEmbarque={newPreEmbarque}
-            setNewPreEmbarque={setNewPreEmbarque}
-            addPreEmbarqueRecord={addPreEmbarqueRecord}
-            confirmAllPreEmbarque={confirmAllPreEmbarque}
-            removeFromTempList={removeFromTempList}
-            deletePreEmbarqueRecord={deletePreEmbarqueRecord}
-            calculateBMI={calculateBMI}
-            getPreEmbarqueStatus={getPreEmbarqueStatus}
-            styles={styles}
-          />
-        )}
+          {activeModule === 'preembarque' && (
+            <PreEmbarqueModule
+              preEmbarqueRecords={preEmbarqueRecords}
+              setPreEmbarqueRecords={setPreEmbarqueRecords}
+              showPreEmbarqueForm={showPreEmbarqueForm}
+              setShowPreEmbarqueForm={setShowPreEmbarqueForm}
+              multipleEmployees={multipleEmployees}
+              setMultipleEmployees={setMultipleEmployees}
+              preEmbarqueList={preEmbarqueList}
+              setPreEmbarqueList={setPreEmbarqueList}
+              newPreEmbarque={newPreEmbarque}
+              setNewPreEmbarque={setNewPreEmbarque}
+              addPreEmbarqueRecord={addPreEmbarqueRecord}
+              confirmAllPreEmbarque={confirmAllPreEmbarque}
+              removeFromTempList={removeFromTempList}
+              deletePreEmbarqueRecord={deletePreEmbarqueRecord}
+              calculateBMI={calculateBMI}
+              getPreEmbarqueStatus={getPreEmbarqueStatus}
+              styles={styles}
+            />
+          )}
 
-        {activeModule === 'funcionarios' && (
-          <ColaboradoresModule
-            employees={employees}
-            showEmployeeForm={showEmployeeForm}
-            setShowEmployeeForm={setShowEmployeeForm}
-            newEmployee={newEmployee}
-            setNewEmployee={setNewEmployee}
-            addEmployee={handleAddEmployee}
-            deleteEmployee={handleDeleteEmployee}
-            styles={styles}
-          />
-        )}
+          {activeModule === 'funcionarios' && (
+            <ColaboradoresModule
+              employees={employees}
+              showEmployeeForm={showEmployeeForm}
+              setShowEmployeeForm={setShowEmployeeForm}
+              newEmployee={newEmployee}
+              setNewEmployee={setNewEmployee}
+              addEmployee={handleAddEmployee}
+              deleteEmployee={handleDeleteEmployee}
+              styles={styles}
+            />
+          )}
 
-        {activeModule === 'refeicao' && (
-          <RefeicaoModule styles={styles} user={user} isRestricted={false} />
-        )}
+          {activeModule === 'refeicao' && (
+            <RefeicaoModule styles={styles} user={user} isRestricted={false} />
+          )}
 
-        {activeModule === 'premer' && <PreMERModule employees={employees} />}
+          {activeModule === 'premer' && <PreMERModule employees={employees} />}
 
-        {activeModule === 'prontuario' && (
-          <ProntuarioModule
-            employees={employees}
-            styles={styles}
-            preEmbarqueRecords={preEmbarqueRecords}
-            bloodPressureRecords={bloodPressureRecords}
-            toxicologicoRecords={[]}
-          />
-        )}
+          {activeModule === 'prontuario' && (
+            <ProntuarioModule
+              employees={employees}
+              styles={styles}
+              preEmbarqueRecords={preEmbarqueRecords}
+              bloodPressureRecords={bloodPressureRecords}
+              toxicologicoRecords={[]}
+            />
+          )}
+        </div>
       </main>
+
+      {/* ANIMAÇÕES */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
