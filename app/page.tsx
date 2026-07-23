@@ -20,6 +20,25 @@ import { useAuth } from './hook/useAuth';
 import { useModulosPermitidos } from './hook/useModulosPermitidos';
 
 // ============================================================
+// HOOK PARA DETECTAR TAMANHO DA TELA
+// ============================================================
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+
+  return matches;
+}
+
+// ============================================================
 // COMPONENTE DE LOADING
 // ============================================================
 function LoadingScreen() {
@@ -267,6 +286,10 @@ function DashboardContent() {
   const { employees, addEmployee, deleteEmployee, loading } = useSupabase();
   const { user, perfil, loading: authLoading, logout } = useAuth();
   const router = useRouter();
+
+  // ── RESPONSIVIDADE ──
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // ── ESTADOS GERAIS ──
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -699,7 +722,13 @@ function DashboardContent() {
   if (isRestricted) {
     return (
       <div style={styles.appContainer}>
-        <main style={{ ...styles.mainContent, marginLeft: 0, padding: '24px' }}>
+        <main
+          style={{
+            ...styles.mainContent,
+            marginLeft: 0,
+            padding: isMobile ? '12px' : '24px',
+          }}
+        >
           <RefeicaoModule
             styles={styles}
             user={user}
@@ -717,36 +746,134 @@ function DashboardContent() {
   }
 
   // ── MODO NORMAL ──
+  const sidebarWidth = sidebarCollapsed ? 70 : 260;
+
   return (
     <div style={styles.appContainer}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-        menuItems={finalMenuItems}
-        activeModule={activeModule}
-        setActiveModule={setActiveModule}
-        styles={styles}
-        user={user}
-        perfil={perfil}
-        onLogout={async () => {
-          await logout();
-          router.push('/login');
-        }}
-      />
+      {/* SIDEBAR - COMPORTAMENTO RESPONSIVO */}
+      {!isMobile && (
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          menuItems={finalMenuItems}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+          styles={styles}
+          user={user}
+          perfil={perfil}
+          onLogout={async () => {
+            await logout();
+            router.push('/login');
+          }}
+        />
+      )}
+
+      {/* MOBILE: OVERLAY PARA FECHAR O MENU */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            zIndex: 999,
+            transition: 'opacity 0.3s ease',
+            opacity: isMobileMenuOpen ? 1 : 0,
+          }}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* MOBILE: SIDEBAR EM OVERLAY */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '280px',
+            zIndex: 1000,
+            transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
+            boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
+            overflow: 'auto',
+          }}
+        >
+          <Sidebar
+            collapsed={false}
+            setCollapsed={() => {}}
+            menuItems={finalMenuItems}
+            activeModule={activeModule}
+            setActiveModule={(id: string) => {
+              setActiveModule(id);
+              setIsMobileMenuOpen(false);
+            }}
+            styles={styles}
+            user={user}
+            perfil={perfil}
+            onLogout={async () => {
+              await logout();
+              router.push('/login');
+            }}
+          />
+        </div>
+      )}
+
+      {/* CONTEÚDO PRINCIPAL */}
       <main
         style={{
           ...styles.mainContent,
-          marginLeft: sidebarCollapsed ? '70px' : '260px',
+          marginLeft: isMobile ? 0 : sidebarWidth,
+          padding: isMobile ? '12px' : '24px',
+          transition: 'margin-left 0.3s ease',
+          width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
         }}
       >
-        <div style={styles.topBar}>
-          <div>
-            <h2 style={styles.pageTitle}>
-              {finalMenuItems.find((m) => m.id === activeModule)?.label ||
-                'Dashboard'}
-            </h2>
-            <p style={styles.pageSubtitle}>CONTINENTAL HEALTH DASHBOARD</p>
+        {/* TOP BAR COM BOTÃO HAMBÚRGUER */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* BOTÃO HAMBÚRGUER (APENAS MOBILE) */}
+            {isMobile && (
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#1a1a1a',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                aria-label="Abrir menu"
+              >
+                <i className="fas fa-bars"></i>
+              </button>
+            )}
+
+            <div>
+              <h2 style={styles.pageTitle}>
+                {finalMenuItems.find((m) => m.id === activeModule)?.label ||
+                  'Dashboard'}
+              </h2>
+              <p style={styles.pageSubtitle}>CONTINENTAL HEALTH DASHBOARD</p>
+            </div>
           </div>
+
           <div style={styles.userInfo}>
             <i className="fas fa-bell" style={styles.bellIcon}></i>
             <div style={styles.userAvatar}>
@@ -763,6 +890,7 @@ function DashboardContent() {
           </div>
         </div>
 
+        {/* MÓDULOS */}
         {activeModule === 'dashboard' && (
           <DashboardModule
             employees={employees}
