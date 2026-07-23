@@ -1,8 +1,6 @@
 // app/Sidebar.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (value: boolean) => void;
@@ -12,6 +10,9 @@ interface SidebarProps {
   user?: any;
   perfil?: any;
   onLogout?: () => void;
+  isMobile: boolean;
+  mobileOpen: boolean;
+  setMobileOpen: (value: boolean) => void;
 }
 
 export default function Sidebar({
@@ -23,34 +24,28 @@ export default function Sidebar({
   user,
   perfil,
   onLogout,
+  isMobile,
+  mobileOpen,
+  setMobileOpen,
 }: SidebarProps) {
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  useEffect(() => {
-    if (!isMobile) setMobileOpen(false);
-  }, [isMobile]);
-
   const handleNav = (id: string) => {
     setActiveModule(id);
     if (isMobile) setMobileOpen(false);
   };
 
-  const nome = perfil?.nome || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
+  const nome =
+    perfil?.nome ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'Usuário';
   const cargo = perfil?.cargo || 'Colaborador';
   const letra = nome.charAt(0).toUpperCase();
 
-  const width = isMobile ? '280px' : (collapsed ? '72px' : '240px');
+  const width = isMobile ? '280px' : collapsed ? '72px' : '240px';
 
   return (
     <>
+      {/* Overlay mobile */}
       {isMobile && mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
@@ -74,7 +69,8 @@ export default function Sidebar({
           left: isMobile && !mobileOpen ? `-${width}` : '0',
           width: width,
           height: '100vh',
-          background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          background:
+            'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
           color: '#e2e8f0',
           transition: 'left 0.3s ease, width 0.3s ease',
           zIndex: 1000,
@@ -84,6 +80,7 @@ export default function Sidebar({
           boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
         }}
       >
+        {/* HEADER */}
         <div
           style={{
             display: 'flex',
@@ -106,13 +103,22 @@ export default function Sidebar({
               overflow: 'hidden',
             }}
           >
-            <i className="fas fa-heartbeat" style={{ fontSize: '24px', color: '#10b981' }}></i>
+            <i
+              className="fas fa-heartbeat"
+              style={{ fontSize: '24px', color: '#10b981' }}
+            ></i>
             {(!collapsed || isMobile) && <span>Continental</span>}
           </div>
           {isMobile ? (
             <button
               onClick={() => setMobileOpen(false)}
-              style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#94a3b8',
+                fontSize: '20px',
+                cursor: 'pointer',
+              }}
             >
               <i className="fas fa-times"></i>
             </button>
@@ -133,11 +139,14 @@ export default function Sidebar({
                 transition: 'all 0.2s',
               }}
             >
-              <i className={`fas fa-chevron-${collapsed ? 'right' : 'left'}`}></i>
+              <i
+                className={`fas fa-chevron-${collapsed ? 'right' : 'left'}`}
+              ></i>
             </button>
           )}
         </div>
 
+        {/* MENU */}
         <nav
           style={{
             flex: 1,
@@ -158,24 +167,32 @@ export default function Sidebar({
                 padding: '12px 14px',
                 borderRadius: '10px',
                 border: 'none',
-                background: activeModule === item.id ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                background:
+                  activeModule === item.id
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : 'transparent',
                 color: activeModule === item.id ? '#10b981' : '#94a3b8',
                 cursor: 'pointer',
                 width: '100%',
                 fontSize: '14px',
                 fontWeight: activeModule === item.id ? 600 : 500,
                 transition: 'all 0.2s ease',
-                justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+                justifyContent:
+                  collapsed && !isMobile ? 'center' : 'flex-start',
               }}
               onClick={() => handleNav(item.id)}
               title={collapsed && !isMobile ? item.label : ''}
             >
-              <i className={`fas ${item.icon}`} style={{ fontSize: '18px', width: '20px', textAlign: 'center' }}></i>
+              <i
+                className={`fas ${item.icon}`}
+                style={{ fontSize: '18px', width: '20px', textAlign: 'center' }}
+              ></i>
               {(!collapsed || isMobile) && <span>{item.label}</span>}
             </button>
           ))}
         </nav>
 
+        {/* USUÁRIO */}
         {user && (
           <div
             style={{
@@ -206,15 +223,26 @@ export default function Sidebar({
             </div>
             {(!collapsed || isMobile) && (
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
                   {nome}
                 </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>{cargo}</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  {cargo}
+                </div>
               </div>
             )}
           </div>
         )}
 
+        {/* LOGOUT */}
         <div style={{ padding: '0 12px 16px 12px' }}>
           <button
             onClick={onLogout}
