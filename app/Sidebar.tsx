@@ -96,6 +96,42 @@ export default function Sidebar({
     return 'Usuário';
   };
 
+  // ===== ESTILOS RESPONSIVOS ADICIONAIS =====
+  const mobileStyles = {
+    sidebarHeader: {
+      padding: isMobile ? '12px 16px' : '32px 24px',
+    },
+    logoText: {
+      fontSize: isMobile ? '14px' : '20px',
+    },
+    navItem: {
+      padding: isMobile ? '10px 14px' : '14px 18px',
+      fontSize: isMobile ? '13px' : '14px',
+      borderRadius: isMobile ? '10px' : '16px',
+    },
+    navIcon: {
+      fontSize: isMobile ? '16px' : '18px',
+    },
+    userInfo: {
+      padding: isMobile ? '12px 16px' : '20px',
+    },
+    userAvatar: {
+      width: isMobile ? '32px' : '40px',
+      height: isMobile ? '32px' : '40px',
+      fontSize: isMobile ? '14px' : '18px',
+    },
+    userName: {
+      fontSize: isMobile ? '13px' : '14px',
+    },
+    userCargo: {
+      fontSize: isMobile ? '10px' : '11px',
+    },
+    logoutBtn: {
+      padding: isMobile ? '10px 14px' : '14px 18px',
+      fontSize: isMobile ? '13px' : '14px',
+    },
+  };
+
   return (
     <>
       {/* Overlay para celular */}
@@ -125,13 +161,15 @@ export default function Sidebar({
           left: isMobile && !mobileOpen ? `-${sidebarWidth}` : '0',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           zIndex: 999,
+          overflowX: 'hidden',
         }}
       >
-        <div style={styles.sidebarHeader}>
+        {/* HEADER */}
+        <div style={{ ...styles.sidebarHeader, ...mobileStyles.sidebarHeader }}>
           <div style={styles.logo}>
             <i className="fas fa-heartbeat" style={styles.logoIcon}></i>
             {(!collapsed || isMobile || isTablet) && (
-              <span style={styles.logoText}>
+              <span style={{ ...styles.logoText, ...mobileStyles.logoText }}>
                 {isMobile ? 'CONTINENTAL' : 'CONTINENTAL SAÚDE'}
               </span>
             )}
@@ -154,7 +192,8 @@ export default function Sidebar({
                 ...styles.toggleBtn,
                 position: 'absolute',
                 right: '15px',
-                top: '25px',
+                top: '15px',
+                zIndex: 10,
               }}
               onClick={() => setMobileOpen(false)}
             >
@@ -163,20 +202,23 @@ export default function Sidebar({
           )}
         </div>
 
+        {/* MENU */}
         <nav style={styles.sidebarNav}>
           {menuItems.map((item) => (
             <button
               key={item.id}
               style={{
                 ...styles.navItem,
+                ...mobileStyles.navItem,
                 ...(activeModule === item.id ? styles.navItemActive : {}),
                 justifyContent:
                   collapsed && !isMobile && !isTablet ? 'center' : 'flex-start',
+                gap: collapsed && !isMobile && !isTablet ? '0' : '14px',
               }}
               onClick={() => handleNavigation(item.id)}
               title={isMobile || (collapsed && !isMobile) ? item.label : ''}
             >
-              <i className={`fas ${item.icon}`} style={styles.navIcon}></i>
+              <i className={`fas ${item.icon}`} style={{ ...styles.navIcon, ...mobileStyles.navIcon }}></i>
               {(!collapsed || isMobile || isTablet) && (
                 <span style={styles.navLabel}>{item.label}</span>
               )}
@@ -184,11 +226,11 @@ export default function Sidebar({
           ))}
         </nav>
 
-        {/* Informações do usuário logado */}
+        {/* USUÁRIO (versão expandida) */}
         {user && (!collapsed || isMobile || isTablet) && (
           <div
             style={{
-              padding: '20px',
+              ...mobileStyles.userInfo,
               borderTop: '1px solid rgba(255, 255, 255, 0.05)',
               marginTop: 'auto',
               background: 'rgba(255, 255, 255, 0.02)',
@@ -203,8 +245,7 @@ export default function Sidebar({
             >
               <div
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  ...mobileStyles.userAvatar,
                   borderRadius: '12px',
                   background:
                     'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -212,7 +253,6 @@ export default function Sidebar({
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  fontSize: '18px',
                   color: 'white',
                   boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)',
                 }}
@@ -222,7 +262,7 @@ export default function Sidebar({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontSize: '14px',
+                    ...mobileStyles.userName,
                     fontWeight: 700,
                     color: 'white',
                     whiteSpace: 'nowrap',
@@ -234,7 +274,7 @@ export default function Sidebar({
                 </div>
                 <div
                   style={{
-                    fontSize: '11px',
+                    ...mobileStyles.userCargo,
                     color: '#94a3b8',
                     fontWeight: 500,
                   }}
@@ -246,7 +286,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {/* Versão collapsed do usuário */}
+        {/* USUÁRIO (versão colapsada) */}
         {user && collapsed && !isMobile && !isTablet && (
           <div
             style={{
@@ -278,12 +318,15 @@ export default function Sidebar({
           </div>
         )}
 
+        {/* FOOTER - BOTÃO SAIR */}
         <div style={styles.sidebarFooter}>
           <button
             style={{
               ...styles.logoutBtnSidebar,
+              ...mobileStyles.logoutBtn,
               justifyContent:
                 collapsed && !isMobile && !isTablet ? 'center' : 'flex-start',
+              gap: collapsed && !isMobile && !isTablet ? '0' : '14px',
             }}
             onClick={handleLogout}
           >
