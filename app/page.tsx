@@ -273,6 +273,15 @@ function DashboardContent() {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // DETECTAR MOBILE
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // ── PRÉ-EMBARQUE ──
   const [preEmbarqueRecords, setPreEmbarqueRecords] = useState<PreEmbarqueRecord[]>([]);
@@ -675,10 +684,11 @@ function DashboardContent() {
   }
 
   // ── MODO NORMAL ──
-  const sidebarWidth = sidebarCollapsed ? 72 : 240;
+  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? 72 : 240);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f0eb' }}>
+      {/* SIDEBAR */}
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -693,6 +703,7 @@ function DashboardContent() {
         }}
       />
 
+      {/* CONTEÚDO PRINCIPAL */}
       <main
         style={{
           flex: 1,
@@ -701,6 +712,7 @@ function DashboardContent() {
           transition: 'margin-left 0.3s ease',
           minHeight: '100vh',
           background: '#f5f0eb',
+          width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
         }}
       >
         {/* TOP BAR */}
