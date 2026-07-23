@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { styles } from './styles';
 import { Employee, BloodPressureRecord, PreEmbarqueRecord } from './types';
-import Sidebar from './components/Sidebar';
+import Sidebar from './Sidebar';
 import DashboardModule from './DashboardModule';
 import IMCUI from './IMC-UI';
 import PreEmbarqueModule from './PreEmbarqueModule';
