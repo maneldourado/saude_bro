@@ -11,7 +11,7 @@ import IMCUI from './IMC-UI';
 import PreEmbarqueModule from './PreEmbarqueModule';
 import PressaoModule from './PressaoModule';
 import ColaboradoresModule from './ColaboradoresModule';
-import RefeicaoModule from './RefeicaoModule'; // <-- NOME CORRETO
+import RefeicaoModule from './RefeicaoModule';
 import PreMERModule from './PreMERModule';
 import ProntuarioModule from './ProntuarioModule';
 import { SupabaseProvider, useSupabase } from './SupabaseContext';
@@ -20,7 +20,7 @@ import { useAuth } from './hook/useAuth';
 import { useModulosPermitidos } from './hook/useModulosPermitidos';
 
 // ============================================================
-// COMPONENTE DE LOADING LINDÃO
+// COMPONENTE DE LOADING
 // ============================================================
 function LoadingScreen() {
   return (
@@ -40,7 +40,6 @@ function LoadingScreen() {
         zIndex: 9999,
       }}
     >
-      {/* Fundo com efeito de ondas */}
       <div
         style={{
           position: 'absolute',
@@ -82,8 +81,6 @@ function LoadingScreen() {
           }}
         />
       </div>
-
-      {/* Logo/Icone */}
       <div
         style={{
           marginBottom: '32px',
@@ -137,7 +134,6 @@ function LoadingScreen() {
           />
         </div>
       </div>
-
       <div
         style={{
           position: 'relative',
@@ -173,7 +169,6 @@ function LoadingScreen() {
           Saúde Ocupacional
         </p>
       </div>
-
       <div
         style={{
           position: 'relative',
@@ -197,7 +192,6 @@ function LoadingScreen() {
           }}
         />
       </div>
-
       <div
         style={{
           position: 'relative',
@@ -239,29 +233,24 @@ function LoadingScreen() {
           ))}
         </span>
       </div>
-
       <style>{`
         @keyframes wave {
           0%, 100% { transform: translate(0, 0) rotate(0deg); }
           33% { transform: translate(-5%, -5%) rotate(2deg); }
           66% { transform: translate(5%, 5%) rotate(-2deg); }
         }
-
         @keyframes pulse-ring {
           0% { transform: scale(1); opacity: 1; }
           100% { transform: scale(1.5); opacity: 0; }
         }
-
         @keyframes pulse-icon {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.1); }
         }
-
         @keyframes loading-bar {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-
         @keyframes dot-bounce {
           0%, 80%, 100% { transform: scale(0.8); opacity: 0.3; }
           40% { transform: scale(1.2); opacity: 1; }
@@ -271,21 +260,21 @@ function LoadingScreen() {
   );
 }
 
-// Componente interno que usa o Supabase
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
 function DashboardContent() {
   const { employees, addEmployee, deleteEmployee, loading } = useSupabase();
   const { user, perfil, loading: authLoading, logout } = useAuth();
   const router = useRouter();
 
+  // ── ESTADOS GERAIS ──
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeModule, setActiveModule] = useState('dashboard');
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [showPressureForm, setShowPressureForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
-  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
 
-  // Estado para Pré-Embarque
+  // ── PRÉ-EMBARQUE ──
   const [preEmbarqueRecords, setPreEmbarqueRecords] = useState<
     PreEmbarqueRecord[]
   >([]);
@@ -308,10 +297,11 @@ function DashboardContent() {
     frenteServico: '',
   });
 
-  // Estado para Pressão Arterial
+  // ── PRESSÃO ARTERIAL ──
   const [bloodPressureRecords, setBloodPressureRecords] = useState<
     BloodPressureRecord[]
   >([]);
+  const [showPressureForm, setShowPressureForm] = useState(false);
   const [newPressureRecord, setNewPressureRecord] = useState({
     date: new Date().toISOString().split('T')[0],
     workFront: '',
@@ -322,7 +312,7 @@ function DashboardContent() {
     heartRate: '',
   });
 
-  // Estado para novo colaborador (formulário)
+  // ── NOVO COLABORADOR ──
   const [newEmployee, setNewEmployee] = useState({
     codigo: '',
     name: '',
@@ -340,13 +330,12 @@ function DashboardContent() {
   });
 
   // ============================================================
-  // PERMISSÕES VIA AUTH
+  // PERMISSÕES
   // ============================================================
   const userEmail = user?.email || user?.user_metadata?.email || null;
   const { temModulo, loading: permissoesLoading } =
     useModulosPermitidos(userEmail);
 
-  // DEFINIR OS ITENS DO MENU COM BASE NAS PERMISSÕES
   const todosMenuItems = [
     { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
     { id: 'funcionarios', icon: 'fa-users', label: 'Colaboradores' },
@@ -357,16 +346,14 @@ function DashboardContent() {
     { id: 'prontuario', icon: 'fa-folder-open', label: 'Prontuário' },
   ];
 
-  // FILTRAR OS ITENS QUE O USUÁRIO PODE VER
   const menuItems = todosMenuItems.filter((item) => temModulo(item.id));
-
-  // Se não tiver permissão para nenhum módulo, mostrar pelo menos o dashboard
   const finalMenuItems =
     menuItems.length > 0
       ? menuItems
       : [{ id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' }];
+  const isRestricted =
+    finalMenuItems.length === 1 && finalMenuItems[0].id === 'refeicao';
 
-  // SE O MÓDULO ATIVO NÃO ESTIVER PERMITIDO, REDIRECIONAR PARA O PRIMEIRO PERMITIDO
   useEffect(() => {
     if (!permissoesLoading && finalMenuItems.length > 0) {
       const moduloPermitido = finalMenuItems.some(
@@ -378,33 +365,25 @@ function DashboardContent() {
     }
   }, [permissoesLoading, finalMenuItems, activeModule]);
 
-  // ============================================================
-  // VERIFICAR AUTENTICAÇÃO
-  // ============================================================
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
 
-  // ==================== FUNÇÕES AUXILIARES ====================
-
+  // ============================================================
+  // FUNÇÕES AUXILIARES
+  // ============================================================
   const calculateBMI = (
     weight: number | string,
     height: number | string
   ): number => {
     const peso = typeof weight === 'string' ? parseFloat(weight) : weight;
     let altura = typeof height === 'string' ? parseFloat(height) : height;
-
     if (!peso || !altura || peso <= 0 || altura <= 0) return 0;
     if (isNaN(peso) || isNaN(altura)) return 0;
-
-    if (altura > 3) {
-      altura = altura / 100;
-    }
-
-    const imc = peso / (altura * altura);
-    return Math.round(imc * 10) / 10;
+    if (altura > 3) altura = altura / 100;
+    return Math.round((peso / (altura * altura)) * 10) / 10;
   };
 
   const getPreEmbarqueStatus = (bmi: number): string => {
@@ -427,14 +406,14 @@ function DashboardContent() {
     return 'Obesidade grau III';
   };
 
-  // ==================== FUNÇÕES PRÉ-EMBARQUE (Supabase) ====================
-
+  // ============================================================
+  // FUNÇÕES PRÉ-EMBARQUE
+  // ============================================================
   const loadPreEmbarqueRecords = async () => {
     const { data, error } = await supabase
       .from('pre_embarque')
       .select('*')
       .order('data_exame', { ascending: false });
-
     if (!error && data) {
       const formatted = data.map((record: any) => ({
         id: record.id.toString(),
@@ -458,13 +437,11 @@ function DashboardContent() {
       alert('Preencha o código e nome do colaborador');
       return;
     }
-
     const employee = employees.find((e) => e.codigo === newPreEmbarque.codigo);
     if (!employee) {
       alert('Colaborador não encontrado');
       return;
     }
-
     const peso = parseFloat(newPreEmbarque.peso) || 0;
     let altura = parseFloat(newPreEmbarque.altura) || 0;
     if (altura > 3) altura = altura / 100;
@@ -486,7 +463,6 @@ function DashboardContent() {
         status: status,
       },
     ]);
-
     if (error) {
       console.error('Erro ao salvar pré-embarque:', error);
       alert('Erro ao salvar: ' + error.message);
@@ -515,14 +491,12 @@ function DashboardContent() {
       alert('Adicione pelo menos um colaborador na lista');
       return;
     }
-
     for (const item of preEmbarqueList) {
       const peso = parseFloat(newPreEmbarque.peso) || 0;
       let altura = parseFloat(newPreEmbarque.altura) || 0;
       if (altura > 3) altura = altura / 100;
       const imc = calculateBMI(peso, altura);
       const status = getPreEmbarqueStatus(imc);
-
       await supabase.from('pre_embarque').insert([
         {
           colaborador_codigo: item.codigo,
@@ -538,7 +512,6 @@ function DashboardContent() {
         },
       ]);
     }
-
     await loadPreEmbarqueRecords();
     setPreEmbarqueList([]);
     setShowPreEmbarqueForm(false);
@@ -565,14 +538,14 @@ function DashboardContent() {
     }
   };
 
-  // ==================== FUNÇÕES PRESSÃO ARTERIAL (Supabase) ====================
-
+  // ============================================================
+  // FUNÇÕES PRESSÃO ARTERIAL
+  // ============================================================
   const loadBloodPressureRecords = async () => {
     const { data, error } = await supabase
       .from('pressao_arterial')
       .select('*')
       .order('data', { ascending: false });
-
     if (!error && data) {
       const formatted = data.map((record: any) => ({
         id: record.id.toString(),
@@ -598,7 +571,6 @@ function DashboardContent() {
       alert('Preencha todos os campos obrigatórios');
       return;
     }
-
     const employee = employees.find(
       (e) => e.id === newPressureRecord.employeeId
     );
@@ -606,7 +578,6 @@ function DashboardContent() {
       alert('Colaborador não encontrado');
       return;
     }
-
     const { error } = await supabase.from('pressao_arterial').insert([
       {
         colaborador_id: parseInt(employee.id),
@@ -620,7 +591,6 @@ function DashboardContent() {
         batimentos: parseInt(newPressureRecord.heartRate) || 0,
       },
     ]);
-
     if (error) {
       console.error('Erro ao salvar pressão:', error);
       alert('Erro ao salvar: ' + error.message);
@@ -655,30 +625,23 @@ function DashboardContent() {
     }
   };
 
-  const filteredPressureRecords = bloodPressureRecords.filter((r) =>
-    r.employeeName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // ==================== FUNÇÕES COLABORADORES (com Supabase) ====================
-
+  // ============================================================
+  // FUNÇÕES COLABORADORES
+  // ============================================================
   const handleAddEmployee = async () => {
     if (!newEmployee.codigo || !newEmployee.name) {
       alert('Por favor, preencha o código e o nome do colaborador.');
       return;
     }
-
     if (!newEmployee.admissao) {
       alert('Por favor, preencha a DATA DE ADMISSÃO.');
       return;
     }
-
     if (!newEmployee.birthDate) {
       alert('Por favor, preencha a DATA DE NASCIMENTO.');
       return;
     }
-
     await addEmployee(newEmployee);
-
     setNewEmployee({
       codigo: '',
       name: '',
@@ -694,7 +657,6 @@ function DashboardContent() {
       bloodPressureSystolic: '',
       bloodPressureDiastolic: '',
     });
-
     setShowEmployeeForm(false);
     alert('Colaborador cadastrado com sucesso!');
   };
@@ -706,26 +668,25 @@ function DashboardContent() {
     }
   };
 
-  // ==================== CARREGAR DADOS DO SUPABASE ====================
-
+  // ============================================================
+  // CARREGAR DADOS
+  // ============================================================
   useEffect(() => {
     loadPreEmbarqueRecords();
     loadBloodPressureRecords();
   }, [employees]);
 
-  // ==================== RENDER ====================
-
-  // Mostrar loading enquanto verifica autenticação ou permissões
+  // ============================================================
+  // RENDER
+  // ============================================================
   if (authLoading || loading || permissoesLoading) {
     return <LoadingScreen />;
   }
 
-  // Se não tiver usuário, não renderiza (redireciona)
   if (!user) {
-    return null;
+    return <LoadingScreen />;
   }
 
-  // Nome do usuário para exibir
   const nomeUsuario =
     perfil?.nome ||
     user?.user_metadata?.name ||
@@ -734,6 +695,28 @@ function DashboardContent() {
   const cargoUsuario = perfil?.cargo || 'Colaborador';
   const primeiraLetra = nomeUsuario.charAt(0).toUpperCase();
 
+  // ── MODO RESTRITO ──
+  if (isRestricted) {
+    return (
+      <div style={styles.appContainer}>
+        <main style={{ ...styles.mainContent, marginLeft: 0, padding: '24px' }}>
+          <RefeicaoModule
+            styles={styles}
+            user={user}
+            isRestricted={true}
+            colaboradorNome={nomeUsuario}
+            colaboradorCargo={cargoUsuario}
+            onLogout={async () => {
+              await logout();
+              router.push('/login');
+            }}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ── MODO NORMAL ──
   return (
     <div style={styles.appContainer}>
       <Sidebar
@@ -745,7 +728,10 @@ function DashboardContent() {
         styles={styles}
         user={user}
         perfil={perfil}
-        onLogout={logout}
+        onLogout={async () => {
+          await logout();
+          router.push('/login');
+        }}
       />
       <main
         style={{
@@ -831,7 +817,7 @@ function DashboardContent() {
         )}
 
         {activeModule === 'refeicao' && (
-          <RefeicaoModule styles={styles} user={user} />
+          <RefeicaoModule styles={styles} user={user} isRestricted={false} />
         )}
 
         {activeModule === 'premer' && <PreMERModule employees={employees} />}
@@ -850,7 +836,9 @@ function DashboardContent() {
   );
 }
 
-// Componente principal com o Provider
+// ============================================================
+// EXPORT
+// ============================================================
 export default function Dashboard() {
   return (
     <SupabaseProvider>
