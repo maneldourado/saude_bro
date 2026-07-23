@@ -266,6 +266,29 @@ const GlobalStyles = () => (
     .imc-btn-ghost:hover { background: ${C.surfaceAlt}; }
     .imc-month-bar:hover .imc-bar-fill { opacity: 0.75; }
     select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px !important; }
+    @media (max-width: 768px) {
+      .imc-root { padding: 12px !important; }
+      .imc-root .imc-stats-grid { grid-template-columns: 1fr !important; }
+      .imc-root .imc-donut-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+      .imc-root .imc-month-chart { height: 120px !important; gap: 4px !important; }
+      .imc-root .imc-month-chart .imc-bar-fill { border-radius: 4px !important; }
+      .imc-root .imc-line-chart { height: auto !important; }
+      .imc-root .imc-line-chart svg { width: 100% !important; height: auto !important; }
+      .imc-root .imc-table-wrapper { overflow-x: auto !important; }
+      .imc-root .imc-table-wrapper table { font-size: 11px !important; min-width: 600px !important; }
+      .imc-root .imc-table-wrapper th, .imc-root .imc-table-wrapper td { padding: 6px 8px !important; }
+      .imc-root .imc-filter-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+      .imc-root .imc-filter-row .imc-filter-group { flex-wrap: wrap !important; }
+    }
+    @media (max-width: 480px) {
+      .imc-root { padding: 8px !important; }
+      .imc-root .imc-header { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
+      .imc-root .imc-header .imc-header-actions { flex-wrap: wrap !important; }
+      .imc-root .imc-stats-grid .imc-stat-card { padding: 12px !important; }
+      .imc-root .imc-stats-grid .imc-stat-value { font-size: 24px !important; }
+      .imc-root .imc-modal-content { padding: 16px !important; }
+      .imc-root .imc-modal-content .imc-form-grid { grid-template-columns: 1fr !important; }
+    }
   `}</style>
 );
 
@@ -912,13 +935,25 @@ interface IMCUIProps {
   styles?: any;
 }
 
-export default function IMCUI(
-  { calculateBMI, getBMIClassification, styles }: IMCUIProps = {} as any
-) {
+export default function IMCUI({
+  calculateBMI,
+  getBMIClassification,
+  styles,
+}: IMCUIProps = {} as any) {
   const imc = useIMCModule(calculateBMI, getBMIClassification);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (imc.employees?.length > 0) {
@@ -963,9 +998,9 @@ export default function IMCUI(
     : C.border;
 
   const filterBtnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '6px 14px',
+    padding: isMobile ? '4px 10px' : '6px 14px',
     borderRadius: 8,
-    fontSize: 13,
+    fontSize: isMobile ? 11 : 13,
     fontWeight: 500,
     cursor: 'pointer',
     transition: 'all .15s',
@@ -980,7 +1015,7 @@ export default function IMCUI(
       style={{
         background: C.bg,
         minHeight: '100vh',
-        padding: '28px 24px',
+        padding: isMobile ? '12px' : '28px 24px',
         animation: 'imc-fadeUp .3s ease',
         ...styles?.imcContainer,
       }}
@@ -1019,13 +1054,14 @@ export default function IMCUI(
 
       {/* ── HEADER ── */}
       <div
+        className="imc-header"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 16,
-          marginBottom: 28,
+          alignItems: isMobile ? 'stretch' : 'flex-start',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 12 : 16,
+          marginBottom: isMobile ? 16 : 28,
         }}
       >
         <div>
@@ -1039,8 +1075,8 @@ export default function IMCUI(
           >
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: isMobile ? 32 : 36,
+                height: isMobile ? 32 : 36,
                 borderRadius: 10,
                 background: C.accent,
                 display: 'flex',
@@ -1048,12 +1084,12 @@ export default function IMCUI(
                 justifyContent: 'center',
               }}
             >
-              <IconScale size={22} color={C.white} />
+              <IconScale size={isMobile ? 18 : 22} color={C.white} />
             </div>
             <h1
               style={{
                 margin: 0,
-                fontSize: 22,
+                fontSize: isMobile ? 18 : 22,
                 fontWeight: 800,
                 color: C.primary,
               }}
@@ -1061,25 +1097,32 @@ export default function IMCUI(
               Controle de IMC
             </h1>
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: C.muted }}>
+          <p style={{ margin: 0, fontSize: isMobile ? 11 : 13, color: C.muted }}>
             Gestão de avaliações e indicadores de saúde corporativa
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div
+          className="imc-header-actions"
+          style={{
+            display: 'flex',
+            gap: isMobile ? 6 : 10,
+            flexWrap: 'wrap',
+          }}
+        >
           <button
             onClick={() => imc.setShowManualModal(true)}
             style={{
-              padding: '9px 20px',
+              padding: isMobile ? '6px 14px' : '9px 20px',
               borderRadius: 8,
               border: 'none',
               background: C.accent,
               color: C.white,
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 4,
               boxShadow: `0 2px 8px ${C.accent}40`,
               transition: 'all .15s',
             }}
@@ -1097,18 +1140,18 @@ export default function IMCUI(
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
-              padding: '9px 20px',
+              padding: isMobile ? '6px 14px' : '9px 20px',
               borderRadius: 8,
               border: `1px solid ${C.borderMid}`,
               background: C.white,
               color: C.secondary,
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all .15s',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 4,
             }}
             className="imc-btn-ghost"
           >
@@ -1116,7 +1159,7 @@ export default function IMCUI(
               'Importando...'
             ) : (
               <>
-                <IconUpload size={16} color={C.secondary} />
+                <IconUpload size={isMobile ? 14 : 16} color={C.secondary} />
                 Importar Planilha
               </>
             )}
@@ -1133,19 +1176,20 @@ export default function IMCUI(
       </div>
 
       {/* ── FILTROS ── */}
-      <Card style={{ marginBottom: 24, padding: '14px 18px' }}>
+      <Card style={{ marginBottom: isMobile ? 16 : 24, padding: isMobile ? '10px 14px' : '14px 18px' }}>
         <div
+          className="imc-filter-row"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
-            gap: 10,
+            gap: isMobile ? 6 : 10,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 8 }}>
             <span
               style={{
-                fontSize: 12,
+                fontSize: isMobile ? 10 : 12,
                 fontWeight: 600,
                 color: C.muted,
                 textTransform: 'uppercase',
@@ -1161,10 +1205,10 @@ export default function IMCUI(
                 imc.setSelectedMonth(null);
               }}
               style={{
-                padding: '6px 28px 6px 12px',
+                padding: isMobile ? '4px 20px 4px 8px' : '6px 28px 6px 12px',
                 borderRadius: 8,
                 border: `1px solid ${C.border}`,
-                fontSize: 13,
+                fontSize: isMobile ? 11 : 13,
                 color: C.primary,
                 background: C.white,
                 cursor: 'pointer',
@@ -1186,12 +1230,12 @@ export default function IMCUI(
             </select>
           </div>
 
-          <div style={{ width: 1, height: 24, background: C.border }} />
+          <div style={{ width: 1, height: isMobile ? 16 : 24, background: C.border }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="imc-filter-group" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 8, flexWrap: 'wrap' }}>
             <span
               style={{
-                fontSize: 12,
+                fontSize: isMobile ? 10 : 12,
                 fontWeight: 600,
                 color: C.muted,
                 textTransform: 'uppercase',
@@ -1200,29 +1244,31 @@ export default function IMCUI(
             >
               Período
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: C.muted }}>De</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 2 : 6 }}>
+              <span style={{ fontSize: isMobile ? 10 : 12, color: C.muted }}>De</span>
               <input
                 type="date"
                 value={imc.dataInicio}
                 onChange={(e) => imc.setDataInicio(e.target.value)}
                 style={{
-                  padding: '6px 10px',
+                  padding: isMobile ? '4px 6px' : '6px 10px',
                   borderRadius: 8,
                   border: `1px solid ${C.border}`,
-                  fontSize: 13,
+                  fontSize: isMobile ? 11 : 13,
+                  maxWidth: isMobile ? '110px' : 'auto',
                 }}
               />
-              <span style={{ fontSize: 12, color: C.muted }}>Até</span>
+              <span style={{ fontSize: isMobile ? 10 : 12, color: C.muted }}>Até</span>
               <input
                 type="date"
                 value={imc.dataFim}
                 onChange={(e) => imc.setDataFim(e.target.value)}
                 style={{
-                  padding: '6px 10px',
+                  padding: isMobile ? '4px 6px' : '6px 10px',
                   borderRadius: 8,
                   border: `1px solid ${C.border}`,
-                  fontSize: 13,
+                  fontSize: isMobile ? 11 : 13,
+                  maxWidth: isMobile ? '110px' : 'auto',
                 }}
               />
             </div>
@@ -1233,9 +1279,9 @@ export default function IMCUI(
                 )
               }
               style={{
-                padding: '6px 14px',
+                padding: isMobile ? '4px 10px' : '6px 14px',
                 borderRadius: 8,
-                fontSize: 13,
+                fontSize: isMobile ? 10 : 13,
                 fontWeight: 500,
                 cursor: 'pointer',
                 border: `1px solid ${
@@ -1254,7 +1300,7 @@ export default function IMCUI(
             </button>
           </div>
 
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: C.muted }}>
+          <span style={{ marginLeft: 'auto', fontSize: isMobile ? 10 : 12, color: C.muted }}>
             <strong style={{ color: C.primary }}>{imc.employees.length}</strong>{' '}
             registros totais
           </span>
@@ -1263,11 +1309,12 @@ export default function IMCUI(
 
       {/* ── CARDS PRINCIPAIS ── */}
       <div
+        className="imc-stats-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 16,
-          marginBottom: 16,
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+          gap: isMobile ? 10 : 16,
+          marginBottom: isMobile ? 10 : 16,
         }}
       >
         <StatCard
@@ -1275,24 +1322,25 @@ export default function IMCUI(
           value={totalReg}
           sub="Múltiplas medições"
           accentColor={C.accent}
-          icon={<IconClipboard size={16} color={C.accent} />}
+          icon={<IconClipboard size={isMobile ? 14 : 16} color={C.accent} />}
         />
         <StatCard
           label="Colaboradores Únicos"
           value={totalColab}
           sub="Avaliados no período"
           accentColor="#7c3aed"
-          icon={<IconUsers size={16} color="#7c3aed" />}
+          icon={<IconUsers size={isMobile ? 14 : 16} color="#7c3aed" />}
         />
       </div>
 
       {/* ── MÉTRICAS INAPTOS ── */}
       <div
+        className="imc-stats-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 14,
-          marginBottom: 16,
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+          gap: isMobile ? 8 : 14,
+          marginBottom: isMobile ? 10 : 16,
         }}
       >
         {[
@@ -1300,25 +1348,25 @@ export default function IMCUI(
             label: 'Total Avaliados',
             value: imc.inaptosData.totalAvaliados,
             color: C.secondary,
-            icon: <IconChartBar size={16} color={C.secondary} />,
+            icon: <IconChartBar size={isMobile ? 14 : 16} color={C.secondary} />,
           },
           {
             label: 'IMC ≥ 35 + Circ ≥ 102',
             value: imc.inaptosData.totalInaptosIMC35_Circ,
             color: C.danger,
-            icon: <IconCircle size={16} fill={C.danger} />,
+            icon: <IconCircle size={isMobile ? 14 : 16} fill={C.danger} />,
           },
           {
             label: 'Circ. ≥ 102 cm',
             value: imc.inaptosData.totalInaptosCirc,
             color: C.warning,
-            icon: <IconCircle size={16} fill={C.warning} />,
+            icon: <IconCircle size={isMobile ? 14 : 16} fill={C.warning} />,
           },
           {
             label: 'Total Inaptos',
             value: imc.inaptosData.todosInaptos.length,
             color: C.orange,
-            icon: <IconAlertTriangle size={16} color={C.orange} />,
+            icon: <IconAlertTriangle size={isMobile ? 14 : 16} color={C.orange} />,
           },
         ].map((item, i) => (
           <StatCard
@@ -1335,9 +1383,9 @@ export default function IMCUI(
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 14,
-          marginBottom: 24,
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+          gap: isMobile ? 8 : 14,
+          marginBottom: isMobile ? 16 : 24,
         }}
       >
         {[
@@ -1365,20 +1413,20 @@ export default function IMCUI(
           },
         ].map((item, i) => (
           <Card key={i}>
-            <div style={{ padding: '16px 18px' }}>
+            <div style={{ padding: isMobile ? '12px 14px' : '16px 18px' }}>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: isMobile ? 10 : 11,
                   fontWeight: 700,
                   color: C.muted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
-                  marginBottom: 8,
+                  marginBottom: isMobile ? 4 : 8,
                 }}
               >
                 {item.label}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: C.primary }}>
+              <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 700, color: C.primary }}>
                 {item.value}
               </div>
             </div>
@@ -1390,9 +1438,9 @@ export default function IMCUI(
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 14,
-          marginBottom: 24,
+          gridTemplateColumns: isMobile ? '1fr 1fr 1fr' : 'repeat(3, 1fr)',
+          gap: isMobile ? 8 : 14,
+          marginBottom: isMobile ? 16 : 24,
         }}
       >
         {[
@@ -1401,31 +1449,31 @@ export default function IMCUI(
             value: imc.variacaoPeso.diminuiu,
             color: C.success,
             bg: C.successBg,
-            icon: <IconArrowDown size={24} color={C.success} />,
+            icon: <IconArrowDown size={isMobile ? 18 : 24} color={C.success} />,
           },
           {
             label: 'Manteve',
             value: imc.variacaoPeso.manteve,
             color: C.warning,
             bg: C.warningBg,
-            icon: <IconArrowRight size={24} color={C.warning} />,
+            icon: <IconArrowRight size={isMobile ? 18 : 24} color={C.warning} />,
           },
           {
             label: 'Aumentou',
             value: imc.variacaoPeso.aumentou,
             color: C.danger,
             bg: C.dangerBg,
-            icon: <IconArrowUp size={24} color={C.danger} />,
+            icon: <IconArrowUp size={isMobile ? 18 : 24} color={C.danger} />,
           },
         ].map((item, i) => (
           <Card key={i}>
-            <div style={{ padding: '18px 20px', textAlign: 'center' }}>
+            <div style={{ padding: isMobile ? '14px 12px' : '18px 20px', textAlign: 'center' }}>
               <div
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: isMobile ? 36 : 44,
+                  height: isMobile ? 36 : 44,
                   borderRadius: '50%',
-                  margin: '0 auto 10px',
+                  margin: '0 auto 8px',
                   background: item.bg,
                   display: 'flex',
                   alignItems: 'center',
@@ -1435,22 +1483,20 @@ export default function IMCUI(
               >
                 {item.icon}
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: item.color }}>
+              <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: item.color }}>
                 {item.value}
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: isMobile ? 10 : 12,
                   color: C.muted,
-                  marginTop: 4,
+                  marginTop: 2,
                   fontWeight: 500,
                 }}
               >
                 Variação de Peso
               </div>
-              <div
-                style={{ fontSize: 14, fontWeight: 600, color: C.secondary }}
-              >
+              <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 600, color: C.secondary }}>
                 {item.label}
               </div>
             </div>
@@ -1460,25 +1506,26 @@ export default function IMCUI(
 
       {/* ── DONUT + LEGENDA ── */}
       {statusList.length > 0 && (
-        <Card style={{ marginBottom: 24 }}>
+        <Card style={{ marginBottom: isMobile ? 16 : 24 }}>
           <CardHeader
             title="Distribuição por Status de IMC"
             subtitle={`Baseado em ${totalColab} colaboradores únicos`}
           />
           <div
+            className="imc-donut-grid"
             style={{
-              padding: '0 22px 22px',
+              padding: isMobile ? '0 16px 16px' : '0 22px 22px',
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 32,
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+              gap: isMobile ? 16 : 32,
               alignItems: 'center',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div
                 style={{
-                  width: 190,
-                  height: 190,
+                  width: isMobile ? 140 : 190,
+                  height: isMobile ? 140 : 190,
                   borderRadius: '50%',
                   background: donutGrad,
                   position: 'relative',
@@ -1491,8 +1538,8 @@ export default function IMCUI(
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: 108,
-                    height: 108,
+                    width: isMobile ? 80 : 108,
+                    height: isMobile ? 80 : 108,
                     borderRadius: '50%',
                     background: C.white,
                     display: 'flex',
@@ -1504,7 +1551,7 @@ export default function IMCUI(
                 >
                   <div
                     style={{
-                      fontSize: 26,
+                      fontSize: isMobile ? 20 : 26,
                       fontWeight: 800,
                       color: C.primary,
                       lineHeight: 1,
@@ -1514,7 +1561,7 @@ export default function IMCUI(
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: isMobile ? 8 : 10,
                       color: C.muted,
                       fontWeight: 600,
                       letterSpacing: '0.05em',
@@ -1526,7 +1573,7 @@ export default function IMCUI(
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 6 : 10 }}>
               {segments.map(({ status, count, pct }) => {
                 const sc = statusColors[status] || {
                   text: '#aaa',
@@ -1538,7 +1585,7 @@ export default function IMCUI(
                   <div
                     key={status}
                     style={{
-                      padding: '10px 14px',
+                      padding: isMobile ? '8px 12px' : '10px 14px',
                       borderRadius: 10,
                       background: C.surfaceAlt,
                       border: `1px solid ${C.border}`,
@@ -1548,14 +1595,14 @@ export default function IMCUI(
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10,
-                        marginBottom: 6,
+                        gap: isMobile ? 6 : 10,
+                        marginBottom: isMobile ? 4 : 6,
                       }}
                     >
                       <div
                         style={{
-                          width: 10,
-                          height: 10,
+                          width: isMobile ? 8 : 10,
+                          height: isMobile ? 8 : 10,
                           borderRadius: 3,
                           background: sc.dot,
                           flexShrink: 0,
@@ -1564,7 +1611,7 @@ export default function IMCUI(
                       <span
                         style={{
                           flex: 1,
-                          fontSize: 13,
+                          fontSize: isMobile ? 11 : 13,
                           color: C.secondary,
                           fontWeight: 500,
                         }}
@@ -1573,7 +1620,7 @@ export default function IMCUI(
                       </span>
                       <span
                         style={{
-                          fontSize: 15,
+                          fontSize: isMobile ? 13 : 15,
                           fontWeight: 700,
                           color: C.primary,
                         }}
@@ -1582,7 +1629,7 @@ export default function IMCUI(
                       </span>
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: isMobile ? 10 : 12,
                           fontWeight: 600,
                           color: sc.text,
                         }}
@@ -1592,7 +1639,7 @@ export default function IMCUI(
                     </div>
                     <div
                       style={{
-                        height: 4,
+                        height: isMobile ? 3 : 4,
                         background: `${sc.dot}20`,
                         borderRadius: 4,
                       }}
@@ -1616,25 +1663,26 @@ export default function IMCUI(
       )}
 
       {/* ── GRÁFICO DE BARRAS MENSAL ── */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: isMobile ? 16 : 24 }}>
         <CardHeader
           title={`Registros por Mês — ${imc.selectedYear}`}
           subtitle="Clique em um mês para filtrar"
         />
-        <div style={{ padding: '8px 22px 20px' }}>
+        <div style={{ padding: isMobile ? '4px 12px 12px' : '8px 22px 20px' }}>
           <div
+            className="imc-month-chart"
             style={{
               display: 'flex',
               justifyContent: 'space-around',
               alignItems: 'flex-end',
-              height: 160,
-              gap: 6,
+              height: isMobile ? 100 : 160,
+              gap: isMobile ? 2 : 6,
             }}
           >
             {imc.meses.map((mes: string, i: number) => {
               const valor = imc.totalPorMes[i];
               const barH =
-                valor > 0 ? Math.max(8, (valor / imc.maxTotal) * 120) : 6;
+                valor > 0 ? Math.max(isMobile ? 6 : 8, (valor / imc.maxTotal) * (isMobile ? 80 : 120)) : isMobile ? 4 : 6;
               const isSelected = imc.selectedMonth === i;
               const hasData = valor > 0;
               return (
@@ -1654,15 +1702,15 @@ export default function IMCUI(
                 >
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: isMobile ? 9 : 11,
                       fontWeight: 700,
                       color: isSelected
                         ? C.accent
                         : hasData
                         ? C.secondary
                         : C.muted,
-                      marginBottom: 4,
-                      minHeight: 16,
+                      marginBottom: isMobile ? 2 : 4,
+                      minHeight: isMobile ? 12 : 16,
                     }}
                   >
                     {hasData ? valor : ''}
@@ -1670,7 +1718,7 @@ export default function IMCUI(
                   <div
                     style={{
                       width: '100%',
-                      height: 120,
+                      height: isMobile ? 80 : 120,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'flex-end',
@@ -1685,7 +1733,7 @@ export default function IMCUI(
                           : hasData
                           ? `${C.accent}55`
                           : C.border,
-                        borderRadius: '5px 5px 3px 3px',
+                        borderRadius: isMobile ? '3px 3px 2px 2px' : '5px 5px 3px 3px',
                         transition: 'height .4s ease, background .2s',
                         boxShadow: isSelected
                           ? `0 -2px 8px ${C.accent}40`
@@ -1695,8 +1743,8 @@ export default function IMCUI(
                   </div>
                   <div
                     style={{
-                      marginTop: 6,
-                      fontSize: 10,
+                      marginTop: isMobile ? 4 : 6,
+                      fontSize: isMobile ? 8 : 10,
                       fontWeight: isSelected ? 700 : 400,
                       color: isSelected ? C.accent : C.muted,
                     }}
@@ -1711,145 +1759,147 @@ export default function IMCUI(
       </Card>
 
       {/* ── GRÁFICO DE LINHAS ── */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: isMobile ? 16 : 24 }}>
         <CardHeader title="Evolução Anual por Status de IMC" />
-        <div style={{ padding: '0 22px 16px' }}>
-          <svg
-            viewBox="0 0 700 240"
-            style={{ width: '100%', height: 'auto', overflow: 'visible' }}
-          >
-            {/* Grid */}
-            {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
-              const y = 20 + (1 - pct) * 180;
-              return (
-                <g key={i}>
-                  <line
-                    x1="48"
-                    y1={y}
-                    x2="680"
-                    y2={y}
-                    stroke={C.border}
-                    strokeWidth="1"
-                    strokeDasharray="4 3"
-                  />
-                  <text
-                    x="40"
-                    y={y + 4}
-                    textAnchor="end"
-                    fontSize="10"
-                    fill={C.muted}
-                  >
-                    {Math.round(imc.evolucaoPorStatus.maxCount * pct)}
-                  </text>
-                </g>
-              );
-            })}
-            {/* Lines */}
-            {Object.entries(imc.evolucaoPorStatus.data).map(
-              ([status, values]) => {
-                const sc = statusColors[status];
-                const color = sc?.dot || C.muted;
-                const pts = (values as number[])
-                  .map((v, i) => {
-                    const x = 48 + (i / 11) * 632;
-                    const y =
-                      imc.evolucaoPorStatus.maxCount > 0
-                        ? 200 - (v / imc.evolucaoPorStatus.maxCount) * 180
-                        : 200;
-                    return `${x},${y}`;
-                  })
-                  .join(' ');
+        <div style={{ padding: isMobile ? '0 12px 12px' : '0 22px 16px' }}>
+          <div className="imc-line-chart" style={{ width: '100%', overflow: 'auto' }}>
+            <svg
+              viewBox={isMobile ? "0 0 700 200" : "0 0 700 240"}
+              style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+            >
+              {/* Grid */}
+              {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
+                const y = isMobile ? 15 + (1 - pct) * 150 : 20 + (1 - pct) * 180;
                 return (
-                  <g key={status}>
-                    <polyline
-                      points={pts}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="2.5"
-                      strokeLinejoin="round"
-                      strokeLinecap="round"
+                  <g key={i}>
+                    <line
+                      x1="48"
+                      y1={y}
+                      x2="680"
+                      y2={y}
+                      stroke={C.border}
+                      strokeWidth="1"
+                      strokeDasharray="4 3"
                     />
-                    {(values as number[]).map((v, i) => {
+                    <text
+                      x="40"
+                      y={y + 4}
+                      textAnchor="end"
+                      fontSize={isMobile ? 8 : 10}
+                      fill={C.muted}
+                    >
+                      {Math.round(imc.evolucaoPorStatus.maxCount * pct)}
+                    </text>
+                  </g>
+                );
+              })}
+              {/* Lines */}
+              {Object.entries(imc.evolucaoPorStatus.data).map(
+                ([status, values]) => {
+                  const sc = statusColors[status];
+                  const color = sc?.dot || C.muted;
+                  const pts = (values as number[])
+                    .map((v, i) => {
                       const x = 48 + (i / 11) * 632;
                       const y =
                         imc.evolucaoPorStatus.maxCount > 0
-                          ? 200 - (v / imc.evolucaoPorStatus.maxCount) * 180
-                          : 200;
-                      return (
-                        <g key={i}>
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r="4.5"
-                            fill={C.white}
-                            stroke={color}
-                            strokeWidth="2"
-                          />
-                          {v > 0 && (
-                            <text
-                              x={x}
-                              y={y - 9}
-                              textAnchor="middle"
-                              fontSize="9"
-                              fontWeight="700"
-                              fill={color}
-                            >
-                              {v}
-                            </text>
-                          )}
-                        </g>
-                      );
-                    })}
-                  </g>
-                );
-              }
-            )}
-            {/* X axis labels */}
-            {imc.meses.map((mes: string, i: number) => (
-              <text
-                key={i}
-                x={48 + (i / 11) * 632}
-                y={218}
-                textAnchor="middle"
-                fontSize="10"
-                fill={C.muted}
-              >
-                {mes}
-              </text>
-            ))}
-          </svg>
+                          ? (isMobile ? 165 : 200) - (v / imc.evolucaoPorStatus.maxCount) * (isMobile ? 150 : 180)
+                          : isMobile ? 165 : 200;
+                      return `${x},${y}`;
+                    })
+                    .join(' ');
+                  return (
+                    <g key={status}>
+                      <polyline
+                        points={pts}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={isMobile ? 2 : 2.5}
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                      {(values as number[]).map((v, i) => {
+                        const x = 48 + (i / 11) * 632;
+                        const y =
+                          imc.evolucaoPorStatus.maxCount > 0
+                            ? (isMobile ? 165 : 200) - (v / imc.evolucaoPorStatus.maxCount) * (isMobile ? 150 : 180)
+                            : isMobile ? 165 : 200;
+                        return (
+                          <g key={i}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={isMobile ? 3.5 : 4.5}
+                              fill={C.white}
+                              stroke={color}
+                              strokeWidth={isMobile ? 1.5 : 2}
+                            />
+                            {v > 0 && (
+                              <text
+                                x={x}
+                                y={y - (isMobile ? 7 : 9)}
+                                textAnchor="middle"
+                                fontSize={isMobile ? 7 : 9}
+                                fontWeight="700"
+                                fill={color}
+                              >
+                                {v}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                }
+              )}
+              {/* X axis labels */}
+              {imc.meses.map((mes: string, i: number) => (
+                <text
+                  key={i}
+                  x={48 + (i / 11) * 632}
+                  y={isMobile ? 180 : 218}
+                  textAnchor="middle"
+                  fontSize={isMobile ? 8 : 10}
+                  fill={C.muted}
+                >
+                  {mes}
+                </text>
+              ))}
+            </svg>
+          </div>
 
           <div
             style={{
               display: 'flex',
               justifyContent: 'center',
-              gap: 20,
-              marginTop: 8,
+              gap: isMobile ? 8 : 20,
+              marginTop: isMobile ? 4 : 8,
               flexWrap: 'wrap',
             }}
           >
             {Object.entries(statusColors).map(([status, sc]) => (
               <div
                 key={status}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6 }}
               >
                 <div
                   style={{
-                    width: 22,
-                    height: 3,
+                    width: isMobile ? 16 : 22,
+                    height: isMobile ? 2 : 3,
                     background: sc.dot,
                     borderRadius: 2,
                   }}
                 />
                 <div
                   style={{
-                    width: 7,
-                    height: 7,
+                    width: isMobile ? 5 : 7,
+                    height: isMobile ? 5 : 7,
                     borderRadius: '50%',
                     background: sc.dot,
                   }}
                 />
-                <span style={{ fontSize: 11, color: C.secondary }}>
+                <span style={{ fontSize: isMobile ? 9 : 11, color: C.secondary }}>
                   {status}
                 </span>
               </div>
@@ -1859,11 +1909,11 @@ export default function IMCUI(
       </Card>
 
       {/* ── TABELA INAPTOS ── */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: isMobile ? 16 : 24 }}>
         <CardHeader
           title="Inaptos por Período"
           action={
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: isMobile ? 4 : 8, flexWrap: 'wrap' }}>
               <button
                 style={filterBtnStyle(imc.periodoFiltro === 'mensal')}
                 onClick={() => imc.handleSetPeriodoFiltro('mensal')}
@@ -1879,9 +1929,9 @@ export default function IMCUI(
               <button
                 onClick={() => imc.setShowInaptosTable(!imc.showInaptosTable)}
                 style={{
-                  padding: '6px 14px',
+                  padding: isMobile ? '4px 10px' : '6px 14px',
                   borderRadius: 8,
-                  fontSize: 13,
+                  fontSize: isMobile ? 10 : 13,
                   fontWeight: 500,
                   cursor: 'pointer',
                   border: `1px solid ${C.border}`,
@@ -1895,13 +1945,14 @@ export default function IMCUI(
             </div>
           }
         />
-        <div style={{ padding: '0 22px 20px' }}>
-          <div style={{ overflowX: 'auto' }}>
+        <div style={{ padding: isMobile ? '0 12px 12px' : '0 22px 20px' }}>
+          <div className="imc-table-wrapper" style={{ overflowX: 'auto' }}>
             <table
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                fontSize: 13,
+                fontSize: isMobile ? 11 : 13,
+                minWidth: isMobile ? '500px' : 'auto',
               }}
             >
               <thead>
@@ -1916,7 +1967,7 @@ export default function IMCUI(
                     <th
                       key={col}
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         fontWeight: 700,
                         textAlign: i === 0 ? 'left' : 'center',
                         color:
@@ -1925,7 +1976,7 @@ export default function IMCUI(
                             : i === 3
                             ? C.warning
                             : C.secondary,
-                        fontSize: 11,
+                        fontSize: isMobile ? 9 : 11,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
@@ -1949,7 +2000,7 @@ export default function IMCUI(
                         >
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               fontWeight: 600,
                               color: C.primary,
                             }}
@@ -1958,7 +2009,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                               color: C.secondary,
                             }}
@@ -1967,7 +2018,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
@@ -1985,7 +2036,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
@@ -2001,15 +2052,15 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
                             <span
                               style={{
-                                padding: '2px 10px',
+                                padding: isMobile ? '2px 8px' : '2px 10px',
                                 borderRadius: 20,
-                                fontSize: 12,
+                                fontSize: isMobile ? 10 : 12,
                                 fontWeight: 700,
                                 background:
                                   pct > 20
@@ -2043,7 +2094,7 @@ export default function IMCUI(
                         >
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               fontWeight: 600,
                               color: C.primary,
                             }}
@@ -2052,7 +2103,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                               color: C.secondary,
                             }}
@@ -2061,7 +2112,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
@@ -2079,7 +2130,7 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
@@ -2095,15 +2146,15 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '10px 12px',
+                              padding: isMobile ? '6px 8px' : '10px 12px',
                               textAlign: 'center',
                             }}
                           >
                             <span
                               style={{
-                                padding: '2px 10px',
+                                padding: isMobile ? '2px 8px' : '2px 10px',
                                 borderRadius: 20,
-                                fontSize: 12,
+                                fontSize: isMobile ? 10 : 12,
                                 fontWeight: 700,
                                 background:
                                   pct > 20
@@ -2129,12 +2180,12 @@ export default function IMCUI(
             </table>
             {imc.inaptosData.todosInaptos.length === 0 && (
               <div
-                style={{ textAlign: 'center', padding: '32px', color: C.muted }}
+                style={{ textAlign: 'center', padding: isMobile ? '20px' : '32px', color: C.muted }}
               >
-                <div style={{ fontSize: 32, marginBottom: 8 }}>
-                  <IconCheck size={32} color={C.success} />
+                <div style={{ fontSize: isMobile ? 24 : 32, marginBottom: isMobile ? 4 : 8 }}>
+                  <IconCheck size={isMobile ? 24 : 32} color={C.success} />
                 </div>
-                <div style={{ fontWeight: 600, color: C.secondary }}>
+                <div style={{ fontWeight: 600, color: C.secondary, fontSize: isMobile ? 13 : 14 }}>
                   Nenhum inapto neste período
                 </div>
               </div>
@@ -2145,28 +2196,29 @@ export default function IMCUI(
           {imc.showInaptosTable && imc.inaptosData.todosInaptos.length > 0 && (
             <div
               style={{
-                marginTop: 20,
-                paddingTop: 20,
+                marginTop: isMobile ? 12 : 20,
+                paddingTop: isMobile ? 12 : 20,
                 borderTop: `1px solid ${C.border}`,
                 animation: 'imc-fadeUp .2s ease',
               }}
             >
               <h4
                 style={{
-                  margin: '0 0 14px',
-                  fontSize: 13,
+                  margin: '0 0 10px',
+                  fontSize: isMobile ? 12 : 13,
                   fontWeight: 700,
                   color: C.primary,
                 }}
               >
                 Detalhes dos Inaptos
               </h4>
-              <div style={{ overflowX: 'auto' }}>
+              <div className="imc-table-wrapper" style={{ overflowX: 'auto' }}>
                 <table
                   style={{
                     width: '100%',
                     borderCollapse: 'collapse',
-                    fontSize: 13,
+                    fontSize: isMobile ? 11 : 13,
+                    minWidth: isMobile ? '550px' : 'auto',
                   }}
                 >
                   <thead>
@@ -2183,11 +2235,11 @@ export default function IMCUI(
                         <th
                           key={col}
                           style={{
-                            padding: '8px 12px',
+                            padding: isMobile ? '4px 6px' : '8px 12px',
                             fontWeight: 700,
                             textAlign: i > 1 && i < 5 ? 'center' : 'left',
                             color: C.secondary,
-                            fontSize: 11,
+                            fontSize: isMobile ? 9 : 11,
                             textTransform: 'uppercase',
                             letterSpacing: '0.04em',
                           }}
@@ -2207,7 +2259,7 @@ export default function IMCUI(
                         >
                           <td
                             style={{
-                              padding: '9px 12px',
+                              padding: isMobile ? '4px 6px' : '9px 12px',
                               fontWeight: 600,
                               color: C.primary,
                             }}
@@ -2215,12 +2267,12 @@ export default function IMCUI(
                             {item.codigo}
                           </td>
                           <td
-                            style={{ padding: '9px 12px', color: C.secondary }}
+                            style={{ padding: isMobile ? '4px 6px' : '9px 12px', color: C.secondary }}
                           >
                             {item.data || '—'}
                           </td>
                           <td
-                            style={{ padding: '9px 12px', textAlign: 'center' }}
+                            style={{ padding: isMobile ? '4px 6px' : '9px 12px', textAlign: 'center' }}
                           >
                             <span
                               style={{
@@ -2232,7 +2284,7 @@ export default function IMCUI(
                             </span>
                           </td>
                           <td
-                            style={{ padding: '9px 12px', textAlign: 'center' }}
+                            style={{ padding: isMobile ? '4px 6px' : '9px 12px', textAlign: 'center' }}
                           >
                             <span
                               style={{
@@ -2248,14 +2300,14 @@ export default function IMCUI(
                           </td>
                           <td
                             style={{
-                              padding: '9px 12px',
+                              padding: isMobile ? '4px 6px' : '9px 12px',
                               textAlign: 'center',
                               color: C.secondary,
                             }}
                           >
                             {item.relacaoCircAltura?.toFixed(2) || '—'}
                           </td>
-                          <td style={{ padding: '9px 12px' }}>
+                          <td style={{ padding: isMobile ? '4px 6px' : '9px 12px' }}>
                             <Badge
                               label={item.motivo}
                               color={
@@ -2271,7 +2323,7 @@ export default function IMCUI(
                             />
                           </td>
                           <td
-                            style={{ padding: '9px 12px', color: C.secondary }}
+                            style={{ padding: isMobile ? '4px 6px' : '9px 12px', color: C.secondary }}
                           >
                             {item.empresa || '—'}
                           </td>
@@ -2293,10 +2345,10 @@ export default function IMCUI(
           action={
             <span
               style={{
-                fontSize: 12,
+                fontSize: isMobile ? 10 : 12,
                 color: C.muted,
                 background: C.surfaceAlt,
-                padding: '4px 12px',
+                padding: isMobile ? '2px 10px' : '4px 12px',
                 borderRadius: 20,
                 border: `1px solid ${C.border}`,
                 fontWeight: 600,
@@ -2306,9 +2358,14 @@ export default function IMCUI(
             </span>
           }
         />
-        <div style={{ padding: '0 22px 22px', overflowX: 'auto' }}>
+        <div className="imc-table-wrapper" style={{ padding: isMobile ? '0 12px 12px' : '0 22px 22px', overflowX: 'auto' }}>
           <table
-            style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: isMobile ? 11 : 13,
+              minWidth: isMobile ? '750px' : 'auto',
+            }}
           >
             <thead>
               <tr style={{ borderBottom: `2px solid ${C.border}` }}>
@@ -2327,11 +2384,11 @@ export default function IMCUI(
                   <th
                     key={col}
                     style={{
-                      padding: '10px 12px',
+                      padding: isMobile ? '6px 8px' : '10px 12px',
                       textAlign: 'left',
                       fontWeight: 700,
                       color: C.secondary,
-                      fontSize: 11,
+                      fontSize: isMobile ? 9 : 11,
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
                       whiteSpace: 'nowrap',
@@ -2378,7 +2435,7 @@ export default function IMCUI(
                   >
                     <td
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         fontWeight: 700,
                         color: C.primary,
                         whiteSpace: 'nowrap',
@@ -2388,19 +2445,19 @@ export default function IMCUI(
                     </td>
                     <td
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         color: C.secondary,
                         whiteSpace: 'nowrap',
                       }}
                     >
                       {emp.dataStr || '—'}
                     </td>
-                    <td style={{ padding: '10px 12px', color: C.secondary }}>
+                    <td style={{ padding: isMobile ? '6px 8px' : '10px 12px', color: C.secondary }}>
                       {emp.height ? `${emp.height} cm` : '—'}
                     </td>
                     <td
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         fontWeight: 600,
                         color: C.primary,
                       }}
@@ -2409,24 +2466,24 @@ export default function IMCUI(
                     </td>
                     <td
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         fontWeight: 700,
                         color: sc.text,
                       }}
                     >
                       {bmi > 0 ? bmi.toFixed(1) : '—'}
                     </td>
-                    <td style={{ padding: '10px 12px' }}>
+                    <td style={{ padding: isMobile ? '6px 8px' : '10px 12px' }}>
                       <Badge label={status} color={sc.text} bg={sc.bg} />
                     </td>
-                    <td style={{ padding: '10px 12px', color: C.secondary }}>
+                    <td style={{ padding: isMobile ? '6px 8px' : '10px 12px', color: C.secondary }}>
                       {emp.circunferencia > 0
                         ? `${emp.circunferencia.toFixed(1)} cm`
                         : '—'}
                     </td>
                     <td
                       style={{
-                        padding: '10px 12px',
+                        padding: isMobile ? '6px 8px' : '10px 12px',
                         fontWeight: 700,
                         color: varColor,
                         whiteSpace: 'nowrap',
@@ -2435,10 +2492,10 @@ export default function IMCUI(
                       {variacao > 0 ? '+' : ''}
                       {variacao.toFixed(2)} kg
                     </td>
-                    <td style={{ padding: '10px 12px' }}>
+                    <td style={{ padding: isMobile ? '6px 8px' : '10px 12px' }}>
                       <Badge label={varLabel} color={varColor} bg={varBg} />
                     </td>
-                    <td style={{ padding: '10px 12px', color: C.secondary }}>
+                    <td style={{ padding: isMobile ? '6px 8px' : '10px 12px', color: C.secondary }}>
                       {emp.company || '—'}
                     </td>
                   </tr>
@@ -2448,17 +2505,17 @@ export default function IMCUI(
           </table>
           {imc.filteredData.length === 0 && (
             <div
-              style={{ textAlign: 'center', padding: '48px', color: C.muted }}
+              style={{ textAlign: 'center', padding: isMobile ? '24px' : '48px', color: C.muted }}
             >
-              <div style={{ fontSize: 36, marginBottom: 10 }}>
-                <IconSearch size={36} color={C.muted} />
+              <div style={{ fontSize: isMobile ? 28 : 36, marginBottom: isMobile ? 6 : 10 }}>
+                <IconSearch size={isMobile ? 28 : 36} color={C.muted} />
               </div>
               <div
-                style={{ fontWeight: 600, color: C.secondary, fontSize: 15 }}
+                style={{ fontWeight: 600, color: C.secondary, fontSize: isMobile ? 13 : 15 }}
               >
                 Nenhum registro encontrado
               </div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>
+              <div style={{ fontSize: isMobile ? 11 : 13, marginTop: isMobile ? 2 : 4 }}>
                 Tente ajustar os filtros de período
               </div>
             </div>
