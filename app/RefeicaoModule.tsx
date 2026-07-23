@@ -14,13 +14,6 @@ interface IconProps {
   className?: string;
 }
 
-const Icon = ({
-  component: Component,
-  size = 24,
-  color = 'currentColor',
-  className = '',
-}: any) => <Component size={size} color={color} className={className} />;
-
 const IconUtensils = ({ size = 24, color = 'currentColor' }: IconProps) => (
   <svg
     viewBox="0 0 24 24"
@@ -225,32 +218,27 @@ const RADIUS = {
   xl: '16px',
 };
 
-const SHADOWS = {
-  sm: '0 2px 8px rgba(0,0,0,0.06)',
-  md: '0 4px 15px rgba(0,0,0,0.1)',
-  lg: '0 8px 24px rgba(0,0,0,0.12)',
-};
-
 // ============================================================
-// COMPONENTES REUTILIZÁVEIS
+// COMPONENTES REUTILIZÁVEIS (ATUALIZADOS PARA MOBILE)
 // ============================================================
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  noPadding?: boolean;
 }
 
-const Card = ({ children, className = '', style = {} }: CardProps) => (
+const Card = ({ children, className = '', style = {}, noPadding = false }: CardProps) => (
   <div
     style={{
       background: COLORS.background,
-      borderRadius:
-        COLORS.border === 'rgba(0,0,0,0.08)' ? RADIUS.lg : RADIUS.lg,
-      padding: SPACING.xxl,
+      borderRadius: RADIUS.xl,
+      padding: noPadding ? 0 : SPACING.lg,
+      paddingInline: noPadding ? 0 : SPACING.lg,
       border: `1px solid ${COLORS.border}`,
-      boxShadow: SHADOWS.sm,
-      marginBottom: SPACING.xxl,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      marginBottom: SPACING.lg,
       ...style,
     }}
     className={className}
@@ -268,6 +256,7 @@ interface ButtonProps {
   icon?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  fullWidth?: boolean;
 }
 
 const Button = ({
@@ -279,6 +268,7 @@ const Button = ({
   icon,
   className = '',
   style = {},
+  fullWidth = false,
 }: ButtonProps) => {
   const variantStyles = {
     primary: {
@@ -320,8 +310,11 @@ const Button = ({
         transition: 'all 0.2s ease',
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: SPACING.md,
         opacity: disabled ? 0.6 : 1,
+        whiteSpace: 'nowrap',
+        width: fullWidth ? '100%' : 'auto',
         ...variantStyles[variant],
         ...sizeStyles[size],
         ...style,
@@ -351,10 +344,11 @@ const Badge = ({ status, children }: BadgeProps) => {
     <span
       style={{
         display: 'inline-block',
-        padding: `${SPACING.sm} ${SPACING.md}`,
+        padding: `${SPACING.xs} ${SPACING.md}`,
         borderRadius: '20px',
         fontSize: '11px',
         fontWeight: 600,
+        whiteSpace: 'nowrap',
         ...statusStyles[status],
       }}
     >
@@ -399,10 +393,11 @@ const Alert = ({ type, children, icon }: AlertProps) => {
         gap: SPACING.md,
         marginBottom: SPACING.lg,
         ...typeStyles[type],
+        flexWrap: 'wrap',
       }}
     >
       {icon && <span>{icon}</span>}
-      {children}
+      <span style={{ flex: 1 }}>{children}</span>
     </div>
   );
 };
@@ -429,23 +424,16 @@ const StatCard = ({
       textAlign: 'center',
       transition: 'all 0.2s ease',
       cursor: 'default',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.boxShadow = SHADOWS.md;
-      e.currentTarget.style.transform = 'translateY(-2px)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.transform = 'translateY(0)';
+      minWidth: '100px',
     }}
   >
-    {icon && <div style={{ marginBottom: SPACING.md }}>{icon}</div>}
+    {icon && <div style={{ marginBottom: SPACING.sm }}>{icon}</div>}
     <div
       style={{
         fontSize: '24px',
         fontWeight: 700,
         color,
-        marginBottom: SPACING.sm,
+        marginBottom: SPACING.xs,
       }}
     >
       {value}
@@ -474,78 +462,89 @@ const ProfileCard = ({
   <div
     style={{
       display: 'flex',
-      alignItems: 'center',
-      gap: SPACING.xl,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: SPACING.md,
       padding: SPACING.lg,
       background: COLORS.surface,
       borderRadius: RADIUS.xl,
       border: `1px solid ${COLORS.border}`,
       marginBottom: SPACING.xxl,
-      flexWrap: 'wrap',
     }}
   >
     <div
       style={{
-        width: '64px',
-        height: '64px',
-        borderRadius: '50%',
-        background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '28px',
-        fontWeight: 700,
-        color: 'white',
-        flexShrink: 0,
+        gap: SPACING.lg,
+        width: '100%',
+        flexWrap: 'wrap',
       }}
     >
-      {name.charAt(0).toUpperCase()}
-    </div>
-    <div style={{ flex: 1, minWidth: '200px' }}>
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 700,
-          margin: 0,
-          color: COLORS.text.primary,
-        }}
-      >
-        {name}
-      </h2>
       <div
         style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
           display: 'flex',
-          gap: SPACING.xl,
-          flexWrap: 'wrap',
-          fontSize: '14px',
-          color: COLORS.text.secondary,
-          marginTop: SPACING.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          fontWeight: 700,
+          color: 'white',
+          flexShrink: 0,
         }}
       >
-        <span>
-          <strong style={{ color: COLORS.text.primary }}>Código:</strong>{' '}
-          {codigo}
-        </span>
-        <span>
-          <strong style={{ color: COLORS.text.primary }}>Cargo:</strong>{' '}
-          {cargo || 'Não definido'}
-        </span>
-        <span>
-          <strong style={{ color: COLORS.text.primary }}>Email:</strong> {email}
-        </span>
+        {name.charAt(0).toUpperCase()}
       </div>
+      <div style={{ flex: 1, minWidth: '150px' }}>
+        <h2
+          style={{
+            fontSize: '18px',
+            fontWeight: 700,
+            margin: 0,
+            color: COLORS.text.primary,
+          }}
+        >
+          {name}
+        </h2>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: SPACING.sm,
+            fontSize: '13px',
+            color: COLORS.text.secondary,
+            marginTop: SPACING.xs,
+          }}
+        >
+          <span>
+            <strong style={{ color: COLORS.text.primary }}>Código:</strong>{' '}
+            {codigo}
+          </span>
+          <span>
+            <strong style={{ color: COLORS.text.primary }}>Cargo:</strong>{' '}
+            {cargo || 'Não definido'}
+          </span>
+        </div>
+      </div>
+      {onLogout && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onLogout}
+          icon={<IconLogout size={18} color={COLORS.danger} />}
+          style={{ color: COLORS.danger, borderColor: COLORS.danger }}
+        >
+          Sair
+        </Button>
+      )}
     </div>
-    {onLogout && (
-      <Button
-        variant="ghost"
-        size="md"
-        onClick={onLogout}
-        icon={<IconLogout size={18} color={COLORS.danger} />}
-        style={{ color: COLORS.danger, borderColor: COLORS.danger }}
-      >
-        Sair
-      </Button>
-    )}
+    <div style={{ fontSize: '13px', color: COLORS.text.secondary }}>
+      <strong style={{ color: COLORS.text.primary }}>Email:</strong> {email}
+    </div>
   </div>
 );
 
@@ -637,8 +636,8 @@ const UploadArea = ({
               src={preview}
               alt="Preview"
               style={{
-                maxWidth: '200px',
-                maxHeight: '150px',
+                maxWidth: '180px',
+                maxHeight: '120px',
                 borderRadius: RADIUS.md,
                 objectFit: 'cover',
               }}
@@ -1197,7 +1196,7 @@ export default function RefeicaoModule({
     <div
       style={{
         padding: isRestricted ? '0' : SPACING.xxl,
-        maxWidth: isRestricted ? '1200px' : '100%',
+        maxWidth: '1200px',
         margin: '0 auto',
         fontFamily: '"Inter", -apple-system, sans-serif',
         ...styles,
@@ -1218,17 +1217,23 @@ export default function RefeicaoModule({
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: SPACING.xxl,
-          flexWrap: 'wrap',
-          gap: SPACING.lg,
+          flexDirection: 'column',
+          gap: SPACING.md,
+          marginBottom: SPACING.xl,
         }}
       >
-        <div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: SPACING.md,
+          }}
+        >
           <h1
             style={{
-              fontSize: '28px',
+              fontSize: '24px',
               fontWeight: 800,
               color: COLORS.text.primary,
               margin: 0,
@@ -1240,44 +1245,48 @@ export default function RefeicaoModule({
             <IconUtensils size={28} color={COLORS.primary} />
             {isRestricted ? 'Minhas Refeições' : 'Controle de Refeição'}
           </h1>
-          {!isRestricted && (
-            <p
-              style={{
-                color: COLORS.text.secondary,
-                fontSize: '14px',
-                margin: `${SPACING.md} 0 0`,
-              }}
-            >
-              {colaboradorInfo.nome} • Cód: {colaboradorInfo.codigo}
-            </p>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: SPACING.md, flexWrap: 'wrap' }}>
-          <Button
-            variant={isAtrasado ? 'secondary' : 'primary'}
-            size="md"
-            onClick={() => {
-              setIsAtrasado(!isAtrasado);
-              if (!showForm) setShowForm(true);
-            }}
-            icon={<IconClock size={18} />}
+          <div
+            style={{ display: 'flex', gap: SPACING.md, flexWrap: 'wrap' }}
           >
-            {isAtrasado ? 'Lançar Atrasado' : '+ Novo Registro'}
-          </Button>
-          {!isAtrasado && (
             <Button
-              variant="secondary"
+              variant={isAtrasado ? 'secondary' : 'primary'}
               size="md"
               onClick={() => {
-                setIsAtrasado(true);
-                setShowForm(true);
+                setIsAtrasado(!isAtrasado);
+                if (!showForm) setShowForm(true);
               }}
               icon={<IconClock size={18} />}
+              fullWidth={false}
             >
-              Lançar Atrasado
+              {isAtrasado ? 'Lançar Atrasado' : '+ Novo Registro'}
             </Button>
-          )}
+            {!isAtrasado && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setIsAtrasado(true);
+                  setShowForm(true);
+                }}
+                icon={<IconClock size={18} />}
+                fullWidth={false}
+              >
+                Lançar Atrasado
+              </Button>
+            )}
+          </div>
         </div>
+        {!isRestricted && (
+          <p
+            style={{
+              color: COLORS.text.secondary,
+              fontSize: '14px',
+              margin: 0,
+            }}
+          >
+            {colaboradorInfo.nome} • Cód: {colaboradorInfo.codigo}
+          </p>
+        )}
       </div>
 
       {/* ── ESTATÍSTICAS ── */}
@@ -1285,22 +1294,22 @@ export default function RefeicaoModule({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: SPACING.lg,
-            marginBottom: SPACING.xxl,
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: SPACING.md,
+            marginBottom: SPACING.xl,
           }}
         >
           <StatCard
             value={registros.length}
-            label="Total de Refeições"
-            icon={<IconUtensils size={24} color={COLORS.primary} />}
+            label="Total"
+            icon={<IconUtensils size={20} color={COLORS.primary} />}
           />
           <StatCard
             value={
               registros.filter((r) => r.status_validacao === 'aprovado').length
             }
             label="Aprovadas"
-            icon={<IconCheck size={24} color={COLORS.success} />}
+            icon={<IconCheck size={20} color={COLORS.success} />}
             color={COLORS.success}
           />
           <StatCard
@@ -1308,7 +1317,7 @@ export default function RefeicaoModule({
               registros.filter((r) => r.status_validacao === 'pendente').length
             }
             label="Pendentes"
-            icon={<IconClock size={24} color={COLORS.warning} />}
+            icon={<IconClock size={20} color={COLORS.warning} />}
             color={COLORS.warning}
           />
         </div>
@@ -1318,10 +1327,21 @@ export default function RefeicaoModule({
       {isRestricted && imcRecente && imcRecente.imc > 0 && (
         <Card style={{ background: '#f0fdf4', borderColor: '#86efac' }}>
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: SPACING.md }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: SPACING.sm,
+            }}
           >
-            <IconWeight size={24} color={COLORS.primary} />
-            <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACING.md,
+                flexWrap: 'wrap',
+              }}
+            >
+              <IconWeight size={24} color={COLORS.primary} />
               <div
                 style={{
                   fontSize: '14px',
@@ -1331,26 +1351,26 @@ export default function RefeicaoModule({
               >
                 Último IMC - {imcRecente.data}
               </div>
-              <div
+            </div>
+            <div
+              style={{
+                fontSize: '20px',
+                fontWeight: 700,
+                color: COLORS.primary,
+              }}
+            >
+              {imcRecente.imc.toFixed(1)}
+              <span
                 style={{
-                  fontSize: '24px',
-                  fontWeight: 700,
-                  color: COLORS.primary,
+                  fontSize: '14px',
+                  fontWeight: 400,
+                  color: COLORS.text.secondary,
+                  marginLeft: SPACING.md,
                 }}
               >
-                {imcRecente.imc.toFixed(1)}
-                <span
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 400,
-                    color: COLORS.text.secondary,
-                    marginLeft: SPACING.md,
-                  }}
-                >
-                  ({imcRecente.status}) • {imcRecente.peso}kg /{' '}
-                  {imcRecente.altura}cm
-                </span>
-              </div>
+                ({imcRecente.status}) • {imcRecente.peso}kg /{' '}
+                {imcRecente.altura}cm
+              </span>
             </div>
           </div>
         </Card>
@@ -1361,7 +1381,12 @@ export default function RefeicaoModule({
           style={{ background: COLORS.surface, borderColor: COLORS.border }}
         >
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: SPACING.md }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACING.md,
+              flexWrap: 'wrap',
+            }}
           >
             <IconWeight size={24} color="#94a3b8" />
             <div>
@@ -1404,6 +1429,7 @@ export default function RefeicaoModule({
                 width: '100%',
                 borderCollapse: 'collapse',
                 fontSize: '13px',
+                minWidth: '400px',
               }}
             >
               <thead>
@@ -1422,6 +1448,7 @@ export default function RefeicaoModule({
                           color: COLORS.text.secondary,
                           fontSize: '11px',
                           textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {header}
@@ -1440,6 +1467,7 @@ export default function RefeicaoModule({
                       style={{
                         padding: `${SPACING.md} ${SPACING.md}`,
                         color: COLORS.text.primary,
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {new Date(e.data_exame).toLocaleDateString('pt-BR')}
@@ -1491,7 +1519,12 @@ export default function RefeicaoModule({
           style={{ background: COLORS.surface, borderColor: COLORS.border }}
         >
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: SPACING.md }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACING.md,
+              flexWrap: 'wrap',
+            }}
           >
             <IconShip size={24} color="#94a3b8" />
             <div>
@@ -1546,218 +1579,289 @@ export default function RefeicaoModule({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: '1fr',
               gap: SPACING.lg,
             }}
           >
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Data da Refeição
-              </label>
-              <input
-                type="date"
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  transition: 'all 0.2s ease',
-                }}
-                value={formData.data_refeicao}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    data_refeicao: e.target.value,
-                  }))
-                }
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Refeição
-              </label>
-              <select
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  cursor: 'pointer',
-                }}
-                value={formData.refeicao}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, refeicao: e.target.value }))
-                }
-              >
-                {refeicoes.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Horário Início
-              </label>
-              <input
-                type="time"
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  transition: 'all 0.2s ease',
-                }}
-                value={formData.horario_inicio}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    horario_inicio: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Horário Fim
-              </label>
-              <input
-                type="time"
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  transition: 'all 0.2s ease',
-                }}
-                value={formData.horario_termino}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    horario_termino: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: SPACING.lg }}>
-            <label
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: COLORS.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'block',
-                marginBottom: SPACING.md,
-              }}
-            >
-              Alimentos e Bebidas consumidos
-            </label>
-            <textarea
-              style={{
-                width: '100%',
-                padding: `${SPACING.md} ${SPACING.md}`,
-                borderRadius: RADIUS.md,
-                border: `1px solid ${COLORS.border}`,
-                fontSize: '14px',
-                background: `rgba(0,0,0,0.02)`,
-                outline: 'none',
-                color: COLORS.text.primary,
-                transition: 'all 0.2s ease',
-                minHeight: '80px',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-              }}
-              value={formData.alimentos}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  alimentos: e.target.value,
-                }))
-              }
-              placeholder="Ex: Arroz, feijão, carne assada, suco de laranja"
-            />
-          </div>
-
-          <div style={{ marginTop: SPACING.lg }}>
-            <label
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: COLORS.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'block',
-                marginBottom: SPACING.md,
-              }}
-            >
-              Hidratação (mL)
-            </label>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: SPACING.md }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: SPACING.md,
+              }}
             >
+              <div>
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: COLORS.text.secondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    display: 'block',
+                    marginBottom: SPACING.md,
+                  }}
+                >
+                  Data da Refeição
+                </label>
+                <input
+                  type="date"
+                  style={{
+                    width: '100%',
+                    padding: `${SPACING.md} ${SPACING.md}`,
+                    borderRadius: RADIUS.md,
+                    border: `1px solid ${COLORS.border}`,
+                    fontSize: '14px',
+                    background: `rgba(0,0,0,0.02)`,
+                    outline: 'none',
+                    color: COLORS.text.primary,
+                    transition: 'all 0.2s ease',
+                  }}
+                  value={formData.data_refeicao}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      data_refeicao: e.target.value,
+                    }))
+                  }
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: COLORS.text.secondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    display: 'block',
+                    marginBottom: SPACING.md,
+                  }}
+                >
+                  Refeição
+                </label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: `${SPACING.md} ${SPACING.md}`,
+                    borderRadius: RADIUS.md,
+                    border: `1px solid ${COLORS.border}`,
+                    fontSize: '14px',
+                    background: `rgba(0,0,0,0.02)`,
+                    outline: 'none',
+                    color: COLORS.text.primary,
+                    cursor: 'pointer',
+                  }}
+                  value={formData.refeicao}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      refeicao: e.target.value,
+                    }))
+                  }
+                >
+                  {refeicoes.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: SPACING.md,
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: COLORS.text.secondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    display: 'block',
+                    marginBottom: SPACING.md,
+                  }}
+                >
+                  Horário Início
+                </label>
+                <input
+                  type="time"
+                  style={{
+                    width: '100%',
+                    padding: `${SPACING.md} ${SPACING.md}`,
+                    borderRadius: RADIUS.md,
+                    border: `1px solid ${COLORS.border}`,
+                    fontSize: '14px',
+                    background: `rgba(0,0,0,0.02)`,
+                    outline: 'none',
+                    color: COLORS.text.primary,
+                    transition: 'all 0.2s ease',
+                  }}
+                  value={formData.horario_inicio}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      horario_inicio: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: COLORS.text.secondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    display: 'block',
+                    marginBottom: SPACING.md,
+                  }}
+                >
+                  Horário Fim
+                </label>
+                <input
+                  type="time"
+                  style={{
+                    width: '100%',
+                    padding: `${SPACING.md} ${SPACING.md}`,
+                    borderRadius: RADIUS.md,
+                    border: `1px solid ${COLORS.border}`,
+                    fontSize: '14px',
+                    background: `rgba(0,0,0,0.02)`,
+                    outline: 'none',
+                    color: COLORS.text.primary,
+                    transition: 'all 0.2s ease',
+                  }}
+                  value={formData.horario_termino}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      horario_termino: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: COLORS.text.secondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  display: 'block',
+                  marginBottom: SPACING.md,
+                }}
+              >
+                Alimentos e Bebidas consumidos
+              </label>
+              <textarea
+                style={{
+                  width: '100%',
+                  padding: `${SPACING.md} ${SPACING.md}`,
+                  borderRadius: RADIUS.md,
+                  border: `1px solid ${COLORS.border}`,
+                  fontSize: '14px',
+                  background: `rgba(0,0,0,0.02)`,
+                  outline: 'none',
+                  color: COLORS.text.primary,
+                  transition: 'all 0.2s ease',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                }}
+                value={formData.alimentos}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    alimentos: e.target.value,
+                  }))
+                }
+                placeholder="Ex: Arroz, feijão, carne assada, suco de laranja"
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: COLORS.text.secondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  display: 'block',
+                  marginBottom: SPACING.md,
+                }}
+              >
+                Hidratação (mL)
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACING.md,
+                }}
+              >
+                <input
+                  type="number"
+                  style={{
+                    flex: 1,
+                    padding: `${SPACING.md} ${SPACING.md}`,
+                    borderRadius: RADIUS.md,
+                    border: `1px solid ${COLORS.border}`,
+                    fontSize: '14px',
+                    background: `rgba(0,0,0,0.02)`,
+                    outline: 'none',
+                    color: COLORS.text.primary,
+                    transition: 'all 0.2s ease',
+                  }}
+                  value={formData.hidratacao_ml}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setFormData((prev) => ({ ...prev, hidratacao_ml: val }));
+                  }}
+                  placeholder="Ex: 500"
+                  min="0"
+                  step="50"
+                />
+                <span
+                  style={{
+                    fontSize: '14px',
+                    color: COLORS.text.secondary,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  mL
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: COLORS.text.secondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  display: 'block',
+                  marginBottom: SPACING.md,
+                }}
+              >
+                Frente de Serviço
+              </label>
               <input
-                type="number"
+                type="text"
                 style={{
                   width: '100%',
                   padding: `${SPACING.md} ${SPACING.md}`,
@@ -1769,128 +1873,82 @@ export default function RefeicaoModule({
                   color: COLORS.text.primary,
                   transition: 'all 0.2s ease',
                 }}
-                value={formData.hidratacao_ml}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value) || 0;
-                  setFormData((prev) => ({ ...prev, hidratacao_ml: val }));
-                }}
-                placeholder="Ex: 500"
-                min="0"
-                step="50"
+                value={formData.frente_servico}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    frente_servico: e.target.value,
+                  }))
+                }
+                placeholder="Ex: SANTOS SCOUT"
               />
-              <span
-                style={{
-                  fontSize: '14px',
-                  color: COLORS.text.secondary,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                mL
-              </span>
             </div>
-          </div>
 
-          <div style={{ marginTop: SPACING.lg }}>
-            <label
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: COLORS.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'block',
-                marginBottom: SPACING.md,
-              }}
-            >
-              Frente de Serviço
-            </label>
-            <input
-              type="text"
-              style={{
-                width: '100%',
-                padding: `${SPACING.md} ${SPACING.md}`,
-                borderRadius: RADIUS.md,
-                border: `1px solid ${COLORS.border}`,
-                fontSize: '14px',
-                background: `rgba(0,0,0,0.02)`,
-                outline: 'none',
-                color: COLORS.text.primary,
-                transition: 'all 0.2s ease',
-              }}
-              value={formData.frente_servico}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  frente_servico: e.target.value,
-                }))
-              }
-              placeholder="Ex: SANTOS SCOUT"
+            {/* FOTO DO PRATO */}
+            <UploadArea
+              label="Foto do Prato"
+              required
+              icon={<IconCamera size={32} color={COLORS.primary} />}
+              preview={fotoPrato?.preview}
+              onFileSelect={(file) => processarFoto(file).then(setFotoPrato)}
+              onRemove={() => setFotoPrato(null)}
+              color={COLORS.primary}
             />
-          </div>
 
-          {/* FOTO DO PRATO */}
-          <UploadArea
-            label="Foto do Prato"
-            required
-            icon={<IconCamera size={32} color={COLORS.primary} />}
-            preview={fotoPrato?.preview}
-            onFileSelect={(file) => processarFoto(file).then(setFotoPrato)}
-            onRemove={() => setFotoPrato(null)}
-            color={COLORS.primary}
-          />
+            {/* SELFIE */}
+            <UploadArea
+              label="Selfie do Colaborador (opcional)"
+              icon={<IconCamera size={32} color="#8b5cf6" />}
+              preview={selfie?.preview}
+              onFileSelect={(file) => {
+                const reader = new FileReader();
+                reader.onloadend = () =>
+                  setSelfie({ file, preview: reader.result as string });
+                reader.readAsDataURL(file);
+              }}
+              onRemove={() => setSelfie(null)}
+              color="#8b5cf6"
+            />
 
-          {/* SELFIE */}
-          <UploadArea
-            label="Selfie do Colaborador (opcional)"
-            icon={<IconCamera size={32} color="#8b5cf6" />}
-            preview={selfie?.preview}
-            onFileSelect={(file) => {
-              const reader = new FileReader();
-              reader.onloadend = () =>
-                setSelfie({ file, preview: reader.result as string });
-              reader.readAsDataURL(file);
-            }}
-            onRemove={() => setSelfie(null)}
-            color="#8b5cf6"
-          />
-
-          {/* BOTÕES */}
-          <div
-            style={{
-              marginTop: SPACING.xl,
-              paddingTop: SPACING.lg,
-              borderTop: `1px solid ${COLORS.border}`,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: SPACING.md,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => {
-                setShowForm(false);
-                setIsAtrasado(false);
-                setFotoPrato(null);
-                setSelfie(null);
+            {/* BOTÕES */}
+            <div
+              style={{
+                marginTop: SPACING.md,
+                paddingTop: SPACING.md,
+                borderTop: `1px solid ${COLORS.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACING.md,
               }}
             >
-              Cancelar
-            </Button>
-            <Button
-              variant={isAtrasado ? 'secondary' : 'primary'}
-              size="md"
-              onClick={handleSubmit}
-              disabled={saving}
-              icon={saving ? '⏳' : '💾'}
-            >
-              {saving
-                ? 'Salvando...'
-                : isAtrasado
-                ? 'Salvar Atrasado'
-                : 'Salvar Registro'}
-            </Button>
+              <Button
+                variant={isAtrasado ? 'secondary' : 'primary'}
+                size="lg"
+                onClick={handleSubmit}
+                disabled={saving}
+                icon={saving ? '⏳' : '💾'}
+                fullWidth
+              >
+                {saving
+                  ? 'Salvando...'
+                  : isAtrasado
+                  ? 'Salvar Atrasado'
+                  : 'Salvar Registro'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setShowForm(false);
+                  setIsAtrasado(false);
+                  setFotoPrato(null);
+                  setSelfie(null);
+                }}
+                fullWidth
+              >
+                Cancelar
+              </Button>
+            </div>
           </div>
         </Card>
       )}
@@ -1900,40 +1958,48 @@ export default function RefeicaoModule({
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: SPACING.lg,
-            flexWrap: 'wrap',
+            flexDirection: 'column',
             gap: SPACING.md,
+            marginBottom: SPACING.lg,
           }}
         >
-          <h3
+          <div
             style={{
-              fontSize: '16px',
-              fontWeight: 700,
-              color: COLORS.text.primary,
-              margin: 0,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: SPACING.md,
             }}
           >
-            {isRestricted ? 'Meus Registros' : 'Registros do Dia'}
-          </h3>
-          <input
-            type="date"
-            style={{
-              width: '100%',
-              maxWidth: '200px',
-              padding: `${SPACING.md} ${SPACING.md}`,
-              borderRadius: RADIUS.md,
-              border: `1px solid ${COLORS.border}`,
-              fontSize: '14px',
-              background: `rgba(0,0,0,0.02)`,
-              outline: 'none',
-              color: COLORS.text.primary,
-              transition: 'all 0.2s ease',
-            }}
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
+            <h3
+              style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: COLORS.text.primary,
+                margin: 0,
+              }}
+            >
+              {isRestricted ? 'Meus Registros' : 'Registros do Dia'}
+            </h3>
+            <input
+              type="date"
+              style={{
+                padding: `${SPACING.md} ${SPACING.md}`,
+                borderRadius: RADIUS.md,
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '14px',
+                background: `rgba(0,0,0,0.02)`,
+                outline: 'none',
+                color: COLORS.text.primary,
+                transition: 'all 0.2s ease',
+                maxWidth: '160px',
+                width: '100%',
+              }}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
         </div>
 
         {registrosFiltrados.length === 0 ? (
@@ -1969,6 +2035,7 @@ export default function RefeicaoModule({
                 width: '100%',
                 borderCollapse: 'collapse',
                 fontSize: '13px',
+                minWidth: '500px',
               }}
             >
               <thead>
@@ -1999,6 +2066,7 @@ export default function RefeicaoModule({
                         color: COLORS.text.secondary,
                         fontSize: '11px',
                         textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {header}
@@ -2016,6 +2084,7 @@ export default function RefeicaoModule({
                       style={{
                         padding: `${SPACING.md} ${SPACING.md}`,
                         color: COLORS.text.primary,
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {new Date(reg.data_refeicao).toLocaleDateString('pt-BR')}
@@ -2024,6 +2093,7 @@ export default function RefeicaoModule({
                       style={{
                         padding: `${SPACING.md} ${SPACING.md}`,
                         color: COLORS.text.primary,
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {reg.refeicao}
@@ -2032,6 +2102,7 @@ export default function RefeicaoModule({
                       style={{
                         padding: `${SPACING.md} ${SPACING.md}`,
                         color: COLORS.text.secondary,
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {reg.horario_inicio} - {reg.horario_termino}
@@ -2040,12 +2111,13 @@ export default function RefeicaoModule({
                       style={{
                         padding: `${SPACING.md} ${SPACING.md}`,
                         color: COLORS.text.secondary,
-                        maxWidth: '200px',
+                        maxWidth: '140px',
                         whiteSpace: 'normal',
+                        wordBreak: 'break-word',
                       }}
                     >
-                      {reg.alimentos.length > 50
-                        ? reg.alimentos.substring(0, 50) + '...'
+                      {reg.alimentos.length > 35
+                        ? reg.alimentos.substring(0, 35) + '...'
                         : reg.alimentos}
                       {reg.hidratacao_ml > 0 && (
                         <span
@@ -2090,12 +2162,12 @@ export default function RefeicaoModule({
                         }
                       >
                         {reg.status_validacao === 'aprovado'
-                          ? '✅ Aprovado'
+                          ? '✅'
                           : reg.status_validacao === 'pendente'
-                          ? '⏳ Pendente'
+                          ? '⏳'
                           : reg.status_validacao === 'rejeitado'
-                          ? '❌ Rejeitado'
-                          : '⚠️ Duvidoso'}
+                          ? '❌'
+                          : '⚠️'}
                       </Badge>
                     </td>
                     <td
