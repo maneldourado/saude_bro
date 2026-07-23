@@ -1,4 +1,4 @@
-// app/DashboardModule.tsx - VERSÃO MINIMALISTA COM CORES SUAVES
+// app/DashboardModule.tsx - VERSÃO MINIMALISTA COM CORES SUAVES (RESPONSIVA)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -34,6 +34,17 @@ export default function DashboardModule({
   const [currentDate, setCurrentDate] = useState<string>('');
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDay, setCurrentDay] = useState<string>('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const calculateBMI = (
     weight: number | string,
@@ -193,7 +204,6 @@ export default function DashboardModule({
     textSec: '#6b6560',
     textMut: '#9b9590',
 
-    // Cores suaves para os cards
     green: '#4a7c59',
     greenBg: '#e8f0e9',
     greenLight: '#f0f7f1',
@@ -228,9 +238,10 @@ export default function DashboardModule({
     shadowMd: '0 4px 8px rgba(0,0,0,0.06)',
   };
 
+  // ===== ESTILOS RESPONSIVOS =====
   const s = {
     container: {
-      padding: '28px',
+      padding: isMobile ? '12px' : '28px',
       maxWidth: '1400px',
       margin: '0 auto',
       fontFamily:
@@ -242,83 +253,85 @@ export default function DashboardModule({
     hero: {
       background: c.card,
       borderRadius: '12px',
-      padding: '28px 32px',
-      marginBottom: '24px',
+      padding: isMobile ? '16px 18px' : '28px 32px',
+      marginBottom: isMobile ? '16px' : '24px',
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      gap: isMobile ? '8px' : '0',
       border: `1px solid ${c.border}`,
       boxShadow: c.shadow,
     } as React.CSSProperties,
     heroTitle: {
-      fontSize: '22px',
+      fontSize: isMobile ? '18px' : '22px',
       fontWeight: 600,
       color: c.text,
       margin: 0,
     } as React.CSSProperties,
     heroSub: {
-      fontSize: '13px',
+      fontSize: isMobile ? '12px' : '13px',
       color: c.textSec,
-      margin: '4px 0 0 0',
+      margin: '2px 0 0 0',
     } as React.CSSProperties,
     heroDate: {
-      fontSize: '14px',
+      fontSize: isMobile ? '13px' : '14px',
       fontWeight: 500,
       color: c.text,
+      textAlign: isMobile ? 'left' : 'right',
     } as React.CSSProperties,
     heroTime: {
-      fontSize: '24px',
+      fontSize: isMobile ? '20px' : '24px',
       fontWeight: 700,
       color: c.primary,
     } as React.CSSProperties,
     heroDay: {
-      fontSize: '12px',
+      fontSize: isMobile ? '11px' : '12px',
       color: c.textSec,
-      marginBottom: '4px',
+      marginBottom: '2px',
       textTransform: 'capitalize' as const,
     } as React.CSSProperties,
 
     row4: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '14px',
-      marginBottom: '24px',
+      gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+      gap: isMobile ? '10px' : '14px',
+      marginBottom: isMobile ? '16px' : '24px',
     } as React.CSSProperties,
     row2: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '14px',
-      marginBottom: '24px',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+      gap: isMobile ? '12px' : '14px',
+      marginBottom: isMobile ? '16px' : '24px',
     } as React.CSSProperties,
     rowMini: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-      gap: '10px',
-      marginBottom: '24px',
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(130px, 1fr))',
+      gap: isMobile ? '8px' : '10px',
+      marginBottom: isMobile ? '16px' : '24px',
     } as React.CSSProperties,
 
     card: {
       background: c.card,
       borderRadius: '10px',
-      padding: '20px',
+      padding: isMobile ? '14px' : '20px',
       border: `1px solid ${c.border}`,
       boxShadow: c.shadow,
     } as React.CSSProperties,
     cardTitle: {
-      fontSize: '14px',
+      fontSize: isMobile ? '13px' : '14px',
       fontWeight: 600,
       color: c.text,
-      margin: '0 0 16px 0',
+      margin: '0 0 12px 0',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
+      gap: '6px',
     } as React.CSSProperties,
 
-    // Stats cards
     statCard: {
       background: c.card,
       borderRadius: '10px',
-      padding: '18px',
+      padding: isMobile ? '14px' : '18px',
       border: `1px solid ${c.border}`,
       boxShadow: c.shadow,
       transition: 'all 0.2s ease',
@@ -331,36 +344,37 @@ export default function DashboardModule({
     statRow: {
       display: 'flex',
       alignItems: 'center',
-      gap: '12px',
-      marginBottom: '8px',
+      gap: isMobile ? '10px' : '12px',
+      marginBottom: '4px',
     } as React.CSSProperties,
     statIcon: (bg: string, cl: string) =>
       ({
-        width: '44px',
-        height: '44px',
-        borderRadius: '10px',
+        width: isMobile ? '38px' : '44px',
+        height: isMobile ? '38px' : '44px',
+        borderRadius: '8px',
         background: bg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         color: cl,
-        fontSize: '18px',
+        fontSize: isMobile ? '15px' : '18px',
+        flexShrink: 0,
       } as React.CSSProperties),
     statNum: {
-      fontSize: '32px',
+      fontSize: isMobile ? '24px' : '32px',
       fontWeight: 700,
       color: c.text,
       lineHeight: 1,
     } as React.CSSProperties,
     statLabel: {
-      fontSize: '11px',
+      fontSize: isMobile ? '9px' : '11px',
       fontWeight: 600,
       color: c.textMut,
       textTransform: 'uppercase' as const,
       letterSpacing: '0.05em',
     } as React.CSSProperties,
     statComp: {
-      fontSize: '12px',
+      fontSize: isMobile ? '10px' : '12px',
       fontWeight: 500,
       color: c.textSec,
       display: 'flex',
@@ -368,12 +382,11 @@ export default function DashboardModule({
       gap: '4px',
     } as React.CSSProperties,
 
-    // Mini cards com cores
     miniCard: (bg: string) =>
       ({
         background: bg,
         borderRadius: '8px',
-        padding: '14px',
+        padding: isMobile ? '10px' : '14px',
         border: `1px solid ${c.border}`,
         boxShadow: c.shadow,
         textAlign: 'center' as const,
@@ -381,47 +394,46 @@ export default function DashboardModule({
         cursor: 'default',
       } as React.CSSProperties),
     miniNum: {
-      fontSize: '22px',
+      fontSize: isMobile ? '18px' : '22px',
       fontWeight: 700,
       color: c.text,
     } as React.CSSProperties,
     miniLabel: {
-      fontSize: '10px',
+      fontSize: isMobile ? '8px' : '10px',
       fontWeight: 600,
       color: c.textMut,
       textTransform: 'uppercase' as const,
       letterSpacing: '0.05em',
-      marginTop: '4px',
-    } as React.CSSProperties,
-    miniPct: {
-      fontSize: '11px',
-      fontWeight: 500,
-      color: c.textSec,
       marginTop: '2px',
     } as React.CSSProperties,
+    miniPct: {
+      fontSize: isMobile ? '9px' : '11px',
+      fontWeight: 500,
+      color: c.textSec,
+      marginTop: '1px',
+    } as React.CSSProperties,
 
-    // Pyramid
-    pyrRow: { marginBottom: '12px' } as React.CSSProperties,
+    pyrRow: { marginBottom: isMobile ? '10px' : '12px' } as React.CSSProperties,
     pyrHead: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '4px',
+      marginBottom: '3px',
     } as React.CSSProperties,
     pyrName: {
-      fontSize: '13px',
+      fontSize: isMobile ? '12px' : '13px',
       fontWeight: 500,
       color: c.text,
     } as React.CSSProperties,
     pyrVal: {
-      fontSize: '13px',
+      fontSize: isMobile ? '12px' : '13px',
       fontWeight: 600,
       color: c.text,
     } as React.CSSProperties,
     pyrBar: {
-      height: '14px',
+      height: isMobile ? '10px' : '14px',
       background: c.borderLight,
-      borderRadius: '7px',
+      borderRadius: '6px',
       overflow: 'hidden',
     } as React.CSSProperties,
     pyrFill: (w: number, cl: string) =>
@@ -429,51 +441,50 @@ export default function DashboardModule({
         width: `${Math.min(w, 100)}%`,
         height: '100%',
         background: cl,
-        borderRadius: '7px',
+        borderRadius: '6px',
         transition: 'width 0.6s ease',
       } as React.CSSProperties),
     pyrInfo: {
-      marginTop: '10px',
-      padding: '8px 12px',
+      marginTop: '8px',
+      padding: '6px 10px',
       background: c.bg,
       borderRadius: '6px',
-      fontSize: '12px',
+      fontSize: isMobile ? '11px' : '12px',
       color: c.textSec,
     } as React.CSSProperties,
 
-    // Tox
     toxGrid: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
-      gap: '8px',
-      marginBottom: '12px',
+      gap: isMobile ? '6px' : '8px',
+      marginBottom: isMobile ? '10px' : '12px',
     } as React.CSSProperties,
     toxItem: (bg: string) =>
       ({
         background: bg,
         borderRadius: '8px',
-        padding: '12px',
+        padding: isMobile ? '10px' : '12px',
         border: `1px solid ${c.borderLight}`,
       } as React.CSSProperties),
     toxLabel: {
-      fontSize: '10px',
+      fontSize: isMobile ? '9px' : '10px',
       fontWeight: 600,
       color: c.textMut,
       textTransform: 'uppercase' as const,
       letterSpacing: '0.05em',
     } as React.CSSProperties,
     toxVal: {
-      fontSize: '20px',
+      fontSize: isMobile ? '18px' : '20px',
       fontWeight: 700,
       color: c.text,
-      marginTop: '2px',
+      marginTop: '1px',
     } as React.CSSProperties,
     progBar: {
-      height: '16px',
+      height: isMobile ? '12px' : '16px',
       background: c.borderLight,
       borderRadius: '8px',
       overflow: 'hidden',
-      marginBottom: '4px',
+      marginBottom: '3px',
     } as React.CSSProperties,
     progFill: (w: number) =>
       ({
@@ -484,73 +495,74 @@ export default function DashboardModule({
         transition: 'width 0.6s ease',
       } as React.CSSProperties),
     progLabel: {
-      fontSize: '12px',
+      fontSize: isMobile ? '11px' : '12px',
       fontWeight: 700,
       color: c.text,
     } as React.CSSProperties,
     progTitle: {
-      fontSize: '10px',
+      fontSize: isMobile ? '9px' : '10px',
       fontWeight: 600,
       color: c.textMut,
       textTransform: 'uppercase' as const,
       letterSpacing: '0.05em',
-      marginBottom: '6px',
+      marginBottom: '4px',
     } as React.CSSProperties,
 
-    // Timeline
     tlList: {
       display: 'flex',
       flexDirection: 'column' as const,
-      gap: '8px',
+      gap: isMobile ? '6px' : '8px',
     } as React.CSSProperties,
     tlItem: {
       display: 'flex',
       alignItems: 'center',
-      gap: '10px',
-      padding: '10px 12px',
+      gap: isMobile ? '8px' : '10px',
+      padding: isMobile ? '8px 10px' : '10px 12px',
       background: c.bg,
       borderRadius: '8px',
       border: `1px solid ${c.borderLight}`,
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
     } as React.CSSProperties,
     tlIcon: {
-      width: '32px',
-      height: '32px',
-      borderRadius: '8px',
+      width: isMobile ? '28px' : '32px',
+      height: isMobile ? '28px' : '32px',
+      borderRadius: '6px',
       background: c.redBg,
       color: c.red,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '13px',
+      fontSize: isMobile ? '11px' : '13px',
+      flexShrink: 0,
     } as React.CSSProperties,
     tlName: {
-      fontSize: '13px',
+      fontSize: isMobile ? '12px' : '13px',
       fontWeight: 600,
       color: c.text,
     } as React.CSSProperties,
     tlDesc: {
-      fontSize: '11px',
+      fontSize: isMobile ? '10px' : '11px',
       color: c.textSec,
-      marginTop: '2px',
+      marginTop: '1px',
     } as React.CSSProperties,
     tlBadge: {
       padding: '2px 8px',
-      borderRadius: '8px',
-      fontSize: '10px',
+      borderRadius: '6px',
+      fontSize: isMobile ? '8px' : '10px',
       fontWeight: 700,
       background: c.redBg,
       color: c.red,
+      whiteSpace: 'nowrap',
     } as React.CSSProperties,
 
-    // Actions
     actGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-      gap: '8px',
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(110px, 1fr))',
+      gap: isMobile ? '6px' : '8px',
     } as React.CSSProperties,
     actBtn: (bg: string, cl: string) =>
       ({
-        padding: '14px 10px',
+        padding: isMobile ? '10px 8px' : '14px 10px',
         borderRadius: '8px',
         border: `1px solid ${c.border}`,
         background: c.card,
@@ -559,33 +571,36 @@ export default function DashboardModule({
         display: 'flex',
         flexDirection: 'column' as const,
         alignItems: 'center',
-        gap: '6px',
+        gap: isMobile ? '4px' : '6px',
         transition: 'all 0.2s ease',
-        fontSize: '11px',
+        fontSize: isMobile ? '10px' : '11px',
         fontWeight: 600,
         width: '100%',
         boxShadow: c.shadow,
       } as React.CSSProperties),
     actIcon: (cl: string) =>
-      ({ fontSize: '20px', color: cl } as React.CSSProperties),
+      ({
+        fontSize: isMobile ? '16px' : '20px',
+        color: cl,
+      } as React.CSSProperties),
 
     empty: {
       textAlign: 'center' as const,
-      padding: '20px',
+      padding: isMobile ? '12px' : '20px',
       color: c.textMut,
-      fontSize: '13px',
+      fontSize: isMobile ? '12px' : '13px',
     } as React.CSSProperties,
     loading: {
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '80px 32px',
-      gap: '14px',
+      padding: isMobile ? '40px 16px' : '80px 32px',
+      gap: '12px',
     } as React.CSSProperties,
     spinner: {
-      width: '36px',
-      height: '36px',
+      width: isMobile ? '28px' : '36px',
+      height: isMobile ? '28px' : '36px',
       border: `2px solid ${c.border}`,
       borderTop: `2px solid ${c.primary}`,
       borderRadius: '50%',
@@ -600,7 +615,7 @@ export default function DashboardModule({
       <div style={s.loading}>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         <div style={s.spinner}></div>
-        <p style={{ color: c.textSec, fontSize: '14px' }}>
+        <p style={{ color: c.textSec, fontSize: isMobile ? '13px' : '14px' }}>
           Carregando dados...
         </p>
       </div>
@@ -617,7 +632,7 @@ export default function DashboardModule({
           </h1>
           <p style={s.heroSub}>Painel de saúde ocupacional</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
           <div style={s.heroDate}>{currentDate}</div>
           <div style={s.heroDay}>{currentDay}</div>
           <div style={s.heroTime}>{currentTime}</div>
@@ -659,9 +674,11 @@ export default function DashboardModule({
           <div
             key={idx}
             style={s.statCard}
-            onMouseEnter={(e) =>
-              Object.assign(e.currentTarget.style, s.statHover)
-            }
+            onMouseEnter={(e) => {
+              if (!isMobile) {
+                Object.assign(e.currentTarget.style, s.statHover);
+              }
+            }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = '';
               e.currentTarget.style.boxShadow = c.shadow;
@@ -698,8 +715,10 @@ export default function DashboardModule({
             key={idx}
             style={s.miniCard(item.bg)}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = c.shadowMd;
+              if (!isMobile) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = c.shadowMd;
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = '';
@@ -796,7 +815,7 @@ export default function DashboardModule({
                   <div style={s.tlIcon}>
                     <i className="fas fa-file-medical"></i>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: isMobile ? '80px' : 'auto' }}>
                     <div style={s.tlName}>{item.colaborador_nome}</div>
                     <div style={s.tlDesc}>Atestado pendente</div>
                   </div>
@@ -871,8 +890,10 @@ export default function DashboardModule({
                 style={s.actBtn(a.cl + '15', a.cl)}
                 onClick={() => handleAction(a.mod)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = a.cl + '25';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  if (!isMobile) {
+                    e.currentTarget.style.background = a.cl + '25';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = c.card;
