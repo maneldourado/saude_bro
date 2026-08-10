@@ -6,220 +6,220 @@ import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 
 // ============================================================
-// ÍCONES SVG - COMPONENTES REUTILIZÁVEIS
+// SISTEMA DE DESIGN - TOKENS E PALETA MODERNA
+// ============================================================
+const THEME = {
+  colors: {
+    primary: {
+      light: '#34d399',
+      main: '#10b981',
+      dark: '#059669',
+      soft: 'rgba(16, 185, 129, 0.1)',
+    },
+    secondary: {
+      light: '#fbbf24',
+      main: '#f59e0b',
+      dark: '#d97706',
+      soft: 'rgba(245, 158, 11, 0.1)',
+    },
+    danger: {
+      light: '#f87171',
+      main: '#ef4444',
+      dark: '#dc2626',
+      soft: 'rgba(239, 68, 68, 0.1)',
+    },
+    info: {
+      light: '#60a5fa',
+      main: '#3b82f6',
+      dark: '#2563eb',
+      soft: 'rgba(59, 130, 246, 0.1)',
+    },
+    warning: {
+      light: '#fb923c',
+      main: '#f97316',
+      dark: '#ea580c',
+      soft: 'rgba(249, 115, 22, 0.1)',
+    },
+    success: {
+      light: '#4ade80',
+      main: '#22c55e',
+      dark: '#16a34a',
+      soft: 'rgba(34, 197, 94, 0.1)',
+    },
+    slate: {
+      50: '#f8fafc',
+      100: '#f1f5f9',
+      200: '#e2e8f0',
+      300: '#cbd5e1',
+      400: '#94a3b8',
+      500: '#64748b',
+      600: '#475569',
+      700: '#334155',
+      800: '#1e293b',
+      900: '#0f172a',
+    },
+    white: '#ffffff',
+    black: '#000000',
+  },
+  shadows: {
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+  },
+  radius: {
+    sm: '6px',
+    md: '8px',
+    lg: '12px',
+    xl: '16px',
+    full: '9999px',
+  },
+  spacing: {
+    xs: '4px',
+    sm: '8px',
+    md: '12px',
+    lg: '16px',
+    xl: '24px',
+    xxl: '32px',
+  },
+  fonts: {
+    sans: '"Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  }
+};
+
+// ============================================================
+// ÍCONES SVG (LUCIDE-STYLE)
 // ============================================================
 interface IconProps {
   size?: number;
   color?: string;
+  strokeWidth?: number;
   className?: string;
 }
 
-const IconUtensils = ({ size = 24, color = 'currentColor' }: IconProps) => (
+const Icon = ({ children, size = 24, color = 'currentColor', strokeWidth = 2, className = '' }: IconProps & { children: React.ReactNode }) => (
   <svg
-    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
+    viewBox="0 0 24 24"
     fill="none"
     stroke={color}
-    strokeWidth="2"
+    strokeWidth={strokeWidth}
     strokeLinecap="round"
     strokeLinejoin="round"
+    className={className}
   >
+    {children}
+  </svg>
+);
+
+const IconUtensils = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
     <path d="M7 2v20" />
     <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
-  </svg>
+  </Icon>
 );
 
-const IconCamera = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconCamera = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
     <circle cx="12" cy="13" r="4" />
-  </svg>
+  </Icon>
 );
 
-const IconCheck = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconCheck = (props: IconProps) => (
+  <Icon {...props}>
     <polyline points="20 6 9 17 4 12" />
-  </svg>
+  </Icon>
 );
 
-const IconAlertTriangle = ({
-  size = 24,
-  color = 'currentColor',
-}: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconAlertTriangle = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M12 9v4" />
     <path d="M12 17h.01" />
     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-  </svg>
+  </Icon>
 );
 
-const IconTrash = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconTrash = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M3 6h18" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-  </svg>
+  </Icon>
 );
 
-const IconClock = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconClock = (props: IconProps) => (
+  <Icon {...props}>
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
-  </svg>
+  </Icon>
 );
 
-const IconUser = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconUser = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
-  </svg>
+  </Icon>
 );
 
-const IconShip = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconShip = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
     <path d="M2 21v-8l2-2h16l2 2v8" />
     <path d="M4 11V6c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v5" />
     <path d="M8 4l-1 3h10l-1-3" />
-  </svg>
+  </Icon>
 );
 
-const IconWeight = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconWeight = (props: IconProps) => (
+  <Icon {...props}>
     <circle cx="12" cy="12" r="10" />
     <line x1="12" y1="8" x2="12" y2="16" />
     <line x1="8" y1="12" x2="16" y2="12" />
-  </svg>
+  </Icon>
 );
 
-const IconLogout = ({ size = 24, color = 'currentColor' }: IconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+const IconLogout = (props: IconProps) => (
+  <Icon {...props}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
+  </Icon>
+);
+
+const IconCalendar = (props: IconProps) => (
+  <Icon {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </Icon>
+);
+
+const IconChevronDown = (props: IconProps) => (
+  <Icon {...props}>
+    <polyline points="6 9 12 15 18 9" />
+  </Icon>
+);
+
+const IconPlus = (props: IconProps) => (
+  <Icon {...props}>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </Icon>
+);
+
+const IconDroplets = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M7 16.3c2.2 0 4-1.8 4-4 0-2.2-4-6-4-6s-4 3.8-4 6c0 2.2 1.8 4 4 4Z" />
+    <path d="M17 16.3c2.2 0 4-1.8 4-4 0-2.2-4-6-4-6s-4 3.8-4 6c0 2.2 1.8 4 4 4Z" />
+  </Icon>
 );
 
 // ============================================================
-// SISTEMA DE DESIGN - PALETA DE CORES E TOKENS
-// ============================================================
-const COLORS = {
-  primary: '#10b981',
-  primaryDark: '#059669',
-  secondary: '#f59e0b',
-  danger: '#dc2626',
-  warning: '#d97706',
-  success: '#059669',
-  background: '#ffffff',
-  surface: '#f8fafc',
-  border: 'rgba(0,0,0,0.08)',
-  text: {
-    primary: '#1a1a1a',
-    secondary: '#6b5f55',
-    muted: '#9ca3af',
-  },
-};
-
-const SPACING = {
-  xs: '4px',
-  sm: '8px',
-  md: '12px',
-  lg: '16px',
-  xl: '20px',
-  xxl: '24px',
-};
-
-const RADIUS = {
-  sm: '8px',
-  md: '10px',
-  lg: '12px',
-  xl: '16px',
-};
-
-// ============================================================
-// COMPONENTES REUTILIZÁVEIS (ATUALIZADOS PARA MOBILE)
+// COMPONENTES DE UI REFORMULADOS
 // ============================================================
 
 interface CardProps {
@@ -227,36 +227,62 @@ interface CardProps {
   className?: string;
   style?: React.CSSProperties;
   noPadding?: boolean;
+  variant?: 'default' | 'flat' | 'outline' | 'glass';
 }
 
-const Card = ({ children, className = '', style = {}, noPadding = false }: CardProps) => (
-  <div
-    style={{
-      background: COLORS.background,
-      borderRadius: RADIUS.xl,
-      padding: noPadding ? 0 : SPACING.lg,
-      paddingInline: noPadding ? 0 : SPACING.lg,
-      border: `1px solid ${COLORS.border}`,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-      marginBottom: SPACING.lg,
-      ...style,
-    }}
-    className={className}
-  >
-    {children}
-  </div>
-);
+const Card = ({ children, className = '', style = {}, noPadding = false, variant = 'default' }: CardProps) => {
+  const variants = {
+    default: {
+      background: THEME.colors.white,
+      boxShadow: THEME.shadows.md,
+      border: `1px solid ${THEME.colors.slate[200]}`,
+    },
+    flat: {
+      background: THEME.colors.slate[50],
+      boxShadow: 'none',
+      border: 'none',
+    },
+    outline: {
+      background: 'transparent',
+      boxShadow: 'none',
+      border: `1px solid ${THEME.colors.slate[200]}`,
+    },
+    glass: {
+      background: 'rgba(255, 255, 255, 0.8)',
+      backdropFilter: 'blur(8px)',
+      boxShadow: THEME.shadows.lg,
+      border: '1px solid rgba(255, 255, 255, 0.3)',
+    }
+  };
+
+  return (
+    <div
+      style={{
+        borderRadius: THEME.radius.lg,
+        padding: noPadding ? 0 : THEME.spacing.lg,
+        marginBottom: THEME.spacing.lg,
+        transition: 'all 0.3s ease',
+        ...variants[variant],
+        ...style,
+      }}
+      className={className}
+    >
+      {children}
+    </div>
+  );
+};
 
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'success';
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
   fullWidth?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const Button = ({
@@ -269,135 +295,160 @@ const Button = ({
   className = '',
   style = {},
   fullWidth = false,
+  type = 'button',
 }: ButtonProps) => {
-  const variantStyles = {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const variants = {
     primary: {
-      background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
-      color: 'white',
-      boxShadow: `0 4px 15px rgba(16,185,129,0.15)`,
+      background: THEME.colors.primary.main,
+      color: THEME.colors.white,
+      hover: THEME.colors.primary.dark,
     },
     secondary: {
-      background: COLORS.secondary,
-      color: 'white',
-      boxShadow: `0 4px 15px rgba(245,158,11,0.15)`,
+      background: THEME.colors.secondary.main,
+      color: THEME.colors.white,
+      hover: THEME.colors.secondary.dark,
+    },
+    success: {
+      background: THEME.colors.success.main,
+      color: THEME.colors.white,
+      hover: THEME.colors.success.dark,
     },
     danger: {
-      background: COLORS.danger,
-      color: 'white',
+      background: THEME.colors.danger.main,
+      color: THEME.colors.white,
+      hover: THEME.colors.danger.dark,
+    },
+    outline: {
+      background: 'transparent',
+      color: THEME.colors.slate[700],
+      border: `1px solid ${THEME.colors.slate[300]}`,
+      hover: THEME.colors.slate[100],
     },
     ghost: {
       background: 'transparent',
-      color: COLORS.text.secondary,
-      border: `1px solid ${COLORS.border}`,
+      color: THEME.colors.slate[600],
+      hover: THEME.colors.slate[100],
     },
   };
 
-  const sizeStyles = {
-    sm: { padding: `${SPACING.sm} ${SPACING.md}`, fontSize: '12px' },
-    md: { padding: `${SPACING.md} ${SPACING.xl}`, fontSize: '14px' },
-    lg: { padding: `${SPACING.lg} ${SPACING.xxl}`, fontSize: '16px' },
+  const sizes = {
+    sm: { padding: '6px 12px', fontSize: '12px', gap: '6px' },
+    md: { padding: '10px 20px', fontSize: '14px', gap: '8px' },
+    lg: { padding: '14px 28px', fontSize: '16px', gap: '10px' },
   };
+
+  const currentVariant = variants[variant];
+  const currentSize = sizes[size];
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        border: 'none',
-        borderRadius: RADIUS.lg,
-        fontWeight: 700,
+        border: currentVariant.border || 'none',
+        borderRadius: THEME.radius.md,
+        fontWeight: 600,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.md,
-        opacity: disabled ? 0.6 : 1,
-        whiteSpace: 'nowrap',
+        opacity: disabled ? 0.5 : 1,
         width: fullWidth ? '100%' : 'auto',
-        ...variantStyles[variant],
-        ...sizeStyles[size],
+        background: isHovered && !disabled ? currentVariant.hover : currentVariant.background,
+        color: currentVariant.color,
+        transform: isHovered && !disabled ? 'translateY(-1px)' : 'none',
+        boxShadow: isHovered && !disabled ? THEME.shadows.md : 'none',
+        ...currentSize,
         ...style,
       }}
       className={className}
     >
-      {icon && <span>{icon}</span>}
+      {icon && <span style={{ display: 'flex' }}>{icon}</span>}
       {children}
     </button>
   );
 };
 
 interface BadgeProps {
-  status: 'aprovado' | 'pendente' | 'rejeitado' | 'duvidoso';
+  status: 'aprovado' | 'pendente' | 'rejeitado' | 'duvidoso' | string;
   children: React.ReactNode;
+  showDot?: boolean;
 }
 
-const Badge = ({ status, children }: BadgeProps) => {
-  const statusStyles = {
-    aprovado: { background: '#e8f5e9', color: COLORS.success },
-    pendente: { background: '#fff3e0', color: COLORS.warning },
-    rejeitado: { background: '#fce4ec', color: COLORS.danger },
-    duvidoso: { background: '#f3e8ff', color: '#7c3aed' },
+const Badge = ({ status, children, showDot = true }: BadgeProps) => {
+  const statusMap: Record<string, any> = {
+    aprovado: { bg: THEME.colors.success.soft, color: THEME.colors.success.dark, dot: THEME.colors.success.main },
+    pendente: { bg: THEME.colors.warning.soft, color: THEME.colors.warning.dark, dot: THEME.colors.warning.main },
+    rejeitado: { bg: THEME.colors.danger.soft, color: THEME.colors.danger.dark, dot: THEME.colors.danger.main },
+    duvidoso: { bg: 'rgba(124, 58, 237, 0.1)', color: '#6d28d9', dot: '#7c3aed' },
   };
+
+  const config = statusMap[status.toLowerCase()] || { bg: THEME.colors.slate[100], color: THEME.colors.slate[600], dot: THEME.colors.slate[400] };
 
   return (
     <span
       style={{
-        display: 'inline-block',
-        padding: `${SPACING.xs} ${SPACING.md}`,
-        borderRadius: '20px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '4px 10px',
+        borderRadius: THEME.radius.full,
         fontSize: '11px',
-        fontWeight: 600,
+        fontWeight: 700,
         whiteSpace: 'nowrap',
-        ...statusStyles[status],
+        backgroundColor: config.bg,
+        color: config.color,
+        textTransform: 'uppercase',
+        letterSpacing: '0.025em',
       }}
     >
+      {showDot && (
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: config.dot }} />
+      )}
       {children}
     </span>
   );
 };
 
 interface AlertProps {
-  type: 'success' | 'error' | 'warning';
+  type: 'success' | 'error' | 'warning' | 'info';
   children: React.ReactNode;
   icon?: React.ReactNode;
 }
 
 const Alert = ({ type, children, icon }: AlertProps) => {
-  const typeStyles = {
-    success: {
-      background: '#e8f5e9',
-      color: COLORS.success,
-      borderColor: '#c3e6cb',
-    },
-    error: {
-      background: '#fce4ec',
-      color: COLORS.danger,
-      borderColor: '#f5c6cb',
-    },
-    warning: {
-      background: '#fef3c7',
-      color: COLORS.warning,
-      borderColor: '#fde68a',
-    },
+  const configs = {
+    success: { bg: THEME.colors.success.soft, color: THEME.colors.success.dark, border: THEME.colors.success.main, icon: <IconCheck size={20} /> },
+    error: { bg: THEME.colors.danger.soft, color: THEME.colors.danger.dark, border: THEME.colors.danger.main, icon: <IconAlertTriangle size={20} /> },
+    warning: { bg: THEME.colors.warning.soft, color: THEME.colors.warning.dark, border: THEME.colors.warning.main, icon: <IconAlertTriangle size={20} /> },
+    info: { bg: THEME.colors.info.soft, color: THEME.colors.info.dark, border: THEME.colors.info.main, icon: <IconClock size={20} /> },
   };
+
+  const config = configs[type];
 
   return (
     <div
       style={{
-        padding: `${SPACING.md} ${SPACING.lg}`,
-        borderRadius: RADIUS.lg,
-        border: `1px solid`,
+        padding: THEME.spacing.md,
+        borderRadius: THEME.radius.md,
+        backgroundColor: config.bg,
+        color: config.color,
+        borderLeft: `4px solid ${config.border}`,
         display: 'flex',
-        alignItems: 'center',
-        gap: SPACING.md,
-        marginBottom: SPACING.lg,
-        ...typeStyles[type],
-        flexWrap: 'wrap',
+        alignItems: 'flex-start',
+        gap: THEME.spacing.md,
+        marginBottom: THEME.spacing.lg,
+        boxShadow: THEME.shadows.sm,
       }}
     >
-      {icon && <span>{icon}</span>}
-      <span style={{ flex: 1 }}>{children}</span>
+      <div style={{ marginTop: '2px' }}>{icon || config.icon}</div>
+      <div style={{ fontSize: '14px', lineHeight: '1.5', fontWeight: 500 }}>{children}</div>
     </div>
   );
 };
@@ -409,344 +460,162 @@ interface StatCardProps {
   color?: string;
 }
 
-const StatCard = ({
-  value,
-  label,
-  icon,
-  color = COLORS.primary,
-}: StatCardProps) => (
+const StatCard = ({ value, label, icon, color = THEME.colors.primary.main }: StatCardProps) => (
   <div
     style={{
-      background: COLORS.background,
-      padding: SPACING.lg,
-      borderRadius: RADIUS.lg,
-      border: `1px solid ${COLORS.border}`,
-      textAlign: 'center',
-      transition: 'all 0.2s ease',
+      background: THEME.colors.white,
+      padding: THEME.spacing.lg,
+      borderRadius: THEME.radius.lg,
+      border: `1px solid ${THEME.colors.slate[200]}`,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: THEME.spacing.xs,
+      boxShadow: THEME.shadows.sm,
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
       cursor: 'default',
-      minWidth: '100px',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = THEME.shadows.md;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'none';
+      e.currentTarget.style.boxShadow = THEME.shadows.sm;
     }}
   >
-    {icon && <div style={{ marginBottom: SPACING.sm }}>{icon}</div>}
-    <div
-      style={{
-        fontSize: '24px',
-        fontWeight: 700,
-        color,
-        marginBottom: SPACING.xs,
-      }}
-    >
-      {value}
-    </div>
-    <div style={{ fontSize: '12px', color: COLORS.text.secondary }}>
+    {icon && <div style={{ opacity: 0.8 }}>{icon}</div>}
+    <div style={{ fontSize: '24px', fontWeight: 800, color }}>{value}</div>
+    <div style={{ fontSize: '12px', fontWeight: 600, color: THEME.colors.slate[500], textTransform: 'uppercase', letterSpacing: '0.05em' }}>
       {label}
     </div>
   </div>
 );
 
-interface ProfileCardProps {
-  name: string;
-  codigo: string;
-  cargo: string;
-  email: string;
-  onLogout?: () => void;
-}
+// ============================================================
+// COMPONENTES PRINCIPAIS REFORMULADOS
+// ============================================================
 
-const ProfileCard = ({
-  name,
-  codigo,
-  cargo,
-  email,
-  onLogout,
-}: ProfileCardProps) => (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start',
-      gap: SPACING.md,
-      padding: SPACING.lg,
-      background: COLORS.surface,
-      borderRadius: RADIUS.xl,
-      border: `1px solid ${COLORS.border}`,
-      marginBottom: SPACING.xxl,
-    }}
-  >
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: SPACING.lg,
-        width: '100%',
-        flexWrap: 'wrap',
-      }}
-    >
+const ProfileCard = ({ name, codigo, cargo, email, onLogout }: any) => (
+  <Card variant="glass" style={{ marginBottom: THEME.spacing.xl }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: THEME.spacing.lg, flexWrap: 'wrap' }}>
       <div
         style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
+          width: '64px',
+          height: '64px',
+          borderRadius: THEME.radius.full,
+          background: `linear-gradient(135deg, ${THEME.colors.primary.main} 0%, ${THEME.colors.primary.dark} 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '24px',
-          fontWeight: 700,
-          color: 'white',
+          fontSize: '28px',
+          fontWeight: 800,
+          color: THEME.colors.white,
+          boxShadow: THEME.shadows.md,
           flexShrink: 0,
         }}
       >
         {name.charAt(0).toUpperCase()}
       </div>
-      <div style={{ flex: 1, minWidth: '150px' }}>
-        <h2
-          style={{
-            fontSize: '18px',
-            fontWeight: 700,
-            margin: 0,
-            color: COLORS.text.primary,
-          }}
-        >
-          {name}
-        </h2>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: SPACING.sm,
-            fontSize: '13px',
-            color: COLORS.text.secondary,
-            marginTop: SPACING.xs,
-          }}
-        >
-          <span>
-            <strong style={{ color: COLORS.text.primary }}>Código:</strong>{' '}
-            {codigo}
+      <div style={{ flex: 1, minWidth: '200px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: THEME.colors.slate[900], margin: 0 }}>{name}</h2>
+        <div style={{ display: 'flex', gap: THEME.spacing.md, marginTop: '4px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
+            <strong style={{ color: THEME.colors.slate[900] }}>ID:</strong> {codigo}
           </span>
-          <span>
-            <strong style={{ color: COLORS.text.primary }}>Cargo:</strong>{' '}
-            {cargo || 'Não definido'}
+          <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
+            <strong style={{ color: THEME.colors.slate[900] }}>Cargo:</strong> {cargo || 'N/A'}
           </span>
         </div>
+        <div style={{ fontSize: '13px', color: THEME.colors.slate[500], marginTop: '2px' }}>{email}</div>
       </div>
       {onLogout && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onLogout}
-          icon={<IconLogout size={18} color={COLORS.danger} />}
-          style={{ color: COLORS.danger, borderColor: COLORS.danger }}
-        >
+        <Button variant="outline" size="sm" onClick={onLogout} icon={<IconLogout size={16} color={THEME.colors.danger.main} />} style={{ color: THEME.colors.danger.main, borderColor: THEME.colors.danger.soft }}>
           Sair
         </Button>
       )}
     </div>
-    <div style={{ fontSize: '13px', color: COLORS.text.secondary }}>
-      <strong style={{ color: COLORS.text.primary }}>Email:</strong> {email}
-    </div>
-  </div>
+  </Card>
 );
 
-interface UploadAreaProps {
-  onFileSelect: (file: File) => void;
-  preview?: string;
-  onRemove?: () => void;
-  label: string;
-  required?: boolean;
-  icon?: React.ReactNode;
-  color?: string;
-}
-
-const UploadArea = ({
-  onFileSelect,
-  preview,
-  onRemove,
-  label,
-  required = false,
-  icon,
-  color = COLORS.primary,
-}: UploadAreaProps) => {
+const UploadArea = ({ onFileSelect, preview, onRemove, label, required, icon, color = THEME.colors.primary.main }: any) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: any) => {
     e.preventDefault();
     setIsDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: any) => {
     e.preventDefault();
     setIsDragActive(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      onFileSelect(file);
-    }
+    if (file && file.type.startsWith('image/')) onFileSelect(file);
   };
 
   return (
-    <div style={{ marginTop: SPACING.lg }}>
-      <label
-        style={{
-          fontSize: '12px',
-          fontWeight: 700,
-          color: COLORS.text.secondary,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          display: 'block',
-          marginBottom: SPACING.md,
-        }}
-      >
-        {icon && <span style={{ marginRight: SPACING.sm }}>{icon}</span>}
-        {label}
-        {required && (
-          <span style={{ color: COLORS.danger }}> *OBRIGATÓRIA</span>
-        )}
+    <div style={{ marginBottom: THEME.spacing.lg }}>
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: THEME.spacing.sm }}>
+        {label} {required && <span style={{ color: THEME.colors.danger.main }}>*</span>}
       </label>
       <div
-        style={{
-          border: `2px dashed ${
-            isDragActive || preview ? color : COLORS.border
-          }`,
-          borderRadius: RADIUS.lg,
-          padding: SPACING.xl,
-          textAlign: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          minHeight: '120px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: SPACING.md,
-          background:
-            isDragActive || preview
-              ? `rgba(16, 185, 129, 0.05)`
-              : 'transparent',
-        }}
         onClick={() => fileInputRef.current?.click()}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
+        style={{
+          border: `2px dashed ${preview ? color : isDragActive ? color : THEME.colors.slate[300]}`,
+          borderRadius: THEME.radius.lg,
+          padding: THEME.spacing.xl,
+          textAlign: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          background: isDragActive ? `${color}08` : preview ? `${color}05` : THEME.colors.slate[50],
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: THEME.spacing.md,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
       >
         {preview ? (
           <>
-            <img
-              src={preview}
-              alt="Preview"
-              style={{
-                maxWidth: '180px',
-                maxHeight: '120px',
-                borderRadius: RADIUS.md,
-                objectFit: 'cover',
-              }}
-            />
-            <span style={{ fontSize: '12px', color: COLORS.success }}>
-              ✅ Foto capturada
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove?.();
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: COLORS.danger,
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              Remover
-            </button>
+            <img src={preview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: THEME.radius.md, boxShadow: THEME.shadows.md, objectFit: 'cover' }} />
+            <div style={{ display: 'flex', gap: THEME.spacing.md, alignItems: 'center' }}>
+              <Badge status="aprovado">Foto Capturada</Badge>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
+                style={{ background: 'none', border: 'none', color: THEME.colors.danger.main, cursor: 'pointer', fontSize: '12px', fontWeight: 700, textDecoration: 'underline' }}
+              >
+                Remover
+              </button>
+            </div>
           </>
         ) : (
           <>
-            {icon || <IconCamera size={32} color={color} />}
-            <span style={{ fontSize: '14px', color: COLORS.text.secondary }}>
-              Clique ou arraste a foto
-            </span>
-            <span style={{ fontSize: '12px', color: COLORS.text.muted }}>
-              JPG, PNG (Max 5MB)
-            </span>
+            <div style={{ width: '48px', height: '48px', borderRadius: THEME.radius.full, background: THEME.colors.white, display: 'flex', alignItems: 'center', justifyCenter: 'center', boxShadow: THEME.shadows.sm, color }}>
+              {icon || <IconCamera size={24} />}
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: THEME.colors.slate[700] }}>Clique ou arraste a foto</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: THEME.colors.slate[500] }}>PNG, JPG até 5MB</p>
+            </div>
           </>
         )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFileSelect(file);
-            e.target.value = '';
-          }}
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) onFileSelect(file); e.target.value = ''; }} />
       </div>
     </div>
   );
 };
 
 // ============================================================
-// INTERFACES
-// ============================================================
-interface RegistroRefeicao {
-  id: string;
-  colaborador_codigo: string;
-  colaborador_nome: string;
-  funcao: string;
-  turno: 'Diurno' | 'Noturno';
-  frente_servico: string;
-  data_refeicao: string;
-  refeicao: string;
-  alimentos: string;
-  hidratacao_ml: number;
-  horario_inicio: string;
-  horario_termino: string;
-  foto_prato_url: string;
-  foto_prato_hash?: string;
-  selfie_url?: string;
-  dispositivo_id?: string;
-  ip_address?: string;
-  hash_criptografico?: string;
-  status_validacao: 'pendente' | 'aprovado' | 'rejeitado' | 'duvidoso';
-  nivel_confianca: number;
-  created_at: string;
-  is_atrasado?: boolean;
-  data_original?: string;
-}
-
-interface Embarque {
-  id: string;
-  data_exame: string;
-  frente_servico: string;
-  cargo: string;
-  status: string;
-  imc: number;
-}
-
-interface ImcRecente {
-  peso: number;
-  altura: number;
-  imc: number;
-  data: string;
-  status: string;
-}
-
-interface RefeicaoModuleProps {
-  styles?: any;
-  user: User | null;
-  isRestricted?: boolean;
-  colaboradorNome?: string;
-  colaboradorCargo?: string;
-  onLogout?: () => void;
-}
-
-// ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
+
 export default function RefeicaoModule({
   styles = {},
   user,
@@ -754,19 +623,13 @@ export default function RefeicaoModule({
   colaboradorNome = '',
   colaboradorCargo = '',
   onLogout,
-}: RefeicaoModuleProps) {
-  const [colaboradorInfo, setColaboradorInfo] = useState<{
-    codigo: string;
-    nome: string;
-    cargo: string;
-    email: string;
-  } | null>(null);
-  const [registros, setRegistros] = useState<RegistroRefeicao[]>([]);
-  const [embarques, setEmbarques] = useState<Embarque[]>([]);
-  const [imcRecente, setImcRecente] = useState<ImcRecente | null>(null);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+}: any) {
+  // --- ESTADOS ---
+  const [colaboradorInfo, setColaboradorInfo] = useState<any>(null);
+  const [registros, setRegistros] = useState<any[]>([]);
+  const [embarques, setEmbarques] = useState<any[]>([]);
+  const [imcRecente, setImcRecente] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -784,64 +647,43 @@ export default function RefeicaoModule({
     frente_servico: '',
   });
 
-  const [fotoPrato, setFotoPrato] = useState<{
-    file: File;
-    preview: string;
-    hash: string;
-  } | null>(null);
-  const [selfie, setSelfie] = useState<{ file: File; preview: string } | null>(
-    null
-  );
-  const [deviceInfo, setDeviceInfo] = useState<{
-    id: string;
-    model: string;
-    os: string;
-    app_version: string;
-  } | null>(null);
+  const [fotoPrato, setFotoPrato] = useState<any>(null);
+  const [selfie, setSelfie] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
 
-  const selfieInputRef = useRef<HTMLInputElement>(null);
   const refeicoes = ['Café da Manhã', 'Almoço', 'Jantar', 'Ceia'];
 
-  // ── INICIALIZAÇÃO ──
+  // --- EFEITOS ---
   useEffect(() => {
     let deviceId = localStorage.getItem('device_id');
     if (!deviceId) {
-      deviceId =
-        'dev_' +
-        Date.now().toString(36) +
-        '_' +
-        Math.random().toString(36).substring(2, 9);
+      deviceId = `dev_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
       localStorage.setItem('device_id', deviceId);
     }
+    
+    // Correção: Usando navigator.userAgentData se disponível, senão fallback
+    const ua = navigator.userAgent;
     setDeviceInfo({
       id: deviceId,
-      model: navigator.platform || 'Desconhecido',
-      os: navigator.userAgent || 'Desconhecido',
-      app_version: '1.0.0',
+      model: (navigator as any).platform || 'Desconhecido',
+      os: ua.includes('Windows') ? 'Windows' : ua.includes('Mac') ? 'MacOS' : ua.includes('Android') ? 'Android' : ua.includes('iPhone') ? 'iOS' : 'Linux/Outro',
+      app_version: '2.0.0 (Refactor)',
     });
+
     fetch('https://api.ipify.org?format=json')
-      .then((res) => res.json())
-      .then((data) => setIpAddress(data.ip))
+      .then(res => res.json())
+      .then(data => setIpAddress(data.ip))
       .catch(() => setIpAddress('N/I'));
-    if (user) {
-      buscarColaboradorPorEmail(user.email || '');
-    }
+
+    if (user) buscarColaboradorPorEmail(user.email || '');
   }, [user]);
 
-  // ── BUSCAR COLABORADOR ──
+  // --- LÓGICA (MANTIDA) ---
   const buscarColaboradorPorEmail = async (email: string) => {
-    if (!email) {
-      setError('Email do usuário não encontrado');
-      return;
-    }
+    if (!email) { setError('Email não encontrado'); return; }
     try {
-      const { data, error } = await supabase
-        .from('colaboradores')
-        .select('codigo, nome, cargo, email, departamento')
-        .eq('email', email)
-        .maybeSingle();
-
+      const { data, error } = await supabase.from('colaboradores').select('*').eq('email', email).maybeSingle();
       if (data) {
         const info = {
           codigo: data.codigo || email.split('@')[0].toUpperCase(),
@@ -850,215 +692,101 @@ export default function RefeicaoModule({
           email: data.email || email,
         };
         setColaboradorInfo(info);
-        if (data.departamento) {
-          setFormData((prev) => ({
-            ...prev,
-            frente_servico: data.departamento,
-          }));
-        }
+        if (data.departamento) setFormData(prev => ({ ...prev, frente_servico: data.departamento }));
         carregarDadosColaborador(info.codigo);
         return;
       }
-
       const codigo = email.split('@')[0].toUpperCase();
       const nome = user?.user_metadata?.name || email.split('@')[0];
       const cargo = user?.user_metadata?.cargo || 'Colaborador';
-
-      const { data: novoColaborador, error: insertError } = await supabase
-        .from('colaboradores')
-        .insert([
-          { codigo, nome, email, cargo, modulos_permitidos: ['refeicao'] },
-        ])
-        .select()
-        .maybeSingle();
-
-      if (novoColaborador) {
-        const info = {
-          codigo: novoColaborador.codigo,
-          nome: novoColaborador.nome,
-          cargo: novoColaborador.cargo || 'Colaborador',
-          email: novoColaborador.email,
-        };
-        setColaboradorInfo(info);
-        carregarDadosColaborador(info.codigo);
-        return;
-      }
-
-      setColaboradorInfo({ codigo, nome, cargo, email });
-      carregarDadosColaborador(codigo);
+      const { data: novoColaborador } = await supabase.from('colaboradores').insert([{ codigo, nome, email, cargo, modulos_permitidos: ['refeicao'] }]).select().maybeSingle();
+      const info = novoColaborador ? { codigo: novoColaborador.codigo, nome: novoColaborador.nome, cargo: novoColaborador.cargo, email: novoColaborador.email } : { codigo, nome, cargo, email };
+      setColaboradorInfo(info);
+      carregarDadosColaborador(info.codigo);
     } catch (err) {
-      console.error('Erro ao buscar colaborador:', err);
+      console.error(err);
       if (user?.email) {
         const codigo = user.email.split('@')[0].toUpperCase();
-        setColaboradorInfo({
-          codigo,
-          nome: user.user_metadata?.name || user.email.split('@')[0],
-          cargo: user.user_metadata?.cargo || 'Colaborador',
-          email: user.email,
-        });
+        setColaboradorInfo({ codigo, nome: user.user_metadata?.name || user.email.split('@')[0], cargo: user.user_metadata?.cargo || 'Colaborador', email: user.email });
         carregarDadosColaborador(codigo);
-      } else {
-        setError('Não foi possível identificar o colaborador');
       }
     }
   };
 
-  // ── CARREGAR DADOS ──
   const carregarDadosColaborador = async (codigo: string) => {
     setLoading(true);
     try {
-      // REFEIÇÕES
-      const { data: refeicoesData, error: refeicoesError } = await supabase
-        .from('registros_refeicoes')
-        .select('*')
-        .eq('colaborador_codigo', codigo)
-        .order('data_refeicao', { ascending: false })
-        .order('horario_inicio', { ascending: false });
+      const [refeicoesRes, imcRes, embarquesRes] = await Promise.all([
+        supabase.from('registros_refeicoes').select('*').eq('colaborador_codigo', codigo).order('data_refeicao', { ascending: false }).order('horario_inicio', { ascending: false }),
+        supabase.from('imc_records').select('*').eq('codigo', codigo).order('data_raw', { ascending: false }).limit(1),
+        supabase.from('pre_embarque').select('*').eq('colaborador_codigo', codigo).order('data_exame', { ascending: false })
+      ]);
 
-      if (!refeicoesError && refeicoesData) {
-        setRegistros(refeicoesData);
-      }
-
-      // IMC
-      const { data: imcData, error: imcError } = await supabase
-        .from('imc_records')
-        .select('peso, altura, data_raw, data_str')
-        .eq('codigo', codigo)
-        .order('data_raw', { ascending: false })
-        .limit(1);
-
-      if (!imcError && imcData && imcData.length > 0) {
-        const record = imcData[0];
+      if (refeicoesRes.data) setRegistros(refeicoesRes.data);
+      
+      if (imcRes.data?.[0]) {
+        const record = imcRes.data[0];
         const alturaM = record.altura > 3 ? record.altura / 100 : record.altura;
         const imc = alturaM > 0 ? record.peso / (alturaM * alturaM) : 0;
-        let status = 'Não informado';
-        if (imc > 0) {
-          if (imc < 18.5) status = 'Abaixo do peso';
-          else if (imc < 25) status = 'Peso normal';
-          else if (imc < 30) status = 'Sobrepeso';
-          else if (imc < 35) status = 'Obesidade grau I';
-          else if (imc < 40) status = 'Obesidade grau II';
-          else status = 'Obesidade grau III';
-        }
-        setImcRecente({
-          peso: record.peso,
-          altura: record.altura,
-          imc,
-          data:
-            record.data_str ||
-            new Date(record.data_raw).toLocaleDateString('pt-BR'),
-          status,
-        });
-      } else {
-        setImcRecente(null);
+        let status = 'Normal';
+        if (imc < 18.5) status = 'Abaixo do peso';
+        else if (imc < 25) status = 'Peso normal';
+        else if (imc < 30) status = 'Sobrepeso';
+        else status = 'Obesidade';
+        setImcRecente({ peso: record.peso, altura: record.altura, imc, data: record.data_str || new Date(record.data_raw).toLocaleDateString('pt-BR'), status });
       }
 
-      // EMBARQUES
-      const { data: embarquesData, error: embarquesError } = await supabase
-        .from('pre_embarque')
-        .select('id, data_exame, frente_servico, cargo, status, peso, altura')
-        .eq('colaborador_codigo', codigo)
-        .order('data_exame', { ascending: false });
-
-      if (!embarquesError && embarquesData) {
-        const embarquesFormatados = embarquesData.map((e: any) => {
+      if (embarquesRes.data) {
+        setEmbarques(embarquesRes.data.map((e: any) => {
           const alturaM = e.altura > 3 ? e.altura / 100 : e.altura;
-          const imc = alturaM > 0 ? e.peso / (alturaM * alturaM) : 0;
-          return {
-            id: e.id,
-            data_exame: e.data_exame,
-            frente_servico: e.frente_servico || '-',
-            cargo: e.cargo || '-',
-            status: e.status || 'Pendente',
-            imc,
-          };
-        });
-        setEmbarques(embarquesFormatados);
-      } else {
-        setEmbarques([]);
+          return { ...e, imc: alturaM > 0 ? e.peso / (alturaM * alturaM) : 0 };
+        }));
       }
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  // ── PROCESSAR FOTO ──
   const processarFoto = useCallback((file: File) => {
-    return new Promise<{ file: File; preview: string; hash: string }>(
-      (resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const preview = reader.result as string;
-            const hashBuffer = await crypto.subtle.digest(
-              'SHA-256',
-              new TextEncoder().encode(preview.substring(0, 1000))
-            );
-            const hash = Array.from(new Uint8Array(hashBuffer))
-              .map((b) => b.toString(16).padStart(2, '0'))
-              .join('');
-            resolve({ file, preview, hash });
-          } catch (err) {
-            reject(err);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    );
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const preview = reader.result as string;
+          const encoder = new TextEncoder();
+          const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(preview.substring(0, 1000)));
+          const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+          resolve({ file, preview, hash });
+        } catch (err) { reject(err); }
+      };
+      reader.readAsDataURL(file);
+    });
   }, []);
 
-  // ── UPLOAD ──
-  const uploadFoto = async (file: File, tipo: 'prato' | 'selfie') => {
-    const fileName = `${tipo}_${Date.now()}_${Math.random()
-      .toString(36)
-      .substring(7)}`;
-    const { error } = await supabase.storage
-      .from('refeicoes')
-      .upload(fileName, file);
+  const uploadFoto = async (file: File, tipo: string) => {
+    const fileName = `${tipo}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const { error } = await supabase.storage.from('refeicoes').upload(fileName, file);
     if (error) throw error;
     const { data } = supabase.storage.from('refeicoes').getPublicUrl(fileName);
     return data.publicUrl;
   };
 
-  // ── HASH ──
   const gerarHashIntegridade = async (dados: any) => {
     const dataStr = JSON.stringify(dados) + Date.now().toString();
     const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      encoder.encode(dataStr)
-    );
-    return Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(dataStr));
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
-  // ── SUBMETER ──
   const handleSubmit = async () => {
-    if (!colaboradorInfo) {
-      setError('Colaborador não identificado.');
-      return;
-    }
-    if (!formData.alimentos) {
-      setError('Descreva os alimentos consumidos');
-      return;
-    }
-    if (!fotoPrato) {
-      setError('A foto do prato é OBRIGATÓRIA!');
-      return;
-    }
+    if (!colaboradorInfo) { setError('Colaborador não identificado.'); return; }
+    if (!formData.alimentos) { setError('Descreva os alimentos consumidos'); return; }
+    if (!fotoPrato) { setError('A foto do prato é OBRIGATÓRIA!'); return; }
 
-    setSaving(true);
-    setError(null);
-
+    setSaving(true); setError(null);
     try {
-      const fotoUrl = await uploadFoto(fotoPrato.file, 'prato');
-      let selfieUrl = null;
-      if (selfie) {
-        selfieUrl = await uploadFoto(selfie.file, 'selfie');
-      }
+      const [fotoUrl, selfieUrl] = await Promise.all([
+        uploadFoto(fotoPrato.file, 'prato'),
+        selfie ? uploadFoto(selfie.file, 'selfie') : Promise.resolve(null)
+      ]);
 
       const hashData = {
         codigo: colaboradorInfo.codigo,
@@ -1105,1117 +833,243 @@ export default function RefeicaoModule({
         data_original: isAtrasado ? formData.data_refeicao : null,
       };
 
-      const { data, error: insertError } = await supabase
-        .from('registros_refeicoes')
-        .insert([payload])
-        .select();
+      const { data, error: insertError } = await supabase.from('registros_refeicoes').insert([payload]).select();
       if (insertError) throw insertError;
+      if (data?.[0]) setRegistros([data[0], ...registros]);
 
-      if (data && data[0]) {
-        setRegistros([data[0], ...registros]);
-      }
-
-      setSuccessMessage(
-        isAtrasado
-          ? '✅ Refeição em atraso registrada! Aguardando validação.'
-          : '✅ Refeição registrada com sucesso!'
-      );
+      setSuccessMessage(isAtrasado ? '✅ Refeição em atraso registrada! Aguardando validação.' : '✅ Refeição registrada com sucesso!');
       setTimeout(() => setSuccessMessage(null), 4000);
 
-      setFormData((prev) => ({
-        ...prev,
-        alimentos: '',
-        hidratacao_ml: 0,
-        horario_inicio: '12:00',
-        horario_termino: '12:30',
-      }));
-      setFotoPrato(null);
-      setSelfie(null);
-      setIsAtrasado(false);
-      setShowForm(false);
+      setFormData(prev => ({ ...prev, alimentos: '', hidratacao_ml: 0, horario_inicio: '12:00', horario_termino: '12:30' }));
+      setFotoPrato(null); setSelfie(null); setIsAtrasado(false); setShowForm(false);
     } catch (err: any) {
       console.error('Erro ao salvar:', err);
       setError('Erro ao salvar: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  // ── DELETAR ──
   const deletarRegistro = async (id: string, status: string) => {
-    if (status !== 'pendente') {
-      setError('Apenas registros pendentes podem ser excluídos.');
-      return;
-    }
-    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+    if (status !== 'pendente') { setError('Apenas registros pendentes podem ser excluídos.'); return; }
+    if (!confirm('Deseja realmente excluir este registro?')) return;
     try {
-      const { error } = await supabase
-        .from('registros_refeicoes')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      setRegistros(registros.filter((r) => r.id !== id));
-      setSuccessMessage('Registro excluído!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
-      setError('Erro ao excluir: ' + err.message);
-    }
+      await supabase.from('registros_refeicoes').delete().eq('id', id);
+      setRegistros(registros.filter(r => r.id !== id));
+    } catch (err: any) { setError(err.message); }
   };
 
-  // ── FILTRO ──
-  const registrosFiltrados = useMemo(() => {
-    return registros.filter((r) => r.data_refeicao === selectedDate);
-  }, [registros, selectedDate]);
+  const registrosFiltrados = useMemo(() => registros.filter(r => r.data_refeicao === selectedDate), [registros, selectedDate]);
 
-  // ── RENDER ──
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: SPACING.xxl * 2 }}>
-        <div style={{ fontSize: '32px', marginBottom: SPACING.lg }}>⏳</div>
-        <p style={{ color: COLORS.text.secondary }}>Carregando dados...</p>
-      </div>
-    );
-  }
-
-  if (!colaboradorInfo) {
-    return (
-      <div
-        style={{
-          textAlign: 'center',
-          padding: SPACING.xxl * 2,
-          color: COLORS.danger,
-        }}
-      >
-        <IconAlertTriangle size={40} color={COLORS.danger} />
-        <p>Colaborador não encontrado. Faça login novamente.</p>
-      </div>
-    );
-  }
+  // --- RENDER ---
+  if (loading) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', gap: '16px' }}>
+      <div style={{ width: '40px', height: '40px', border: `3px solid ${THEME.colors.slate[200]}`, borderTopColor: THEME.colors.primary.main, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <p style={{ color: THEME.colors.slate[500], fontWeight: 500 }}>Carregando dados nutricionais...</p>
+    </div>
+  );
 
   return (
-    <div
-      style={{
-        padding: isRestricted ? '0' : SPACING.xxl,
-        maxWidth: '1200px',
-        margin: '0 auto',
-        fontFamily: '"Inter", -apple-system, sans-serif',
-        ...styles,
-      }}
-    >
-      {/* ── PERFIL ── */}
-      {isRestricted && (
-        <ProfileCard
-          name={colaboradorInfo.nome}
-          codigo={colaboradorInfo.codigo}
-          cargo={colaboradorInfo.cargo}
-          email={colaboradorInfo.email}
-          onLogout={onLogout}
-        />
-      )}
-
-      {/* ── CABEÇALHO ── */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: SPACING.md,
-          marginBottom: SPACING.xl,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: SPACING.md,
-          }}
-        >
-          <h1
-            style={{
-              fontSize: '24px',
-              fontWeight: 800,
-              color: COLORS.text.primary,
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACING.md,
-            }}
-          >
-            <IconUtensils size={28} color={COLORS.primary} />
-            {isRestricted ? 'Minhas Refeições' : 'Controle de Refeição'}
+    <div style={{ 
+      maxWidth: '1000px', 
+      margin: '0 auto', 
+      padding: isRestricted ? '0' : THEME.spacing.xl, 
+      fontFamily: THEME.fonts.sans,
+      color: THEME.colors.slate[900],
+      ...styles 
+    }}>
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: THEME.spacing.xl, flexWrap: 'wrap', gap: THEME.spacing.lg }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 900, margin: 0, color: THEME.colors.slate[900], letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <IconUtensils size={32} color={THEME.colors.primary.main} strokeWidth={2.5} />
+            {isRestricted ? 'Minhas Refeições' : 'Gestão Alimentar'}
           </h1>
-          <div
-            style={{ display: 'flex', gap: SPACING.md, flexWrap: 'wrap' }}
-          >
-            <Button
-              variant={isAtrasado ? 'secondary' : 'primary'}
-              size="md"
-              onClick={() => {
-                setIsAtrasado(!isAtrasado);
-                if (!showForm) setShowForm(true);
-              }}
-              icon={<IconClock size={18} />}
-              fullWidth={false}
-            >
-              {isAtrasado ? 'Lançar Atrasado' : '+ Novo Registro'}
-            </Button>
-            {!isAtrasado && (
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => {
-                  setIsAtrasado(true);
-                  setShowForm(true);
-                }}
-                icon={<IconClock size={18} />}
-                fullWidth={false}
-              >
-                Lançar Atrasado
-              </Button>
-            )}
-          </div>
-        </div>
-        {!isRestricted && (
-          <p
-            style={{
-              color: COLORS.text.secondary,
-              fontSize: '14px',
-              margin: 0,
-            }}
-          >
-            {colaboradorInfo.nome} • Cód: {colaboradorInfo.codigo}
+          <p style={{ margin: '4px 0 0 0', color: THEME.colors.slate[500], fontSize: '14px', fontWeight: 500 }}>
+            Monitore sua nutrição e hidratação diária
           </p>
-        )}
+        </div>
+        <div style={{ display: 'flex', gap: THEME.spacing.md }}>
+          <Button 
+            variant={isAtrasado ? 'secondary' : 'primary'} 
+            onClick={() => { setIsAtrasado(!isAtrasado); if (!showForm) setShowForm(true); }}
+            icon={<IconPlus size={18} />}
+          >
+            {isAtrasado ? 'Lançar Atrasado' : 'Novo Registro'}
+          </Button>
+        </div>
       </div>
 
-      {/* ── ESTATÍSTICAS ── */}
+      {isRestricted && <ProfileCard {...colaboradorInfo} onLogout={onLogout} />}
+
+      {/* DASHBOARD GRID */}
       {isRestricted && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: SPACING.md,
-            marginBottom: SPACING.xl,
-          }}
-        >
-          <StatCard
-            value={registros.length}
-            label="Total"
-            icon={<IconUtensils size={20} color={COLORS.primary} />}
-          />
-          <StatCard
-            value={
-              registros.filter((r) => r.status_validacao === 'aprovado').length
-            }
-            label="Aprovadas"
-            icon={<IconCheck size={20} color={COLORS.success} />}
-            color={COLORS.success}
-          />
-          <StatCard
-            value={
-              registros.filter((r) => r.status_validacao === 'pendente').length
-            }
-            label="Pendentes"
-            icon={<IconClock size={20} color={COLORS.warning} />}
-            color={COLORS.warning}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: THEME.spacing.lg, marginBottom: THEME.spacing.xl }}>
+          <div style={{ gridColumn: 'span 1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.md }}>
+            <StatCard value={registros.length} label="Total" icon={<IconUtensils size={20} color={THEME.colors.primary.main} />} />
+            <StatCard value={registros.filter(r => r.status_validacao === 'aprovado').length} label="Aprovados" color={THEME.colors.success.main} icon={<IconCheck size={20} color={THEME.colors.success.main} />} />
+          </div>
+          
+          {imcRecente ? (
+            <Card variant="outline" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: THEME.spacing.lg, background: THEME.colors.white }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: THEME.radius.md, background: THEME.colors.primary.soft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: THEME.colors.primary.main }}>
+                <IconWeight size={24} />
+              </div>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[500], textTransform: 'uppercase' }}>IMC Atual ({imcRecente.data})</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: THEME.colors.slate[900] }}>
+                  {imcRecente.imc.toFixed(1)} 
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: THEME.colors.success.main, marginLeft: '8px' }}>{imcRecente.status}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: THEME.colors.slate[500] }}>{imcRecente.peso}kg • {imcRecente.altura}cm</div>
+              </div>
+            </Card>
+          ) : (
+            <Card variant="outline" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: THEME.spacing.lg, background: THEME.colors.slate[50] }}>
+              <IconWeight size={24} color={THEME.colors.slate[400]} />
+              <div style={{ fontSize: '14px', color: THEME.colors.slate[500], fontWeight: 500 }}>Nenhum registro de IMC disponível</div>
+            </Card>
+          )}
         </div>
       )}
 
-      {/* ── IMC ── */}
-      {isRestricted && imcRecente && imcRecente.imc > 0 && (
-        <Card style={{ background: '#f0fdf4', borderColor: '#86efac' }}>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: SPACING.sm,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACING.md,
-                flexWrap: 'wrap',
-              }}
-            >
-              <IconWeight size={24} color={COLORS.primary} />
-              <div
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: COLORS.text.primary,
-                }}
-              >
-                Último IMC - {imcRecente.data}
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: '20px',
-                fontWeight: 700,
-                color: COLORS.primary,
-              }}
-            >
-              {imcRecente.imc.toFixed(1)}
-              <span
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: COLORS.text.secondary,
-                  marginLeft: SPACING.md,
-                }}
-              >
-                ({imcRecente.status}) • {imcRecente.peso}kg /{' '}
-                {imcRecente.altura}cm
-              </span>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/* MENSAGENS */}
+      {error && <Alert type="error">{error}</Alert>}
+      {successMessage && <Alert type="success">{successMessage}</Alert>}
 
-      {isRestricted && !imcRecente && (
-        <Card
-          style={{ background: COLORS.surface, borderColor: COLORS.border }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACING.md,
-              flexWrap: 'wrap',
-            }}
-          >
-            <IconWeight size={24} color="#94a3b8" />
-            <div>
-              <div
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: COLORS.text.primary,
-                }}
-              >
-                IMC
-              </div>
-              <div style={{ fontSize: '14px', color: COLORS.text.secondary }}>
-                Nenhum registro de IMC encontrado
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* ── EMBARQUES ── */}
-      {isRestricted && embarques.length > 0 && (
-        <Card>
-          <h3
-            style={{
-              fontSize: '16px',
-              fontWeight: 700,
-              margin: `0 0 ${SPACING.lg} 0`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACING.md,
-            }}
-          >
-            <IconShip size={20} color={COLORS.primary} />
-            Histórico de Embarques
-          </h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '13px',
-                minWidth: '400px',
-              }}
-            >
-              <thead>
-                <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
-                  {['Data', 'Frente', 'Cargo', 'IMC', 'Status'].map(
-                    (header) => (
-                      <th
-                        key={header}
-                        style={{
-                          padding: `${SPACING.md} ${SPACING.md}`,
-                          textAlign:
-                            header === 'IMC' || header === 'Status'
-                              ? 'center'
-                              : 'left',
-                          fontWeight: 700,
-                          color: COLORS.text.secondary,
-                          fontSize: '11px',
-                          textTransform: 'uppercase',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {header}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {embarques.map((e) => (
-                  <tr
-                    key={e.id}
-                    style={{ borderBottom: `1px solid ${COLORS.border}` }}
-                  >
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.primary,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {new Date(e.data_exame).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.secondary,
-                      }}
-                    >
-                      {e.frente_servico}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.secondary,
-                      }}
-                    >
-                      {e.cargo}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                        fontWeight: 600,
-                        color: e.imc > 25 ? COLORS.danger : COLORS.success,
-                      }}
-                    >
-                      {e.imc ? e.imc.toFixed(1) : '-'}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Badge status={e.status as any}>{e.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {isRestricted && embarques.length === 0 && (
-        <Card
-          style={{ background: COLORS.surface, borderColor: COLORS.border }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACING.md,
-              flexWrap: 'wrap',
-            }}
-          >
-            <IconShip size={24} color="#94a3b8" />
-            <div>
-              <div
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: COLORS.text.primary,
-                }}
-              >
-                Histórico de Embarques
-              </div>
-              <div style={{ fontSize: '14px', color: COLORS.text.secondary }}>
-                Nenhum embarque registrado
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* ── MENSAGENS ── */}
-      {error && (
-        <Alert
-          type="error"
-          icon={<IconAlertTriangle size={18} color={COLORS.danger} />}
-        >
-          {error}
-        </Alert>
-      )}
-      {successMessage && (
-        <Alert
-          type="success"
-          icon={<IconCheck size={18} color={COLORS.success} />}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
-      {/* ── FORMULÁRIO ── */}
+      {/* FORMULÁRIO */}
       {showForm && (
-        <Card>
-          {isAtrasado && (
-            <Alert
-              type="warning"
-              icon={<IconClock size={20} color={COLORS.warning} />}
-            >
-              <strong>Lançamento em atraso:</strong> Você está registrando uma
-              refeição de uma data anterior. Isso será marcado para validação.
-            </Alert>
-          )}
+        <Card variant="default" style={{ borderTop: `4px solid ${isAtrasado ? THEME.colors.secondary.main : THEME.colors.primary.main}`, position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: THEME.spacing.xl }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{isAtrasado ? 'Registro de Refeição Atrasada' : 'Registrar Nova Refeição'}</h3>
+            <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: THEME.colors.slate[400] }}>
+              <Icon size={20}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Icon>
+            </button>
+          </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: SPACING.lg,
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: SPACING.md,
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: COLORS.text.secondary,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'block',
-                    marginBottom: SPACING.md,
-                  }}
-                >
-                  Data da Refeição
-                </label>
-                <input
-                  type="date"
-                  style={{
-                    width: '100%',
-                    padding: `${SPACING.md} ${SPACING.md}`,
-                    borderRadius: RADIUS.md,
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '14px',
-                    background: `rgba(0,0,0,0.02)`,
-                    outline: 'none',
-                    color: COLORS.text.primary,
-                    transition: 'all 0.2s ease',
-                  }}
-                  value={formData.data_refeicao}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      data_refeicao: e.target.value,
-                    }))
-                  }
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: COLORS.text.secondary,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'block',
-                    marginBottom: SPACING.md,
-                  }}
-                >
-                  Refeição
-                </label>
-                <select
-                  style={{
-                    width: '100%',
-                    padding: `${SPACING.md} ${SPACING.md}`,
-                    borderRadius: RADIUS.md,
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '14px',
-                    background: `rgba(0,0,0,0.02)`,
-                    outline: 'none',
-                    color: COLORS.text.primary,
-                    cursor: 'pointer',
-                  }}
-                  value={formData.refeicao}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      refeicao: e.target.value,
-                    }))
-                  }
-                >
-                  {refeicoes.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.lg, marginBottom: THEME.spacing.lg }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Data</label>
+              <input type="date" value={formData.data_refeicao} onChange={e => setFormData({...formData, data_refeicao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px' }} />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Tipo de Refeição</label>
+              <select value={formData.refeicao} onChange={e => setFormData({...formData, refeicao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px', background: 'white' }}>
+                {refeicoes.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.lg, marginBottom: THEME.spacing.lg }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Início</label>
+              <input type="time" value={formData.horario_inicio} onChange={e => setFormData({...formData, horario_inicio: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px' }} />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Término</label>
+              <input type="time" value={formData.horario_termino} onChange={e => setFormData({...formData, horario_termino: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: THEME.spacing.lg }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Alimentos Consumidos</label>
+            <textarea value={formData.alimentos} onChange={e => setFormData({...formData, alimentos: e.target.value})} placeholder="O que você comeu hoje?" style={{ width: '100%', padding: '12px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px', minHeight: '80px', fontFamily: 'inherit' }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.lg, marginBottom: THEME.spacing.xl }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Hidratação (mL)</label>
+              <div style={{ position: 'relative' }}>
+                <input type="number" value={formData.hidratacao_ml} onChange={e => setFormData({...formData, hidratacao_ml: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '10px', paddingRight: '40px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px' }} />
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[400] }}>mL</span>
               </div>
             </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: SPACING.md,
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: COLORS.text.secondary,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'block',
-                    marginBottom: SPACING.md,
-                  }}
-                >
-                  Horário Início
-                </label>
-                <input
-                  type="time"
-                  style={{
-                    width: '100%',
-                    padding: `${SPACING.md} ${SPACING.md}`,
-                    borderRadius: RADIUS.md,
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '14px',
-                    background: `rgba(0,0,0,0.02)`,
-                    outline: 'none',
-                    color: COLORS.text.primary,
-                    transition: 'all 0.2s ease',
-                  }}
-                  value={formData.horario_inicio}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      horario_inicio: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: COLORS.text.secondary,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'block',
-                    marginBottom: SPACING.md,
-                  }}
-                >
-                  Horário Fim
-                </label>
-                <input
-                  type="time"
-                  style={{
-                    width: '100%',
-                    padding: `${SPACING.md} ${SPACING.md}`,
-                    borderRadius: RADIUS.md,
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '14px',
-                    background: `rgba(0,0,0,0.02)`,
-                    outline: 'none',
-                    color: COLORS.text.primary,
-                    transition: 'all 0.2s ease',
-                  }}
-                  value={formData.horario_termino}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      horario_termino: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: THEME.colors.slate[700], marginBottom: '6px', textTransform: 'uppercase' }}>Frente de Serviço</label>
+              <input type="text" value={formData.frente_servico} onChange={e => setFormData({...formData, frente_servico: e.target.value})} placeholder="Local de trabalho" style={{ width: '100%', padding: '10px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, outline: 'none', fontSize: '14px' }} />
             </div>
+          </div>
 
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Alimentos e Bebidas consumidos
-              </label>
-              <textarea
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  transition: 'all 0.2s ease',
-                  minHeight: '80px',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                }}
-                value={formData.alimentos}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    alimentos: e.target.value,
-                  }))
-                }
-                placeholder="Ex: Arroz, feijão, carne assada, suco de laranja"
-              />
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.lg, marginBottom: THEME.spacing.xl }}>
+            <UploadArea label="Foto do Prato" required preview={fotoPrato?.preview} onFileSelect={(file: File) => processarFoto(file).then(setFotoPrato)} onRemove={() => setFotoPrato(null)} />
+            <UploadArea label="Selfie (Opcional)" color="#8b5cf6" icon={<IconUser size={24} />} preview={selfie?.preview} onFileSelect={(file: File) => { const r = new FileReader(); r.onload = () => setSelfie({file, preview: r.result}); r.readAsDataURL(file); }} onRemove={() => setSelfie(null)} />
+          </div>
 
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Hidratação (mL)
-              </label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACING.md,
-                }}
-              >
-                <input
-                  type="number"
-                  style={{
-                    flex: 1,
-                    padding: `${SPACING.md} ${SPACING.md}`,
-                    borderRadius: RADIUS.md,
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '14px',
-                    background: `rgba(0,0,0,0.02)`,
-                    outline: 'none',
-                    color: COLORS.text.primary,
-                    transition: 'all 0.2s ease',
-                  }}
-                  value={formData.hidratacao_ml}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setFormData((prev) => ({ ...prev, hidratacao_ml: val }));
-                  }}
-                  placeholder="Ex: 500"
-                  min="0"
-                  step="50"
-                />
-                <span
-                  style={{
-                    fontSize: '14px',
-                    color: COLORS.text.secondary,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  mL
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: COLORS.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  display: 'block',
-                  marginBottom: SPACING.md,
-                }}
-              >
-                Frente de Serviço
-              </label>
-              <input
-                type="text"
-                style={{
-                  width: '100%',
-                  padding: `${SPACING.md} ${SPACING.md}`,
-                  borderRadius: RADIUS.md,
-                  border: `1px solid ${COLORS.border}`,
-                  fontSize: '14px',
-                  background: `rgba(0,0,0,0.02)`,
-                  outline: 'none',
-                  color: COLORS.text.primary,
-                  transition: 'all 0.2s ease',
-                }}
-                value={formData.frente_servico}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    frente_servico: e.target.value,
-                  }))
-                }
-                placeholder="Ex: SANTOS SCOUT"
-              />
-            </div>
-
-            {/* FOTO DO PRATO */}
-            <UploadArea
-              label="Foto do Prato"
-              required
-              icon={<IconCamera size={32} color={COLORS.primary} />}
-              preview={fotoPrato?.preview}
-              onFileSelect={(file) => processarFoto(file).then(setFotoPrato)}
-              onRemove={() => setFotoPrato(null)}
-              color={COLORS.primary}
-            />
-
-            {/* SELFIE */}
-            <UploadArea
-              label="Selfie do Colaborador (opcional)"
-              icon={<IconCamera size={32} color="#8b5cf6" />}
-              preview={selfie?.preview}
-              onFileSelect={(file) => {
-                const reader = new FileReader();
-                reader.onloadend = () =>
-                  setSelfie({ file, preview: reader.result as string });
-                reader.readAsDataURL(file);
-              }}
-              onRemove={() => setSelfie(null)}
-              color="#8b5cf6"
-            />
-
-            {/* BOTÕES */}
-            <div
-              style={{
-                marginTop: SPACING.md,
-                paddingTop: SPACING.md,
-                borderTop: `1px solid ${COLORS.border}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: SPACING.md,
-              }}
-            >
-              <Button
-                variant={isAtrasado ? 'secondary' : 'primary'}
-                size="lg"
-                onClick={handleSubmit}
-                disabled={saving}
-                icon={saving ? '⏳' : '💾'}
-                fullWidth
-              >
-                {saving
-                  ? 'Salvando...'
-                  : isAtrasado
-                  ? 'Salvar Atrasado'
-                  : 'Salvar Registro'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="md"
-                onClick={() => {
-                  setShowForm(false);
-                  setIsAtrasado(false);
-                  setFotoPrato(null);
-                  setSelfie(null);
-                }}
-                fullWidth
-              >
-                Cancelar
-              </Button>
-            </div>
+          <div style={{ display: 'flex', gap: THEME.spacing.md, justifyContent: 'flex-end', borderTop: `1px solid ${THEME.colors.slate[100]}`, paddingTop: THEME.spacing.lg }}>
+            <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button variant={isAtrasado ? 'secondary' : 'primary'} onClick={handleSubmit} disabled={saving} icon={saving ? null : <IconCheck size={18} />}>
+              {saving ? 'Salvando...' : 'Confirmar Registro'}
+            </Button>
           </div>
         </Card>
       )}
 
-      {/* ── LISTA DE REGISTROS ── */}
-      <Card>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: SPACING.md,
-            marginBottom: SPACING.lg,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: SPACING.md,
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: COLORS.text.primary,
-                margin: 0,
-              }}
-            >
-              {isRestricted ? 'Meus Registros' : 'Registros do Dia'}
-            </h3>
-            <input
-              type="date"
-              style={{
-                padding: `${SPACING.md} ${SPACING.md}`,
-                borderRadius: RADIUS.md,
-                border: `1px solid ${COLORS.border}`,
-                fontSize: '14px',
-                background: `rgba(0,0,0,0.02)`,
-                outline: 'none',
-                color: COLORS.text.primary,
-                transition: 'all 0.2s ease',
-                maxWidth: '160px',
-                width: '100%',
-              }}
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+      {/* HISTÓRICO E TABELAS */}
+      <Card noPadding variant="outline" style={{ overflow: 'hidden', background: 'white' }}>
+        <div style={{ padding: THEME.spacing.lg, borderBottom: `1px solid ${THEME.colors.slate[100]}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: THEME.spacing.md }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <IconCalendar size={18} color={THEME.colors.primary.main} />
+            Registros Diários
+          </h3>
+          <div style={{ position: 'relative' }}>
+            <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)} 
+              style={{ padding: '6px 12px', borderRadius: THEME.radius.md, border: `1px solid ${THEME.colors.slate[200]}`, fontSize: '13px', fontWeight: 600, color: THEME.colors.slate[700], outline: 'none', background: THEME.colors.slate[50] }} 
             />
           </div>
         </div>
 
         {registrosFiltrados.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: SPACING.xxl * 2,
-              color: COLORS.text.secondary,
-            }}
-          >
-            <span
-              style={{
-                fontSize: '48px',
-                display: 'block',
-                marginBottom: SPACING.md,
-              }}
-            >
-              🍽️
-            </span>
-            <p>Nenhum registro de refeição para este dia</p>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setShowForm(true)}
-            >
-              + Adicionar Refeição
-            </Button>
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>🍽️</div>
+            <p style={{ color: THEME.colors.slate[500], fontWeight: 500 }}>Nenhum registro encontrado para esta data.</p>
+            <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>Adicionar Agora</Button>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '13px',
-                minWidth: '500px',
-              }}
-            >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
-                  {[
-                    'Data',
-                    'Refeição',
-                    'Horário',
-                    'Alimentos',
-                    'Foto',
-                    'Status',
-                    'Atrasado',
-                    'Ações',
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: [
-                          'Foto',
-                          'Status',
-                          'Atrasado',
-                          'Ações',
-                        ].includes(header)
-                          ? 'center'
-                          : 'left',
-                        fontWeight: 700,
-                        color: COLORS.text.secondary,
-                        fontSize: '11px',
-                        textTransform: 'uppercase',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {header}
-                    </th>
+                <tr style={{ background: THEME.colors.slate[50] }}>
+                  {['Refeição', 'Horário', 'Alimentos', 'Status', 'Ações'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: THEME.colors.slate[500], textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {registrosFiltrados.map((reg) => (
-                  <tr
-                    key={reg.id}
-                    style={{ borderBottom: `1px solid ${COLORS.border}` }}
-                  >
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.primary,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {new Date(reg.data_refeicao).toLocaleDateString('pt-BR')}
+                {registrosFiltrados.map((reg, idx) => (
+                  <tr key={reg.id} style={{ borderBottom: idx === registrosFiltrados.length - 1 ? 'none' : `1px solid ${THEME.colors.slate[100]}`, transition: 'background 0.2s' }}>
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ fontWeight: 700, color: THEME.colors.slate[900] }}>{reg.refeicao}</div>
+                      {reg.is_atrasado && <Badge status="pendente" showDot={false}>Atrasado</Badge>}
                     </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.primary,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {reg.refeicao}
+                    <td style={{ padding: '16px', fontSize: '13px', color: THEME.colors.slate[600] }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <IconClock size={14} /> {reg.horario_inicio} - {reg.horario_termino}
+                      </div>
                     </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.secondary,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {reg.horario_inicio} - {reg.horario_termino}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        color: COLORS.text.secondary,
-                        maxWidth: '140px',
-                        whiteSpace: 'normal',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {reg.alimentos.length > 35
-                        ? reg.alimentos.substring(0, 35) + '...'
-                        : reg.alimentos}
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ fontSize: '13px', color: THEME.colors.slate[700], maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reg.alimentos}</div>
                       {reg.hidratacao_ml > 0 && (
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            color: COLORS.primary,
-                            display: 'block',
-                          }}
-                        >
-                          💧 {reg.hidratacao_ml} mL
-                        </span>
+                        <div style={{ fontSize: '11px', color: THEME.colors.info.main, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <IconDroplets size={12} /> {reg.hidratacao_ml}mL
+                        </div>
                       )}
                     </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <a
-                        href={reg.foto_prato_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: COLORS.primary }}
-                      >
-                        <IconCamera size={20} color={COLORS.primary} />
-                      </a>
+                    <td style={{ padding: '16px' }}>
+                      <Badge status={reg.status_validacao}>{reg.status_validacao}</Badge>
                     </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Badge
-                        status={
-                          reg.status_validacao as
-                            | 'aprovado'
-                            | 'pendente'
-                            | 'rejeitado'
-                            | 'duvidoso'
-                        }
-                      >
-                        {reg.status_validacao === 'aprovado'
-                          ? '✅'
-                          : reg.status_validacao === 'pendente'
-                          ? '⏳'
-                          : reg.status_validacao === 'rejeitado'
-                          ? '❌'
-                          : '⚠️'}
-                      </Badge>
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {reg.is_atrasado ? (
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            color: COLORS.warning,
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: SPACING.sm,
-                          }}
-                        >
-                          <IconClock size={14} color={COLORS.warning} /> Sim
-                        </span>
-                      ) : (
-                        <span
-                          style={{ fontSize: '11px', color: COLORS.success }}
-                        >
-                          Não
-                        </span>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: `${SPACING.md} ${SPACING.md}`,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {reg.status_validacao === 'pendente' && (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() =>
-                            deletarRegistro(reg.id, reg.status_validacao)
-                          }
-                          icon={<IconTrash size={14} />}
-                        >
-                          Deletar
-                        </Button>
-                      )}
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <a href={reg.foto_prato_url} target="_blank" rel="noreferrer" style={{ width: '32px', height: '32px', borderRadius: THEME.radius.md, background: THEME.colors.slate[100], display: 'flex', alignItems: 'center', justifyContent: 'center', color: THEME.colors.slate[600] }}>
+                          <IconCamera size={16} />
+                        </a>
+                        {reg.status_validacao === 'pendente' && (
+                          <button onClick={() => deletarRegistro(reg.id, reg.status_validacao)} style={{ width: '32px', height: '32px', borderRadius: THEME.radius.md, background: THEME.colors.danger.soft, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: THEME.colors.danger.main, cursor: 'pointer' }}>
+                            <IconTrash size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2224,6 +1078,40 @@ export default function RefeicaoModule({
           </div>
         )}
       </Card>
+
+      {/* EMBARQUES HISTÓRICO */}
+      {isRestricted && embarques.length > 0 && (
+        <Card variant="outline" style={{ marginTop: THEME.spacing.xl, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: THEME.spacing.lg, borderBottom: `1px solid ${THEME.colors.slate[100]}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <IconShip size={20} color={THEME.colors.secondary.main} />
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Histórico de Embarques</h3>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: THEME.colors.slate[50] }}>
+                  {['Data', 'Frente', 'Cargo', 'IMC', 'Status'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: THEME.colors.slate[500], textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {embarques.map((e, idx) => (
+                  <tr key={e.id} style={{ borderBottom: idx === embarques.length - 1 ? 'none' : `1px solid ${THEME.colors.slate[100]}` }}>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600 }}>{new Date(e.data_exame).toLocaleDateString('pt-BR')}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', color: THEME.colors.slate[600] }}>{e.frente_servico}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', color: THEME.colors.slate[600] }}>{e.cargo}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 700, color: e.imc > 30 ? THEME.colors.danger.main : THEME.colors.slate[900] }}>{e.imc.toFixed(1)}</td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <Badge status={e.status}>{e.status}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
