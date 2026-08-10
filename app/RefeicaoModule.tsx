@@ -198,12 +198,6 @@ const IconCalendar = (props: IconProps) => (
   </Icon>
 );
 
-const IconChevronDown = (props: IconProps) => (
-  <Icon {...props}>
-    <polyline points="6 9 12 15 18 9" />
-  </Icon>
-);
-
 const IconPlus = (props: IconProps) => (
   <Icon {...props}>
     <line x1="12" y1="5" x2="12" y2="19" />
@@ -215,6 +209,13 @@ const IconDroplets = (props: IconProps) => (
   <Icon {...props}>
     <path d="M7 16.3c2.2 0 4-1.8 4-4 0-2.2-4-6-4-6s-4 3.8-4 6c0 2.2 1.8 4 4 4Z" />
     <path d="M17 16.3c2.2 0 4-1.8 4-4 0-2.2-4-6-4-6s-4 3.8-4 6c0 2.2 1.8 4 4 4Z" />
+  </Icon>
+);
+
+const IconX = (props: IconProps) => (
+  <Icon {...props}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </Icon>
 );
 
@@ -299,7 +300,7 @@ const Button = ({
 }: ButtonProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const variants = {
+  const variants: Record<string, any> = {
     primary: {
       background: THEME.colors.primary.main,
       color: THEME.colors.white,
@@ -339,8 +340,8 @@ const Button = ({
     lg: { padding: '14px 28px', fontSize: '16px', gap: '10px' },
   };
 
-  const currentVariant = variants[variant];
-  const currentSize = sizes[size];
+  const currentVariant = variants[variant] || variants.primary;
+  const currentSize = sizes[size] || sizes.md;
 
   return (
     <button
@@ -389,7 +390,8 @@ const Badge = ({ status, children, showDot = true }: BadgeProps) => {
     duvidoso: { bg: 'rgba(124, 58, 237, 0.1)', color: '#6d28d9', dot: '#7c3aed' },
   };
 
-  const config = statusMap[status.toLowerCase()] || { bg: THEME.colors.slate[100], color: THEME.colors.slate[600], dot: THEME.colors.slate[400] };
+  const safeStatus = (status || '').toLowerCase();
+  const config = statusMap[safeStatus] || { bg: THEME.colors.slate[100], color: THEME.colors.slate[600], dot: THEME.colors.slate[400] };
 
   return (
     <span
@@ -430,7 +432,7 @@ const Alert = ({ type, children, icon }: AlertProps) => {
     info: { bg: THEME.colors.info.soft, color: THEME.colors.info.dark, border: THEME.colors.info.main, icon: <IconClock size={20} /> },
   };
 
-  const config = configs[type];
+  const config = configs[type] || configs.info;
 
   return (
     <div
@@ -473,16 +475,8 @@ const StatCard = ({ value, label, icon, color = THEME.colors.primary.main }: Sta
       justifyContent: 'center',
       gap: THEME.spacing.xs,
       boxShadow: THEME.shadows.sm,
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      transition: 'all 0.2s ease',
       cursor: 'default',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-2px)';
-      e.currentTarget.style.boxShadow = THEME.shadows.md;
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = 'none';
-      e.currentTarget.style.boxShadow = THEME.shadows.sm;
     }}
   >
     {icon && <div style={{ opacity: 0.8 }}>{icon}</div>}
@@ -497,47 +491,50 @@ const StatCard = ({ value, label, icon, color = THEME.colors.primary.main }: Sta
 // COMPONENTES PRINCIPAIS REFORMULADOS
 // ============================================================
 
-const ProfileCard = ({ name, codigo, cargo, email, onLogout }: any) => (
-  <Card variant="glass" style={{ marginBottom: THEME.spacing.xl }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: THEME.spacing.lg, flexWrap: 'wrap' }}>
-      <div
-        style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: THEME.radius.full,
-          background: `linear-gradient(135deg, ${THEME.colors.primary.main} 0%, ${THEME.colors.primary.dark} 100%)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '28px',
-          fontWeight: 800,
-          color: THEME.colors.white,
-          boxShadow: THEME.shadows.md,
-          flexShrink: 0,
-        }}
-      >
-        {name.charAt(0).toUpperCase()}
-      </div>
-      <div style={{ flex: 1, minWidth: '200px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: THEME.colors.slate[900], margin: 0 }}>{name}</h2>
-        <div style={{ display: 'flex', gap: THEME.spacing.md, marginTop: '4px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
-            <strong style={{ color: THEME.colors.slate[900] }}>ID:</strong> {codigo}
-          </span>
-          <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
-            <strong style={{ color: THEME.colors.slate[900] }}>Cargo:</strong> {cargo || 'N/A'}
-          </span>
+const ProfileCard = ({ name, codigo, cargo, email, onLogout }: any) => {
+  const safeName = name || 'Usuário';
+  return (
+    <Card variant="glass" style={{ marginBottom: THEME.spacing.xl }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: THEME.spacing.lg, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: THEME.radius.full,
+            background: `linear-gradient(135deg, ${THEME.colors.primary.main} 0%, ${THEME.colors.primary.dark} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '28px',
+            fontWeight: 800,
+            color: THEME.colors.white,
+            boxShadow: THEME.shadows.md,
+            flexShrink: 0,
+          }}
+        >
+          {safeName.charAt(0).toUpperCase()}
         </div>
-        <div style={{ fontSize: '13px', color: THEME.colors.slate[500], marginTop: '2px' }}>{email}</div>
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: THEME.colors.slate[900], margin: 0 }}>{safeName}</h2>
+          <div style={{ display: 'flex', gap: THEME.spacing.md, marginTop: '4px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
+              <strong style={{ color: THEME.colors.slate[900] }}>ID:</strong> {codigo || '---'}
+            </span>
+            <span style={{ fontSize: '13px', color: THEME.colors.slate[600] }}>
+              <strong style={{ color: THEME.colors.slate[900] }}>Cargo:</strong> {cargo || 'N/A'}
+            </span>
+          </div>
+          <div style={{ fontSize: '13px', color: THEME.colors.slate[500], marginTop: '2px' }}>{email || ''}</div>
+        </div>
+        {onLogout && (
+          <Button variant="outline" size="sm" onClick={onLogout} icon={<IconLogout size={16} color={THEME.colors.danger.main} />} style={{ color: THEME.colors.danger.main, borderColor: THEME.colors.danger.soft }}>
+            Sair
+          </Button>
+        )}
       </div>
-      {onLogout && (
-        <Button variant="outline" size="sm" onClick={onLogout} icon={<IconLogout size={16} color={THEME.colors.danger.main} />} style={{ color: THEME.colors.danger.main, borderColor: THEME.colors.danger.soft }}>
-          Sair
-        </Button>
-      )}
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 const UploadArea = ({ onFileSelect, preview, onRemove, label, required, icon, color = THEME.colors.primary.main }: any) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -597,7 +594,7 @@ const UploadArea = ({ onFileSelect, preview, onRemove, label, required, icon, co
           </>
         ) : (
           <>
-            <div style={{ width: '48px', height: '48px', borderRadius: THEME.radius.full, background: THEME.colors.white, display: 'flex', alignItems: 'center', justifyCenter: 'center', boxShadow: THEME.shadows.sm, color }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: THEME.radius.full, background: THEME.colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: THEME.shadows.sm, color }}>
               {icon || <IconCamera size={24} />}
             </div>
             <div>
@@ -656,19 +653,20 @@ export default function RefeicaoModule({
 
   // --- EFEITOS ---
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     let deviceId = localStorage.getItem('device_id');
     if (!deviceId) {
       deviceId = `dev_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
       localStorage.setItem('device_id', deviceId);
     }
     
-    // Correção: Usando navigator.userAgentData se disponível, senão fallback
     const ua = navigator.userAgent;
     setDeviceInfo({
       id: deviceId,
       model: (navigator as any).platform || 'Desconhecido',
       os: ua.includes('Windows') ? 'Windows' : ua.includes('Mac') ? 'MacOS' : ua.includes('Android') ? 'Android' : ua.includes('iPhone') ? 'iOS' : 'Linux/Outro',
-      app_version: '2.0.0 (Refactor)',
+      app_version: '2.0.1 (Fixed)',
     });
 
     fetch('https://api.ipify.org?format=json')
@@ -742,6 +740,8 @@ export default function RefeicaoModule({
           return { ...e, imc: alturaM > 0 ? e.peso / (alturaM * alturaM) : 0 };
         }));
       }
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
     } finally { setLoading(false); }
   };
 
@@ -823,7 +823,7 @@ export default function RefeicaoModule({
         dispositivo_os: deviceInfo?.os,
         app_version: deviceInfo?.app_version,
         ip_address: ipAddress,
-        user_agent: navigator.userAgent,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
         timestamp_device: new Date().toISOString(),
         timezone_offset: new Date().getTimezoneOffset(),
         hash_criptografico: hash,
@@ -863,7 +863,7 @@ export default function RefeicaoModule({
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', border: `3px solid ${THEME.colors.slate[200]}`, borderTopColor: THEME.colors.primary.main, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
       <p style={{ color: THEME.colors.slate[500], fontWeight: 500 }}>Carregando dados nutricionais...</p>
     </div>
   );
@@ -899,7 +899,7 @@ export default function RefeicaoModule({
         </div>
       </div>
 
-      {isRestricted && <ProfileCard {...colaboradorInfo} onLogout={onLogout} />}
+      {(isRestricted && colaboradorInfo) && <ProfileCard {...colaboradorInfo} onLogout={onLogout} />}
 
       {/* DASHBOARD GRID */}
       {isRestricted && (
@@ -942,7 +942,7 @@ export default function RefeicaoModule({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: THEME.spacing.xl }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{isAtrasado ? 'Registro de Refeição Atrasada' : 'Registrar Nova Refeição'}</h3>
             <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: THEME.colors.slate[400] }}>
-              <Icon size={20}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Icon>
+              <IconX size={20} />
             </button>
           </div>
 
@@ -991,7 +991,7 @@ export default function RefeicaoModule({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: THEME.spacing.lg, marginBottom: THEME.spacing.xl }}>
             <UploadArea label="Foto do Prato" required preview={fotoPrato?.preview} onFileSelect={(file: File) => processarFoto(file).then(setFotoPrato)} onRemove={() => setFotoPrato(null)} />
-            <UploadArea label="Selfie (Opcional)" color="#8b5cf6" icon={<IconUser size={24} />} preview={selfie?.preview} onFileSelect={(file: File) => { const r = new FileReader(); r.onload = () => setSelfie({file, preview: r.result}); r.readAsDataURL(file); }} onRemove={() => setSelfie(null)} />
+            <UploadArea label="Selfie (Opcional)" color="#8b5cf6" icon={<IconUser size={24} />} preview={selfie?.preview} onFileSelect={(file: File) => { const r = new FileReader(); r.onload = () => setSelfie({file, preview: r.result as string}); r.readAsDataURL(file); }} onRemove={() => setSelfie(null)} />
           </div>
 
           <div style={{ display: 'flex', gap: THEME.spacing.md, justifyContent: 'flex-end', borderTop: `1px solid ${THEME.colors.slate[100]}`, paddingTop: THEME.spacing.lg }}>
@@ -1080,7 +1080,7 @@ export default function RefeicaoModule({
       </Card>
 
       {/* EMBARQUES HISTÓRICO */}
-      {isRestricted && embarques.length > 0 && (
+      {(isRestricted && embarques.length > 0) && (
         <Card variant="outline" style={{ marginTop: THEME.spacing.xl, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: THEME.spacing.lg, borderBottom: `1px solid ${THEME.colors.slate[100]}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <IconShip size={20} color={THEME.colors.secondary.main} />
@@ -1101,7 +1101,7 @@ export default function RefeicaoModule({
                     <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600 }}>{new Date(e.data_exame).toLocaleDateString('pt-BR')}</td>
                     <td style={{ padding: '14px 16px', fontSize: '13px', color: THEME.colors.slate[600] }}>{e.frente_servico}</td>
                     <td style={{ padding: '14px 16px', fontSize: '13px', color: THEME.colors.slate[600] }}>{e.cargo}</td>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 700, color: e.imc > 30 ? THEME.colors.danger.main : THEME.colors.slate[900] }}>{e.imc.toFixed(1)}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 700, color: e.imc > 30 ? THEME.colors.danger.main : THEME.colors.slate[900] }}>{e.imc ? e.imc.toFixed(1) : '---'}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <Badge status={e.status}>{e.status}</Badge>
                     </td>
