@@ -1,4 +1,4 @@
-// app/DashboardModule.tsx - APENAS O CONTEÚDO DO DASHBOARD
+// app/DashboardModule.tsx - VISUAL DA IMAGEM + FUNÇÕES ORIGINAIS
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase';
 interface DashboardModuleProps {
   employees: any[];
   bloodPressureRecords: any[];
+  styles: any;
   onNavigate?: (module: string) => void;
   userNome?: string;
 }
@@ -14,12 +15,14 @@ interface DashboardModuleProps {
 export default function DashboardModule({
   employees,
   bloodPressureRecords,
+  styles: oldStyles,
   onNavigate,
   userNome = 'Jorge Rodrigues',
 }: DashboardModuleProps) {
-  // ===== ESTADOS =====
+  // ===== TODOS OS ESTADOS ORIGINAIS =====
   const [examesToxicologicos, setExamesToxicologicos] = useState<any[]>([]);
   const [imcRecords, setImcRecords] = useState<any[]>([]);
+  const [allImcRecords, setAllImcRecords] = useState<any[]>([]);
   const [atestadosPendentes, setAtestadosPendentes] = useState<any[]>([]);
   const [atestadosCount, setAtestadosCount] = useState<number>(0);
   const [certificadosCount, setCertificadosCount] = useState<number>(0);
@@ -35,7 +38,7 @@ export default function DashboardModule({
   const [currentDay, setCurrentDay] = useState<string>('');
   const [isMobile, setIsMobile] = useState(false);
 
-  // ===== LÓGICA DE DADOS (MANTIDA) =====
+  // ===== LÓGICA DE DADOS ORIGINAL =====
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 1024);
     checkMobile();
@@ -70,6 +73,7 @@ export default function DashboardModule({
           hasMore = data.length === 1000;
         } else hasMore = false;
       }
+      setAllImcRecords(allData);
       if (!allData.length) { setImcRecords([]); return; }
       const latest = allData.reduce((a, b) => b.ano > a.ano || (b.ano === a.ano && b.mes > a.mes) ? b : a);
       setImcRecords(allData.filter((r) => r.mes === latest.mes && r.ano === latest.ano));
@@ -115,6 +119,9 @@ export default function DashboardModule({
   const toxVencidos = examesToxicologicos.filter((e) => e.status === 'vencido').length;
   const toxProx = examesToxicologicos.filter((e) => e.status === 'proximo_vencer').length;
   const toxConf = examesToxicologicos.length ? Math.round((toxAtivos / examesToxicologicos.length) * 100) : 100;
+
+  const totalEmp = employees.length || 1;
+  const pct = (v: number) => Math.round((v / totalEmp) * 100);
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
@@ -173,6 +180,13 @@ export default function DashboardModule({
     kpiLabel: { fontSize: '12px', color: c.textMut, fontWeight: 600, textTransform: 'uppercase', marginTop: '4px' },
     kpiSub: (cl: string) => ({ fontSize: '12px', color: cl, fontWeight: 500, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }),
 
+    // Mini Stats (Contagens)
+    rowMini: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' },
+    miniCard: (bg: string) => ({ background: bg, borderRadius: '10px', padding: '14px', border: `1px solid ${c.border}`, boxShadow: c.shadow, textAlign: 'center' as const, transition: 'all 0.2s ease' }),
+    miniNum: { fontSize: '22px', fontWeight: 700, color: c.text },
+    miniLabel: { fontSize: '10px', fontWeight: 600, color: c.textMut, textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginTop: '2px' },
+    miniPct: { fontSize: '11px', fontWeight: 500, color: c.textSec, marginTop: '1px' },
+
     // Middle Section (2 Columns)
     middleGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: '24px' },
     leftColumn: { display: 'flex', flexDirection: 'column', gap: '24px' },
@@ -182,7 +196,7 @@ export default function DashboardModule({
     card: { backgroundColor: c.card, borderRadius: '16px', padding: '24px', border: `1px solid ${c.border}`, boxShadow: c.shadow },
     cardTitle: { fontSize: '16px', fontWeight: 700, color: c.text, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' },
     
-    // Acesso Rápido
+    // Acesso Rápido (Ações)
     quickGrid: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' },
     quickBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '16px', borderRadius: '12px', border: `1px solid ${c.border}`, backgroundColor: c.bg, cursor: 'pointer', transition: 'all 0.2s', color: c.text },
     quickIcon: (cl: string) => ({ fontSize: '24px', color: cl }),
@@ -201,6 +215,14 @@ export default function DashboardModule({
     toxLabel: { fontSize: '12px', fontWeight: 600, color: c.textMut, textTransform: 'uppercase', marginBottom: '8px' },
     toxValue: { fontSize: '24px', fontWeight: 700, color: c.text },
 
+    // Atividades Recentes (Timeline)
+    tlList: { display: 'flex', flexDirection: 'column' as const, gap: '8px' },
+    tlItem: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: c.bg, borderRadius: '8px', border: `1px solid ${c.border}`, flexWrap: isMobile ? 'wrap' : 'nowrap' },
+    tlIcon: { width: '32px', height: '32px', borderRadius: '6px', background: c.redBg, color: c.red, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0 },
+    tlName: { fontSize: '13px', fontWeight: 600, color: c.text },
+    tlDesc: { fontSize: '11px', color: c.textSec, marginTop: '1px' },
+    tlBadge: { padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, background: c.redBg, color: c.red, whiteSpace: 'nowrap' },
+
     // Frentes de Trabalho
     frontList: { display: 'flex', flexDirection: 'column', gap: '12px' },
     frontItem: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', backgroundColor: c.bg, fontSize: '14px', fontWeight: 500, color: c.text },
@@ -209,21 +231,25 @@ export default function DashboardModule({
     banner: { background: `linear-gradient(90deg, #1E3A8A 0%, #0F172A 100%)`, borderRadius: '16px', padding: '24px 32px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
     bannerText: { fontSize: '18px', fontWeight: 700, margin: '0 0 4px 0' },
     bannerSub: { fontSize: '14px', color: '#94A3B8', margin: 0 },
+    
+    // Loading
+    loading: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '80px 32px', gap: '12px' },
+    spinner: { width: '36px', height: '36px', border: `2px solid ${c.border}`, borderTop: `2px solid ${c.blue}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   };
 
   const handleAction = (mod: string) => onNavigate?.(mod);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
+      <div style={s.loading}>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-        <div style={{ width: '40px', height: '40px', border: `3px solid ${c.border}`, borderTop: `3px solid ${c.blue}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-        <p style={{ color: c.textSec, marginTop: '16px', fontWeight: 500 }}>Carregando painel...</p>
+        <div style={s.spinner}></div>
+        <p style={{ color: c.textSec, fontSize: '14px' }}>Carregando dados...</p>
       </div>
     );
   }
 
-  // Dados mockados para as seções que não vêm do Supabase
+  // Dados mockados para Frentes de Trabalho (já que não vem do Supabase)
   const frentesTrabalho = ['Santos', 'Santos Scout', 'Tamandaré', 'Anna Nery', 'Anchieta', 'PCP-1', 'Apollo Z', 'Alexandre Gusmão', 'Maricá', 'Bacalhau'];
 
   return (
@@ -249,7 +275,7 @@ export default function DashboardModule({
         </div>
       </div>
 
-      {/* KPI GRID */}
+      {/* KPI GRID PRINCIPAL */}
       <div style={s.kpiGrid}>
         {[
           { icon: 'fa-users', bg: c.greenBg, cl: c.green, num: employees.length || 170, label: 'Mergulhadores ativos', sub: '+2% este mês', subCl: c.green },
@@ -273,28 +299,49 @@ export default function DashboardModule({
         ))}
       </div>
 
+      {/* MINI STATS (CONTAGENS DO SEU CÓDIGO ORIGINAL) */}
+      <div style={s.rowMini}>
+        {[
+          { n: employees.length, l: 'Colaboradores', bg: c.blueBg },
+          { n: preMerCount, l: 'Pré-Mergulho', bg: c.purpleBg },
+          { n: imcRecords.length, l: 'IMC', bg: c.greenBg },
+          { n: bloodPressureRecords.length, l: 'Pressão', bg: c.redBg },
+          { n: medicamentosCount, l: 'Medicamentos', bg: c.orangeBg },
+          { n: preEmbarqueCount, l: 'Pré-Embarque', bg: c.tealBg },
+          { n: refeicoesCount, l: 'Refeições', bg: c.orangeBg },
+          { n: certificadosCount, l: 'Certificados', bg: c.blueBg },
+          { n: vacinasCount, l: 'Vacinação', bg: c.greenBg },
+          { n: atestadosCount, l: 'Atestados', bg: c.redBg },
+        ].map((item, idx) => (
+          <div key={idx} style={s.miniCard(item.bg)}>
+            <div style={s.miniNum}>{item.n}</div>
+            <div style={s.miniLabel}>{item.l}</div>
+            <div style={s.miniPct}>{pct(item.n)}%</div>
+          </div>
+        ))}
+      </div>
+
       {/* MIDDLE SECTION (Grid 2 colunas) */}
       <div style={s.middleGrid}>
         
         {/* COLUNA ESQUERDA (Principal) */}
         <div style={s.leftColumn}>
           
-          {/* Acesso Rápido */}
+          {/* Ações Rápidas (Do seu código original) */}
           <div style={s.card}>
-            <h3 style={s.cardTitle}>Acesso rápido <span style={{ fontSize: '12px', fontWeight: 400, color: c.textMut, marginLeft: '8px' }}>Principais módulos do sistema</span></h3>
+            <h3 style={s.cardTitle}>Ações Rápidas</h3>
             <div style={s.quickGrid}>
               {[
-                { l: 'Prontuário', icon: 'fa-folder-open', cl: c.blue },
-                { l: 'Exames Toxicológicos', icon: 'fa-flask', cl: c.green },
-                { l: 'Vacinação', icon: 'fa-syringe', cl: c.purple },
-                { l: 'Pré-MER', icon: 'fa-file-medical', cl: c.orange },
-                { l: 'Pré-Embarque', icon: 'fa-briefcase', cl: c.blue },
-                { l: 'Certificados', icon: 'fa-certificate', cl: c.teal },
-                { l: 'Atestados', icon: 'fa-file-alt', cl: c.textSec },
-                { l: 'IMC', icon: 'fa-weight-scale', cl: c.red },
-                { l: 'Relatórios', icon: 'fa-chart-bar', cl: c.purple },
+                { l: 'IMC', icon: 'fa-weight-scale', mod: 'imc', cl: c.green },
+                { l: 'Pressão', icon: 'fa-heart-pulse', mod: 'pressao', cl: c.red },
+                { l: 'Exames', icon: 'fa-flask', mod: 'toxicologico', cl: c.orange },
+                { l: 'Certificados', icon: 'fa-certificate', mod: 'certificados', cl: c.blue },
+                { l: 'Atestados', icon: 'fa-file-medical', mod: 'atestados', cl: c.red },
+                { l: 'Vacinação', icon: 'fa-syringe', mod: 'vacinacao', cl: c.green },
+                { l: 'Pré-Mergulho', icon: 'fa-person-swimming', mod: 'premer', cl: c.purple },
+                { l: 'Colaboradores', icon: 'fa-users', mod: 'funcionarios', cl: c.blue },
               ].map((btn, idx) => (
-                <div key={idx} style={s.quickBtn} onClick={() => handleAction(btn.l.toLowerCase())}>
+                <div key={idx} style={s.quickBtn} onClick={() => handleAction(btn.mod)}>
                   <i className={`fas ${btn.icon}`} style={s.quickIcon(btn.cl)}></i>
                   <span style={s.quickLabel}>{btn.l}</span>
                 </div>
@@ -306,9 +353,6 @@ export default function DashboardModule({
           <div style={s.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ ...s.cardTitle, margin: 0 }}><i className="fas fa-chart-simple" style={{ color: c.green }}></i> Pirâmide de IMC</h3>
-              <select style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${c.border}`, fontSize: '12px', outline: 'none', backgroundColor: c.bg }}>
-                <option>Todos os colaboradores</option>
-              </select>
             </div>
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '250px' }}>
@@ -327,7 +371,7 @@ export default function DashboardModule({
                   </div>
                 ))}
               </div>
-              {/* Donut Chart Simulado */}
+              {/* Donut Chart */}
               <div style={{ width: '160px', height: '160px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: `conic-gradient(${c.green} 0% 83.5%, ${c.yellow} 83.5% 95.9%, ${c.orange} 95.9% 99.4%, ${c.red} 99.4% 100%)` }}></div>
                 <div style={{ position: 'absolute', width: '110px', height: '110px', backgroundColor: c.card, borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -374,6 +418,30 @@ export default function DashboardModule({
         {/* COLUNA DIREITA (Widgets) */}
         <div style={s.rightColumn}>
           
+          {/* Atividades Recentes (Atestados Pendentes do seu código) */}
+          <div style={s.card}>
+            <h3 style={s.cardTitle}><i className="fas fa-clock" style={{ color: c.blue }}></i> Atividades Recentes</h3>
+            {atestadosPendentes.length > 0 ? (
+              <div style={s.tlList}>
+                {atestadosPendentes.map((item, idx) => (
+                  <div key={idx} style={s.tlItem}>
+                    <div style={s.tlIcon}><i className="fas fa-file-medical"></i></div>
+                    <div style={{ flex: 1, minWidth: isMobile ? '80px' : 'auto' }}>
+                      <div style={s.tlName}>{item.colaborador_nome}</div>
+                      <div style={s.tlDesc}>Atestado pendente</div>
+                    </div>
+                    <div style={s.tlBadge}>Pendente</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px', color: c.textMut, fontSize: '13px' }}>
+                <i className="fas fa-check-circle" style={{ color: c.green, marginRight: '6px' }}></i>
+                Nenhuma pendência
+              </div>
+            )}
+          </div>
+
           {/* Frentes de Trabalho */}
           <div style={s.card}>
             <h3 style={s.cardTitle}><i className="fas fa-ship" style={{ color: c.blue }}></i> Frentes de trabalho</h3>
